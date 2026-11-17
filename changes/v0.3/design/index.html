@@ -418,6 +418,60 @@ html,body{margin:0;background:var(--canvas);color:var(--t1);font-family:var(--sf
 .zoomt .hov{background:rgba(255,255,255,.16)}
 .zoomt .prs{background:rgba(255,255,255,.28);transform:scale(.94)}
 .zoomt .dis{opacity:.3}
+
+/* 筛选入口按钮和面板 */
+.rb>svg:first-child{width:15px;height:15px;flex:none}
+.rb .sp{opacity:.6}
+.rb .bgd{min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#fff;color:var(--accent);font:700 10.5px/16px var(--sf);text-align:center}
+.fpop{position:absolute;width:336px;border-radius:22px;padding:14px 16px 12px;display:flex;flex-direction:column;gap:14px;z-index:8;font-size:12px;color:#fff}
+.fhd{display:flex;align-items:baseline;justify-content:space-between}
+.fhd b{font:600 14px var(--sfd)}
+.fcnt{font:500 12px var(--sf);color:var(--t2)}
+.fcnt em{font-style:normal;font:600 13px var(--mono);color:#fff;margin:0 3px}
+.fcnt small{color:var(--t3);margin-left:8px;font-size:11px}
+.fsec h6{margin:0 0 8px;display:flex;justify-content:space-between;font:600 10.5px var(--sf);letter-spacing:.06em;color:var(--t3)}
+.fsec h6 span{font-weight:500;letter-spacing:0;color:var(--t2)}
+.frate{display:flex;align-items:center;gap:8px}
+.fstars{display:flex;gap:4px;flex:1;justify-content:center;height:28px;border-radius:14px;background:rgba(255,255,255,.07);align-items:center}
+.fchips{display:flex;flex-wrap:wrap;gap:6px}
+.fbr{flex-basis:100%;height:0}
+.fchip{height:26px;border-radius:13px;padding:0 10px;display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.08);font:500 12px var(--sf);color:#fff;white-space:nowrap}
+.fchip em{font-style:normal;font:500 10.5px var(--mono);color:var(--t3)}
+.fchip.on{background:var(--accent);border-color:transparent}
+.fchip.on em{color:rgba(255,255,255,.8)}
+.fchip.dis{opacity:.35}
+.fft{display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(255,255,255,.1);padding-top:10px;font-size:11px;color:var(--t3)}
+.flink{font:500 12px var(--sf);color:#64b5ff}
+.flink.dis{color:var(--t3)}
+.dot5{width:18px;height:18px;border-radius:9px;display:inline-block;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+.cbar{position:absolute;left:50%;transform:translateX(-50%);top:58px;display:flex;gap:8px;z-index:5}
+.cchip{height:28px;border-radius:14px;padding:0 6px 0 11px;display:flex;align-items:center;gap:6px;font:500 12px var(--sf);white-space:nowrap}
+.cchip .st{width:12px;height:12px}
+.cx{width:16px;height:16px;border-radius:8px;background:rgba(255,255,255,.16);display:grid;place-items:center}
+.cx svg{width:9px;height:9px}
+
+.ndot{position:absolute;right:3px;top:3px;width:9px;height:9px;border-radius:50%;background:var(--accent);border:1px solid rgba(20,20,24,.85)}
+.rsheet{position:absolute;left:50%;top:40px;transform:translateX(-50%);width:540px;height:620px;border-radius:26px;display:flex;flex-direction:column;overflow:hidden;z-index:12}
+.rsh-hd{padding:22px 24px 14px;display:flex;gap:14px;align-items:center}
+.rsh-hd h3{margin:0;font:600 17px var(--sfd)}
+.ver{display:flex;align-items:center;gap:8px;margin-top:5px;font:500 12px var(--mono);color:var(--t2)}
+.ver i{font-style:normal;color:var(--t3)}
+.ver b{font-weight:600;color:#fff;background:rgba(255,255,255,.12);border-radius:6px;padding:1px 7px}
+.ver u{text-decoration:none;font:400 12px var(--sf);color:var(--t3);margin-left:4px}
+.md{flex:1;min-height:0;overflow:hidden;padding:0 26px;position:relative;-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 10px,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(180deg,transparent 0,#000 10px,#000 calc(100% - 26px),transparent)}
+.md h2{margin:18px 0 8px;font:700 18px/1.3 var(--sfd)}
+.md h3{margin:16px 0 6px;font:600 14px/1.4 var(--sfd)}
+.md p{margin:0 0 8px;font-size:13px;line-height:1.65;color:var(--t2)}
+.md ul{margin:0 0 8px;padding-left:20px;font-size:13px;line-height:1.7;color:var(--t2)}
+.md li{padding-left:2px}
+.md a{color:#64b5ff;text-decoration:underline;text-decoration-color:rgba(100,181,255,.45)}
+.md code{font:500 11.5px var(--mono);background:rgba(0,0,0,.3);border-radius:5px;padding:1px 5px;color:#fff}
+.md hr{border:0;height:1px;background:rgba(255,255,255,.14);margin:20px 0 4px}
+.md strong{color:#fff;font-weight:600}
+.md .lang{font:600 10.5px var(--sf);letter-spacing:.08em;color:var(--t3);margin-top:16px}
+.rsb{position:absolute;right:9px;width:3px;border-radius:2px;background:rgba(255,255,255,.3);z-index:13}
+.rsh-ft{padding:14px 24px 18px;display:flex;align-items:center;gap:10px;border-top:1px solid rgba(255,255,255,.1)}
+.rsh-ft .lk{font:500 13px var(--sf);color:var(--t2);margin-right:auto}
 </style>
 </head>
 <body>
@@ -547,7 +601,7 @@ function win(o){
       <div class="sp"></div>
       ${o.empty||!it?'':(o.zcHtml||'')}
       ${o.empty||!it?'':`<div class="pill g">${o.cur||idx+1} / ${o.total||list.length}${o.pillSfx||''}</div>`}
-      ${o.notools?'':`<div class="tools g"><div class="ib ${o.empty?'dis':''}">${ic('rotate')}</div><div class="ib ${o.info||o.panel?'on':''} ${o.empty?'dis':''}">${ic('info')}</div><div class="ib">${ic('more')}</div></div>`}
+      ${o.notools?'':`<div class="tools g"><div class="ib ${o.empty?'dis':''}">${ic('rotate')}</div><div class="ib ${o.info||o.panel?'on':''} ${o.empty?'dis':''}">${ic('info')}</div><div class="ib" style="position:relative">${ic('more')}${o.moreDot?'<i class="ndot"></i>':''}</div></div>`}
     </div>`}
    ${o.noseg?'':seg(o.filter||'all',{empty:o.empty,icons:o.compact,en:o.en,list:o.segList,style:o.fs?'top:16px':''})}
    ${it&&!o.empty&&!o.nonav?`<div class="nav g" style="left:${o.fs?24:20}px;top:${top+sh/2-22}px;${idx===0?'opacity:.35':''}">${ic('chevL')}</div><div class="nav g" style="right:${o.fs?24:20}px;top:${top+sh/2-22}px;${o.info||pnl?'display:none;':''}">${ic('chevR')}</div>`:''}
@@ -668,37 +722,80 @@ function zoomTop(pct,o={}){const mode=o.mode||'full',st=k=>o.hov===k?'hov':o.prs
 /* ⋯ 菜单（窗口很窄时，缩放收进这里） */
 function moreMenu(hi){const it=(l,k,i,ck)=>`<div class="mi ${hi===i?'on':''}"><span class="ck">${ck?'✓':''}</span>${l}<kbd>${k||''}</kbd></div>`;
   return`<div class="menu gt" style="right:16px;top:52px;min-width:210px;z-index:9"><div class="mhead">缩放 · 38%</div>${it('放大','⌘+',0)}${it('缩小','⌘−',1)}${it('适应窗口','⌘9',2,1)}${it('实际大小','⌘0',3)}${it('200%','',4)}<div class="msep"></div>${it('在访达中显示','⇧⌘R',5)}${it('拷贝文件路径','⌥⌘C',6)}${it('设为桌面图片','',7)}</div>`}
-/* 顶部筛选组：全部/图片/视频 + 评星筛选按钮，整组居中。按钮只显示条件，不显示数量。compact：类型只留图标，评星只留星和值 */
-function filterGroup(type,counts,rate,o={}){
-  const t=(k,icon,label)=>`<div class="${type===k?'on':''} ${!counts[k]&&type!==k?'off':''}" ${o.compact?'style="padding:0 10px"':''}>${ic(icon)}${o.compact?'':label}<em>${counts[k]}</em></div>`;
+/* ---- 筛选：状态、结果、按钮、面板 ----
+   状态 st = { type: all/img/vid（全部/图片/视频，原有）, rate: 0 不限 / -1 未评星 / 1–5 不低于, fmts: 选中的格式（多选） }，三者取交集 */
+P.dl='<circle cx="12" cy="12" r="9"/><path d="M12 7.5v8M8.5 12.5l3.5 3.5 3.5-3.5"/>';
+P.funnel='<path d="M4 5.5h16l-6.2 7.2v5.3l-3.6 1.8v-7.1z"/>';
+const ST0={type:'all',rate:0,fmts:[]};
+const EXT=it=>it.n.split('.').pop().toUpperCase();
+const FMT_OF=it=>['ARW','CR3','NEF','DNG','RAF'].includes(EXT(it))?'RAW':EXT(it)==='JPG'?'JPEG':EXT(it)==='WEBP'?'WebP':EXT(it)==='TIF'?'TIFF':EXT(it);
+const FMT_IMG=['RAW','HEIC','JPEG','PNG','WebP','GIF','TIFF'],FMT_VID=['MP4','MOV'];
+const mType=(x,t)=>t==='all'||(t==='vid'?!!x.vid:!x.vid), mRate=(x,r)=>r===0||(r===-1?!x.r:(x.r||0)>=r), mFmt=(x,f)=>!f.length||f.includes(FMT_OF(x));
+function FS(st){const A=(t,r,f)=>RL.filter(x=>mType(x,t)&&mRate(x,r)&&mFmt(x,f));
+  const tc={all:A('all',st.rate,st.fmts).length,img:A('img',st.rate,st.fmts).length,vid:A('vid',st.rate,st.fmts).length};
+  const fc={};[...FMT_IMG,...FMT_VID].forEach(f=>fc[f]=RL.filter(x=>mType(x,st.type)&&mRate(x,st.rate)&&FMT_OF(x)===f).length);
+  const B=RL.filter(x=>mType(x,st.type)&&mFmt(x,st.fmts)),rc={0:B.length,'-1':B.filter(x=>!x.r).length};[1,2,3,4,5].forEach(n=>rc[n]=B.filter(x=>x.r>=n).length);
+  return{list:A(st.type,st.rate,st.fmts),tc,fc,rc,active:(st.rate!==0?1:0)+(st.fmts.length?1:0)}}
+const fmtOff=(f,st)=>st.type==='vid'?FMT_IMG.includes(f):st.type==='img'?FMT_VID.includes(f):false;
+const ST4={type:'all',rate:4,fmts:[]};
+const condText=st=>{const c=[];if(st.rate>0)c.push(`≥${st.rate} 星`);if(st.rate===-1)c.push('未评星');if(st.fmts.length===1)c.push(st.fmts[0]);else if(st.fmts.length>1)c.push(`${st.fmts.length} 种格式`);return c};
+/* 入口按钮：full = 筛选 · ≥4 星 · 2 种格式；count = 筛选 · 2；icon = 漏斗 + 数量徽标 */
+function filterBtn(st,mode,o={}){const c=condText(st),n=c.length,cls=`rb g ${n?'act':o.open?'on':''}`;
+  const cv='<svg class="cv" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"/></svg>';
+  const inner=mode==='full'?`${ic('funnel')}<span>筛选</span>${n?`<span class="sp">·</span><span>${c.join(' · ')}</span>`:''}${cv}`
+   :mode==='count'?`${ic('funnel')}<span>筛选</span>${n?`<span class="sp">·</span><span>${n}</span>`:''}${cv}`
+   :`${ic('funnel')}${n?`<span class="bgd">${n}</span>`:''}`;
+  return`<div class="${cls}">${inner}</div>`}
+/* 顶部筛选组：全部/图片/视频 + 筛选按钮，整组居中。slim：类型只留图标 */
+function filterGroup(st,o={}){const tc=FS(st).tc;
+  const t=(k,icon,label)=>`<div class="${st.type===k?'on':''} ${!tc[k]&&st.type!==k?'off':''}" ${o.slim?'style="padding:0 10px"':''}>${ic(icon)}${o.slim?'':label}<em>${tc[k]}</em></div>`;
   const sg=`<div class="seg g" style="position:relative;left:auto;top:auto;transform:none">${t('all','all','全部')}${t('img','photo','图片')}${t('vid','video','视频')}</div>`;
-  const label=rate===-1?'未评星':`≥${rate}${o.compact?'':' 星'}`;
-  const active=rate!==0;
-  const btn=`<div class="rb g ${o.open?'on':active?'act':''}">${star(14,active&&rate>0)}${active?label:(o.compact?'':'评星')}<svg class="cv" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"/></svg></div>`;
-  return`<div style="position:absolute;${o.left?'left:84px':'left:50%;transform:translateX(-50%)'};top:10px;display:flex;gap:10px;z-index:6">${sg}<div style="position:relative">${btn}${o.menu||''}</div></div>`}
-/* 筛选菜单：不限 / 「星级不低于」+ 五行星星 / 未评星 */
-function rateMenu(sel,hi){const cnt=c=>`<kbd style="font-family:var(--mono);font-size:11.5px;letter-spacing:0">${c}</kbd>`;
-  const txt=(k,label,c)=>`<div class="mi ${hi===k?'on':''}" style="height:26px"><span class="ck">${sel===k?'✓':''}</span>${label}${cnt(c)}</div>`;
-  const stR=n=>`<div class="mi ${hi===n?'on':''}" style="height:26px"><span class="ck">${sel===n?'✓':''}</span><span style="display:flex;gap:2px">${stars5(n,13)}</span>${cnt(atLeast(n))}</div>`;
-  return`<div class="menu gt" style="left:0;top:44px;min-width:218px;z-index:8">${txt(0,'不限',RL.length)}<div class="msep"></div><div class="mhead">星级不低于</div>${[1,2,3,4,5].map(stR).join('')}<div class="msep"></div>${txt(-1,'未评星',unrated)}</div>`}
+  return`<div style="position:absolute;${o.left?'left:84px':'left:50%;transform:translateX(-50%)'};top:10px;display:flex;gap:10px;z-index:6">${sg}<div style="position:relative">${filterBtn(st,o.mode||'full',{open:!!o.panel})}${o.panel||''}</div></div>`}
+/* 备选 b 的另一半：激活的条件以可删除的小标签浮在顶部栏下面 */
+function chipsBar(st){const x='<span class="cx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg></span>';
+  const cs=[];if(st.rate>0)cs.push(`${star(12,1)}≥${st.rate} 星`);if(st.rate===-1)cs.push('未评星');st.fmts.forEach(f=>cs.push(f));
+  return`<div class="cbar">${cs.map(c=>`<div class="cchip g adapt">${c}${x}</div>`).join('')}<div class="cchip g adapt" style="padding:0 12px">清除筛选</div></div>`}
+/* 推荐 a：一个弹出面板，每个筛选种类一个分区（星级 / 格式 / …） */
+function filterPanel(st,o={}){const r=FS(st),n=r.list.length,act=r.active>0;
+  const rl=st.rate===0?'不限':st.rate===-1?'未评星':`不低于 ${st.rate} 星`;
+  const stars=[1,2,3,4,5].map(i=>star(21,st.rate>0&&i<=st.rate,(o.hv&&st.rate<=0&&i<=o.hv)||(o.hv&&st.rate>0&&i<=o.hv&&i>st.rate)?'hv':'')).join('');
+  const chip=f=>{const off=fmtOff(f,st),c=r.fc[f],sel=st.fmts.includes(f);return`<div class="fchip ${sel?'on':''} ${off||(!c&&!sel)?'dis':''}">${f}<em>${off?'—':c}</em></div>`};
+  return`<div class="fpop gt" style="left:0;top:44px">
+   <div class="fhd"><b>筛选</b><span class="fcnt">符合<em>${n}</em>个<small>共 ${RL.length} 个</small></span></div>
+   <div class="fsec"><h6>星级<span>${rl}</span></h6><div class="frate"><div class="fchip ${st.rate===0?'on':''}">不限</div><div class="fstars">${stars}</div><div class="fchip ${st.rate===-1?'on':''}">未评星<em>${r.rc[-1]}</em></div></div></div>
+   <div class="fsec"><h6>格式<span>${st.fmts.length?`已选 ${st.fmts.length} 种`:'不限'}</span></h6><div class="fchips">${FMT_IMG.map(chip).join('')}<i class="fbr"></i>${FMT_VID.map(chip).join('')}</div></div>
+   ${o.more||''}
+   <div class="fft"><div class="flink ${act?'':'dis'}">清除筛选</div><span>即时生效 · ⌘F 开关 · Esc 关闭</span></div></div>`}
+/* 备选 b：原生两级菜单 筛选 ▸ 星级 ▸ / 格式 ▸ */
+function filterMenuNative(st,sub,hi){const r=FS(st),act=r.active>0,cnt=c=>`<kbd style="font-family:var(--mono);font-size:11.5px;letter-spacing:0">${c}</kbd>`;
+  const rl=st.rate===0?'不限':st.rate===-1?'未评星':`≥${st.rate} 星`,fl=st.fmts.length?st.fmts.length===1?st.fmts[0]:`${st.fmts.length} 种`:'不限';
+  const l1=`<div class="menu gt" style="left:0;top:44px;min-width:190px;z-index:8"><div class="mi ${sub==='rate'?'on':''}" style="height:26px"><span class="ck"></span>星级<kbd style="letter-spacing:0">${rl} ▸</kbd></div><div class="mi ${sub==='fmt'?'on':''}" style="height:26px"><span class="ck"></span>格式<kbd style="letter-spacing:0">${fl} ▸</kbd></div><div class="msep"></div><div class="mi ${act?'':'dis'}" style="height:26px"><span class="ck"></span>清除筛选</div></div>`;
+  const fi=f=>`<div class="mi ${hi===f?'on':''}" style="height:26px"><span class="ck">${st.fmts.includes(f)?'✓':''}</span>${f}${cnt(fmtOff(f,st)?'—':r.fc[f])}</div>`;
+  const ri=n=>`<div class="mi" style="height:26px"><span class="ck">${st.rate===n?'✓':''}</span><span style="display:flex;gap:2px">${stars5(n,13)}</span>${cnt(r.rc[n])}</div>`;
+  const l2=sub==='fmt'?`<div class="menu gt" style="left:196px;top:70px;min-width:170px;z-index:8">${FMT_IMG.map(fi).join('')}<div class="msep"></div>${FMT_VID.map(fi).join('')}</div>`
+   :`<div class="menu gt" style="left:196px;top:44px;min-width:190px;z-index:8"><div class="mi" style="height:26px"><span class="ck">${st.rate===0?'✓':''}</span>不限${cnt(r.rc[0])}</div><div class="msep"></div><div class="mhead">星级不低于</div>${[1,2,3,4,5].map(ri).join('')}<div class="msep"></div><div class="mi" style="height:26px"><span class="ck">${st.rate===-1?'✓':''}</span>未评星${cnt(r.rc[-1])}</div></div>`;
+  return l1+l2}
 /* 信息面板：在 infoV2 的最上面加一个“评星”组 */
 function infoV3(it,kind,note){const h=infoV2(it,kind);
   const sec3=`<section><h5>评星</h5><div class="kv"><div style="align-items:center"><span style="display:flex;gap:3px;align-items:center">${stars5(it.r||0,16)}</span><b>${it.r?it.r+' 星':'未评星'}</b></div>${note?`<div><span>保存位置</span><b class="m">${note}</b></div>`:''}</div></section><div class="hr"></div>`;
   return h.replace('<div class="ipb">','<div class="ipb">'+sec3)}
+const crop=(html,x,y,w,h)=>`<div style="width:${w}px;height:${h}px;overflow:hidden;border-radius:16px;position:relative;flex:none;box-shadow:0 0 0 1px rgba(255,255,255,.12)"><div style="position:absolute;left:${-x}px;top:${-y}px">${html}</div></div>`;
+const frO=(tag,name,size,html,reason)=>`<div class="frame"><div class="cap"><span class="tag ${tag==='推荐'?'rec':'alt'}">${tag}</span><b>${name}</b><span>${size}</span><i>${reason}</i></div>${html}</div>`;
 const scaled=(html,w,h,k)=>`<div style="width:${w*k}px;height:${h*k}px;flex:none"><div style="width:${w}px;height:${h}px;transform:scale(${k});transform-origin:0 0">${html}</div></div>`;
 
 const I34=rby('IMG_2034.HEIC'), I31=rby('IMG_2031.HEIC');
 const starSfx=r=>`<span style="color:var(--t3)"> · </span><span style="display:inline-flex;align-items:center;gap:3px;color:#fff">${star(11,1)}${r}</span>`;
-/* 一览窗口：顶部栏含缩放控件（按窗口宽度自动收缩），其余照旧 */
-const FGD=['all',{all:20,img:16,vid:4},0];
-function w3(o){const W=o.w||1280,compact=o.compact??W<900,slim=W<SLIM,left=W<LEFTAL;
-  const zm=o.zm||(W>=ZFULL?'full':W>=ZMENU?'pct':'none');
+/* 顶部栏随窗口宽度收缩（阈值由量出来的控件宽度算出，见 1.2 的规则） */
+const TB={sum:1260,zfull:1180,slim:1050,icon:940,zmenu:890,left:730};
+function tiers(W){return{btn:W>=TB.sum?'full':W>=TB.icon?'count':'icon',zoom:W>=TB.zfull?'full':W>=TB.zmenu?'pct':'none',slim:W<TB.slim,left:W<TB.left}}
+/* 一览窗口：顶部栏含缩放控件和筛选按钮，st 是筛选状态，列表和数量自动跟着变 */
+function w3(o){const W=o.w||1280,compact=o.compact??W<900,T=tiers(W),st=o.st||ST0,R=FS(st);
+  const zm=o.zm||T.zoom;
   const hasZ=o.item&&!o.item.err&&!o.nozoom&&zm!=='none';
   const zcHtml=hasZ?zoomTop(o.pct||38,{mode:zm,...(o.zo||{})}):'';
-  const fg=o.fg||FGD;
-  const extra=(o.nofg?'':filterGroup(fg[0],fg[1],fg[2],{compact:slim,left,...(fg[3]||{})}))+(o.stars!=null?stageStars(o.stars,{nodock:o.nodock,flash:o.flash,pop:o.pop}):'')+(o.extra||'');
-  const {fg:_a,zm:_b,stars:_c,flash:_d,pop:_e,nozoom:_f,nofg:_g,zo:_h,pct:_i,extra:_j,...rest}=o;
-  return win({list:RL,noseg:1,compact,zcHtml,...rest,extra})}
+  const extra=(o.nofg?'':filterGroup(st,{mode:o.bm||T.btn,slim:T.slim,left:T.left,panel:o.panel}))+(o.chips?chipsBar(st):'')+(o.stars!=null?stageStars(o.stars,{nodock:o.nodock,flash:o.flash,pop:o.pop}):'')+(o.extra||'');
+  const {st:_s,bm:_bm,panel:_p,chips:_ch,zm:_b,stars:_c,flash:_d,pop:_e,nozoom:_f,nofg:_g,zo:_h,pct:_i,extra:_j,...rest}=o;
+  return win({list:R.list,noseg:1,compact,zcHtml,...rest,extra})}
 
 /* ---- 1.1 ---- */
 const mainRest=w3({item:I34,nonav:1});
@@ -735,10 +832,14 @@ const badgeBoard=`<div class="board" style="width:1440px;height:250px;padding:36
 const zoomFit=w3({item:I34,stars:4,zo:{hov:'a'}});
 const zoomMenuFrame=w3({item:I34,stars:4,zo:{hov:'p',menu:2,cur:0}});
 const zoom200=w3({item:rby('IMG_2040.HEIC'),zoom:{pos:'38% 42%',size:'260%'},nonav:1,pct:200,stars:3,extra:`<div class="nav-map gt"><div class="m"><img src="${th(by('IMG_2040.HEIC'))}" alt=""><div class="vp" style="left:42px;top:30px;width:62px;height:40px"></div></div></div>`});
-const wMid=w3({w:1100,h:700,item:I34,stars:4,zo:{hov:'p',menu:3,cur:0}});
-const wSlim=w3({w:1000,h:660,item:I34,stars:4,fg:['all',{all:20,img:16,vid:4},4]});
-const wCompact=w3({w:820,h:560,item:I34,stars:4,dw:760,fg:['all',{all:20,img:16,vid:4},4]});
-const wMin=w3({w:640,h:440,item:I34,stars:4,dw:576,extra:moreMenu(0)});
+const STC={type:'all',rate:4,fmts:['JPEG','HEIC']};
+const w1280=w3({item:I34,st:STC,stars:4,zo:{hov:'p'}});
+const w1200=w3({w:1200,h:720,item:I34,st:STC,stars:4});
+const w910=w3({w:910,h:600,item:I34,st:STC,stars:4,dw:850});
+const wMid=w3({w:1100,h:700,item:I34,st:STC,stars:4,zo:{hov:'p',menu:3,cur:0}});
+const wSlim=w3({w:1000,h:660,item:I34,st:STC,stars:4});
+const wCompact=w3({w:820,h:560,item:I34,st:STC,stars:4,dw:760});
+const wMin=w3({w:640,h:440,item:I34,st:STC,stars:4,dw:576,extra:moreMenu(0)});
 const zoomStates=`<div class="board" style="width:1440px;height:250px;padding:36px"><img class="bg" src="../../../design/photos/p1043.jpg" alt="">
  <div class="crow" style="gap:44px;align-items:flex-start">
   <div class="var">${zoomTop(38,{})}适应窗口时（显示实际比例）</div>
@@ -748,12 +849,23 @@ const zoomStates=`<div class="board" style="width:1440px;height:250px;padding:36
   <div class="var">${zoomTop(800,{dmax:1})}到达 800% 上限，+ 置灰</div>
   <div class="var">${zoomTop(38,{mode:'pct'})}窗口 &lt; 1100：只留百分比</div>
  </div></div>`;
-const fsZoom=win({w:1440,h:900,item:I34,list:RL,fs:1,extra:fsTop(I34,RL).replace(seg('all'),filterGroup('all',{all:20,img:16,vid:4},0,{})).replace('<div class="pill g">',zoomTop(38,{})+'<div class="pill g">').replace('9 / 20</div><div class="tools g">','9 / 20'+starSfx(4)+'</div><div class="tools g">')+stageStars(4)+cursorSVG(980,8)});
+const fsZoom=win({w:1440,h:900,item:I34,list:RL,fs:1,extra:fsTop(I34,RL).replace(seg('all'),filterGroup(ST0,{})).replace('<div class="pill g">',zoomTop(38,{})+'<div class="pill g">').replace('9 / 20</div><div class="tools g">','9 / 20'+starSfx(4)+'</div><div class="tools g">')+stageStars(4)+cursorSVG(980,8)});
 
 /* ---- 1.3 筛选 ---- */
-const filterMenuFrame=w3({item:I34,stars:4,fg:['all',{all:20,img:16,vid:4},0,{open:1,menu:rateMenu(0,4)}],extra:cursorSVG(840,208)});
-const filtered=w3({item:I34,list:FL,cur:3,total:7,fg:['all',{all:7,img:5,vid:2},4],stars:4});
-const emptyF=win({item:null,empty:1,list:RL,title:FOLDER,sub:'~/Pictures',nodock:1,noseg:1,extra:filterGroup('vid',{all:2,img:2,vid:0},5)+`<div class="card gt" style="width:420px"><div class="badge-ic" style="background:rgba(255,255,255,.1);margin-bottom:2px">${star(26,0)}</div><h3>没有符合条件的文件</h3><p>当前筛选：视频 · ≥5 星<br>放宽条件，或清除筛选后查看全部文件。</p><div class="btns"><div class="btn pri">清除筛选</div></div></div>`});
+const STR={type:'all',rate:4,fmts:[]},STF={type:'all',rate:0,fmts:['RAW','HEIC']},STV={type:'vid',rate:4,fmts:[]},STE={type:'vid',rate:5,fmts:[]};
+const pNone=w3({item:I34,stars:4,panel:filterPanel(ST0),extra:cursorSVG(808,64)});
+const pRate=w3({item:I34,stars:4,st:STR,panel:filterPanel(STR)});
+const pFmt=w3({item:I34,stars:4,st:STF,panel:filterPanel(STF)});
+const pBoth=w3({item:I34,stars:4,st:STC,panel:filterPanel(STC)});
+const IV=rby('IMG_2032.MOV');
+const pVid=w3({item:IV,st:STV,panel:filterPanel(STV),extra:vbar(IV,0,false)});
+const pAlt=w3({item:I34,stars:4,st:STF,panel:filterMenuNative(STF,'fmt','HEIC')});
+const pMoreSecs=`<div class="fsec" data-ann="示意：第 3 个分区（色标）"><h6>色标<span>不限</span></h6><div style="display:flex;gap:10px">${['#ff453a','#ff9f0a','#ffd60a','#30d158','#8e8e93'].map(c=>`<i class="dot5" style="background:${c}"></i>`).join('')}</div></div><div class="fsec" data-ann="示意：第 4 个分区（日期）"><h6>日期<span>不限</span></h6><div class="fchips"><div class="fchip">今天</div><div class="fchip">本周</div><div class="fchip">本月</div><div class="fchip">自选…</div></div></div>`;
+const pMore=`<div class="annwrap">${w3({item:I34,stars:4,panel:filterPanel(ST0,{more:pMoreSecs})})}</div>`.replace('class="annwrap"','class="annwrap" style="padding-right:220px"');
+const actA=crop(w3({item:I34,st:STC,stars:4,nonav:1}),0,0,1280,110), actB=crop(w3({item:I34,st:STC,stars:4,nonav:1,bm:'icon',chips:1}),0,0,1280,110);
+const entryBoard=`<div class="board" style="width:1440px;height:230px;padding:30px 36px"><img class="bg" src="../../../design/photos/p1043.jpg" alt="">
+ <div class="crow" style="gap:26px;align-items:flex-start">${[['未筛选',ST0,'full'],['只有星级',STR,'full'],['只有格式（1 种）',{type:'all',rate:0,fmts:['RAW']},'full'],['星级 + 2 种格式',STC,'full'],['面板打开中',ST0,'full',1],['缩成数量',STC,'count'],['图标 + 徽标',STC,'icon'],['图标（未筛选）',ST0,'icon']].map(([l,st,m,o])=>`<div class="var"><div style="position:relative">${filterBtn(st,m,{open:o})}</div>${l}</div>`).join('')}</div></div>`;
+const emptyF=win({item:null,empty:1,list:RL,title:FOLDER,sub:'~/Pictures',nodock:1,noseg:1,extra:filterGroup(STE,{})+`<div class="card gt" style="width:420px"><div class="badge-ic" style="background:rgba(255,255,255,.1);margin-bottom:2px">${ic('funnel')}</div><h3>没有符合条件的文件</h3><p>当前筛选：视频 · ≥5 星<br>放宽条件，或清除筛选后查看全部文件。</p><div class="btns"><div class="btn pri">清除筛选</div></div></div>`});
 
 /* ---- 1.4 提示 ---- */
 const toastFail=w3({item:rby('DSC_0812.ARW'),stars:4,extra:`<div class="toast g adapt" style="top:66px;z-index:7">${ic('warn').replace('<svg','<svg style="color:var(--yellow)"')}无法保存星级：此位置不可写</div>`});
@@ -779,28 +891,66 @@ function settingsKeys3(){let h=settings('keys');
   /* 新增一行：Z 切换 */
   h=h.replace(R+'<div class="lb">放大 / 缩小',R+'<div class="lb" data-zrow>适应窗口 ↔ 实际大小（切换）</div><div class="kcs"><span class="kc">Z</span></div></div>'+R+'<div class="lb">放大 / 缩小');
   h=h.replace('<div class="lb" data-zrow>','<div class="lb">');
+  h=h.replace(R+'<div class="lb">显示或隐藏缩略图栏',R+'<div class="lb">打开 / 关闭筛选面板</div><div class="kcs"><span class="kc">⌘F</span></div></div>'+R+'<div class="lb">显示或隐藏缩略图栏');ann('打开 / 关闭筛选面板','v0.3 新增');
   ann('适应窗口 / 实际大小','v0.3 改');ann('适应窗口 ↔ 实际大小（切换）','v0.3 新增');
   ann('进入 / 退出全屏','v0.2');ann('显示或隐藏信息面板','v0.2');ann('移到废纸篓','v0.2');ann('撤销上一次评星 / 删除','v0.2 + v0.3 改');
   const grp=`<div style="display:flex;flex-direction:column;gap:6px"><div class="mhead" style="padding:0 4px">评星</div><div class="grp">${[['<span class="kc">1</span><span>–</span><span class="kc">5</span>','设置星级'],['<span class="kc">0</span>','清除星级']].map(([k,a])=>`<div class="row" data-ann="v0.3 新增" style="min-height:31px;padding:4px 14px"><div class="lb">${a}</div><div class="kcs">${k}</div></div>`).join('')}</div></div>`;
   const anchor='<div style="display:flex;flex-direction:column;gap:6px"><div class="mhead" style="padding:0 4px">浏览</div>';
-  return h.replace(anchor,grp+anchor).replace('height:700px','height:840px')}
+  return h.replace(anchor,grp+anchor).replace('height:700px','height:872px')}
 /* ---- 9.6 菜单 / 导出 ---- */
-function menubar3(open,undo){const menus={
+function menubar3(open,undo,opt){const menus={
+ '一览':[['关于一览',''],['检查更新…','',0,1],'-',['设置…','⌘,'],'-',['隐藏一览','⌘H'],['隐藏其他','⌥⌘H'],['显示全部',''],'-',['退出一览','⌘Q']],
  '文件':[['打开…','⌘O'],['打开最近使用','▸'],'-',['评星','▸',0,1],['导出筛选结果…',''],'-',['在访达中显示','⇧⌘R'],['拷贝文件路径','⌥⌘C'],['共享…',''],'-',['向右旋转','R'],['设为桌面图片',''],'-',['移到废纸篓','⌫',0,0,0,1],'-',['关闭窗口','⌘W']],
  '编辑':[[undo,'⌘Z'],['重做','⇧⌘Z',0,0,1],'-',['拷贝图片','⌘C'],['拷贝文件路径','⌥⌘C'],'-',['全选','⌘A',0,0,1]],
- '显示':[['全部','⌘1',1],['只看图片','⌘2'],['只看视频','⌘3'],'-',['评星筛选','▸'],'-',['适应窗口','⌘9'],['实际大小','⌘0'],['切换适应窗口 / 实际大小','Z'],['放大','⌘+'],['缩小','⌘−'],'-',['缩略图栏','T',1],['信息面板','I'],['环境光背景','',1],'-',['进入全屏幕','F']]};
- const names=['一览','文件','编辑','显示','前往','窗口','帮助'];const x={文件:72,编辑:110,显示:162}[open];
+ '显示':[['全部','⌘1',1],['只看图片','⌘2'],['只看视频','⌘3'],'-',['筛选…','⌘F'],['清除筛选','',0,0,1],'-',['适应窗口','⌘9'],['实际大小','⌘0'],['切换适应窗口 / 实际大小','Z'],['放大','⌘+'],['缩小','⌘−'],'-',['缩略图栏','T',1],['信息面板','I'],['环境光背景','',1],'-',['进入全屏幕','F']]};
+ if(open==='一览'&&opt&&opt.upd){menus['一览'].unshift(['<span style="display:inline-block;width:7px;height:7px;border-radius:4px;background:var(--accent);margin-right:7px"></span>有新版本 v0.3.1…','',0,0],'-');menus['一览'][3][3]=0}
+ const names=['一览','文件','编辑','显示','前往','窗口','帮助'];const x={一览:44,文件:72,编辑:110,显示:162}[open];
  const sub=open==='文件'?`<div class="menu gt" style="left:${x+250}px;top:${34+25*3+5}px;min-width:170px">${[['1 星','1'],['2 星','2'],['3 星','3'],['4 星','4'],['5 星','5'],'-',['清除星级','0']].map(m=>m==='-'?'<div class="msep"></div>':`<div class="mi ${m[1]==='4'?'on':''}"><span class="ck"></span>${m[0]}<kbd>${m[1]}</kbd></div>`).join('')}</div>`:'';
  return`<div class="win" style="width:760px;height:500px;border-radius:14px"><img src="../../../design/photos/p1015.jpg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.7)">
   <div style="position:absolute;left:0;right:0;top:0;height:30px;display:flex;align-items:center;gap:4px;padding:0 14px;background:rgba(20,20,24,.35);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px);font-size:13px"><svg viewBox="0 0 16 20" style="width:13px;height:16px;margin-right:10px" fill="#fff"><path d="M13.3 10.6c0-2.4 2-3.5 2-3.6-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.2-2.8.8-3.5.8-.7 0-1.8-.8-3-.8C3.8 5.3 2.3 6.2 1.5 7.6-.2 10.5 1 14.9 2.7 17.2c.8 1.2 1.7 2.4 3 2.4 1.2 0 1.6-.8 3-.8s1.8.8 3 .8c1.3 0 2.1-1.2 2.9-2.3.9-1.3 1.3-2.6 1.3-2.7 0 0-2.6-1-2.6-4zM11 3.5c.6-.8 1.1-1.9 1-3-.9 0-2.1.6-2.7 1.4-.6.7-1.1 1.8-1 2.9 1 .1 2.1-.5 2.7-1.3z"/></svg>${names.map((n,i)=>`<span style="padding:3px 8px;border-radius:5px;${i==0?'font-weight:700;':''}${n===open?'background:rgba(255,255,255,.22)':''}">${n}</span>`).join('')}</div>
-  <div class="menu gt" style="left:${x}px;top:34px">${menus[open].map(m=>m==='-'?'<div class="msep"></div>':`<div class="mi ${m[3]&&open==='文件'?'on':''} ${m[4]&&open==='编辑'?'dis':''} ${m[5]?'red':''}"><span class="ck">${m[2]?'✓':''}</span>${m[0]}<kbd>${m[1]}</kbd></div>`).join('')}</div>${sub}</div>`}
-const exportSheet=w3({item:I34,list:FL,cur:3,total:7,fg:['all',{all:7,img:5,vid:2},4],stars:4,extra:`<div class="dim"></div><div class="alert gt" style="top:60px;transform:translateX(-50%);width:440px;padding:22px 22px 18px;align-items:stretch;text-align:left"><h3 style="font-size:15px;margin:0">导出 7 个筛选结果</h3><p style="margin:0">筛选条件：≥4 星 · 全部类型。</p>
+  <div class="menu gt" style="left:${x}px;top:34px">${menus[open].map(m=>m==='-'?'<div class="msep"></div>':`<div class="mi ${m[3]&&(open==='文件'||open==='一览')?'on':''} ${m[4]&&(open==='编辑'||open==='显示')?'dis':''} ${m[5]?'red':''}"><span class="ck">${m[2]?'✓':''}</span>${m[0]}<kbd>${m[1]}</kbd></div>`).join('')}</div>${sub}</div>`}
+const exportSheet=w3({item:I34,st:ST4,stars:4,extra:`<div class="dim"></div><div class="alert gt" style="top:60px;transform:translateX(-50%);width:440px;padding:22px 22px 18px;align-items:stretch;text-align:left"><h3 style="font-size:15px;margin:0">导出 7 个筛选结果</h3><p style="margin:0">筛选条件：≥4 星 · 全部类型。</p>
  <div class="grp" style="margin-top:6px"><div class="row"><div class="lb">目标文件夹</div><div class="pop">${ic('folder').replace('<svg','<svg style="width:13px;height:13px;color:var(--t2)"')}~/Pictures/精选</div><div class="btn g" style="height:26px;font-size:12px;padding:0 12px">选择…</div></div>
  <div class="row"><div class="lb">方式<small>拷贝会保留原文件</small></div><div class="sseg"><span class="on">拷贝</span><span>移动</span></div></div></div>
  <div class="mrow" style="margin-top:2px">共 7 个文件，约 1.2 GB；RAW 旁边的 .xmp 会一起处理。</div>
  <div class="btns" style="justify-content:flex-end;width:auto"><div class="btn g" style="flex:none">取消</div><div class="btn pri" style="flex:none;box-shadow:0 0 0 3px rgba(255,255,255,.2)">拷贝 7 个文件</div></div></div>`});
 const exportMoveNote=`<div class="board" style="width:640px;height:150px;padding:28px 36px"><img class="bg" src="../../../design/photos/p1043.jpg" alt=""><div class="crow" style="gap:20px;align-items:flex-start"><div class="var"><div class="sseg"><span>拷贝</span><span class="on">移动</span></div>选“移动”时</div><div class="alert gt" style="position:relative;left:auto;top:auto;transform:none;width:330px;padding:12px 14px;align-items:flex-start;text-align:left;border-radius:14px"><p style="margin:0;font-size:12px;color:var(--t2)">移动后，这 7 个文件会离开当前文件夹（不会进废纸篓）。确认按钮改为“移动 7 个文件”。</p></div></div></div>`;
-const exportDone=w3({item:rby('aurora.jpg'),list:FL,cur:1,total:7,fg:['all',{all:7,img:5,vid:2},4],stars:5,extra:`<div class="toast g adapt" style="top:66px;z-index:7">${ic('check')}已拷贝 7 个文件到“精选”<span style="color:var(--t3)">·</span><a style="margin-left:0">在访达中显示</a></div>`});
+const exportDone=w3({item:rby('aurora.jpg'),st:ST4,stars:5,extra:`<div class="toast g adapt" style="top:66px;z-index:7">${ic('check')}已拷贝 7 个文件到“精选”<span style="color:var(--t3)">·</span><a style="margin-left:0">在访达中显示</a></div>`});
+/* ---- 1.7 更新提醒 ---- */
+/* 新版本提醒：和“快捷键变化”同一族的玻璃提示，浮在顶部栏下面，不盖照片中心。wide = 两行 + 按钮；narrow = 一行胶囊 */
+function updNotice(kind){const bt=(t)=>`<div class="btn blue" style="height:28px;font-size:12px;padding:0 13px;flex:none">${t}</div>`,x=`<div class="x">${ic('x')}</div>`;
+  if(kind==='narrow')return`<div class="hint gt" style="top:60px;z-index:7;width:calc(100% - 32px);max-width:520px;align-items:center;padding:7px 40px 7px 10px;border-radius:22px;gap:10px"><div class="hi" style="width:26px;height:26px;border-radius:13px;background:none">${ic('dl').replace('<svg','<svg style="width:20px;height:20px;color:var(--brand-jade)"')}</div><b style="flex:1;font-size:13px;white-space:nowrap">有新版本 v0.3.1</b>${bt('更新说明')}${x.replace('<div class="x">','<div class="x" style="top:50%;margin-top:-11px">')}</div>`;
+  return`<div class="hint gt" style="top:66px;z-index:7;width:470px;align-items:center;padding:12px 44px 12px 14px"><div class="hi">${ic('dl').replace('<svg','<svg style="color:var(--brand-jade)"')}</div><div style="flex:1;min-width:0"><b>有新版本 v0.3.1</b><p style="margin-top:1px">你正在使用 v0.3.0</p></div>${bt('查看更新说明')}${x.replace('<div class="x">','<div class="x" style="top:50%;margin-top:-11px">')}</div>`}
+/* ⋯ 菜单（宽窗口）：第一项是新版本入口 */
+function moreMenu2(){const it=(l,k,hi)=>`<div class="mi ${hi?'on':''}"><span class="ck"></span>${l}<kbd>${k||''}</kbd></div>`;
+  return`<div class="menu gt" style="right:16px;top:52px;min-width:230px;z-index:9">${it('<span style="display:inline-block;width:7px;height:7px;border-radius:4px;background:var(--accent);margin-right:7px"></span>有新版本 v0.3.1…','',0)}<div class="msep"></div>${it('在访达中显示','⇧⌘R')}${it('拷贝文件路径','⌥⌘C')}${it('设为桌面图片','')}<div class="msep"></div>${it('导出筛选结果…','')}</div>`}
+/* 更新说明：只显示和界面语言一致的那一段（中文 / English），安装段不显示。只支持小标题、列表、粗体、行内代码、链接 */
+const NOTES={
+ zh:`<h3>改进</h3><ul><li><strong>大文件夹读星级更快</strong>：文件夹里有 2000 张以上 RAW 时，星级在后台读取，首张图出现的时间不再受影响。</li></ul><h3>修复</h3><ul><li><strong>RAW 打星偶尔没有生成 <code>.xmp</code></strong>：以前在个别情况下评星后旁边没有出现同名小文件，现在每次评星都会写入。</li><li><strong>筛选时序号不对</strong>：以前在筛选状态下删除当前照片，右上角的序号会错一位，现在序号和总数同步更新。</li><li><strong>窗口很窄时按钮被挡住</strong>：以前窗口缩到最窄，顶部栏的“筛选”按钮会被序号盖住，现在会自动缩成图标。</li></ul><h3>升级须知</h3><ul><li><strong>无需操作</strong>：直接替换应用即可，设置和星级都会保留。</li><li><strong>遇到问题</strong>：欢迎到 <a>GitHub 问题页</a> 告诉我们。</li></ul>`,
+ en:`<h3>Improved</h3><ul><li><strong>Faster ratings in big folders</strong>: with 2,000+ RAW files, ratings are now read in the background, so the first photo appears as quickly as before.</li></ul><h3>Fixed</h3><ul><li><strong>RAW rating sometimes did not create an <code>.xmp</code></strong>: in rare cases no sidecar file appeared next to the photo; it is now written every time.</li><li><strong>Wrong counter while filtering</strong>: deleting the current photo with a filter on left the counter off by one; position and total now update together.</li><li><strong>Buttons hidden in a narrow window</strong>: at the narrowest width the Filter button was covered by the counter; it now collapses to an icon.</li></ul><h3>Upgrade notes</h3><ul><li><strong>Nothing to do</strong>: just replace the app; settings and ratings are kept.</li><li><strong>Found a problem?</strong> Tell us on the <a>GitHub issues page</a>.</li></ul>`,
+ long:`<h3>新功能</h3><ul><li><strong>裁切</strong>：按 C 进入裁切，拖动边框选出要保留的部分。</li><li><strong>保存旋转</strong>：旋转后可以把方向写回文件。</li><li><strong>调整尺寸导出</strong>：导出时可以选长边像素。</li></ul><h3>改进</h3><ul><li><strong>筛选面板</strong>：格式数量随星级实时变化。</li><li><strong>大文件夹</strong>：切换筛选的结果在 0.3 秒内出现。</li><li><strong>信息面板</strong>：RAW 的星级保存位置显示 <code>.xmp</code> 文件名。</li></ul><h3>修复</h3><ul><li><strong>RAW 打星偶尔没有生成 <code>.xmp</code></strong>：现在每次评星都会写入。</li><li><strong>筛选时序号不对</strong>：删除当前照片后序号和总数同步更新。</li><li><strong>窗口很窄时按钮被挡住</strong>：现在会自动缩成图标。</li><li><strong>全屏下五星位置</strong>：不再盖住从底部滑入的缩略图栏。</li></ul><h3>升级须知</h3><ul><li><strong>快捷键</strong>：<code>C</code> 现在是裁切；其他快捷键不变。</li><li><strong>详细说明</strong>：见 <a>完整变更列表</a>。</li></ul>`};
+function releaseSheet(lang,o={}){const en=lang==='en',ver=o.ver||'v0.3.1',date=o.date||'2026-11-24';
+  const body=NOTES[o.long?'long':lang];
+  return`<div class="dim"></div><div class="rsheet gt" style="${o.h?`height:${o.h}px`:''}"><div class="rsh-hd">${appIcon(52)}<div><h3>${en?`Yilan ${ver} is available`:`一览 ${ver} 现已发布`}</h3><div class="ver"><b>v0.3.0</b><i>→</i><b>${ver}</b><u>${en?`Released ${date}`:`${date} 发布`}</u></div></div></div>
+  <div class="md" style="${o.scroll?`padding-top:0`:''}"><div style="${o.scroll?`margin-top:-${o.scroll}px`:''}">${body}</div>${o.scroll?'<i class="rsb" style="top:70px;height:150px"></i>':''}</div>
+  <div class="rsh-ft"><span class="lk">${en?'Skip This Version':'跳过这个版本'}</span><div class="btn g">${en?'Later':'稍后'}</div><div class="btn blue">${en?'Go to Download':'前往下载'}</div></div></div>`}
+const updWide=w3({item:I34,stars:4,extra:updNotice('wide')});
+const updNarrow=w3({w:640,h:440,item:I34,stars:4,dw:576,extra:updNotice('narrow')});
+const updDot=w3({item:I34,stars:4,moreDot:1,extra:moreMenu2()});
+const updMenuApp=menubar3('一览',null,{upd:1});
+const notesZh=w3({item:I34,extra:releaseSheet('zh',{h:540})});
+const notesEn=w3({item:I34,extra:releaseSheet('en',{h:540})});
+const notesLong=w3({item:I34,extra:releaseSheet('zh',{long:1,ver:'v0.4.0',date:'2026-12-15',h:540,scroll:150})});
+const checkMenu=menubar3('一览');
+const checking=w3({item:I34,stars:4,extra:`<div class="chip g adapt" style="top:66px;z-index:7"><div class="spin"></div>正在检查更新…</div>`});
+const upToDate=w3({item:I34,stars:4,extra:`<div class="toast g adapt" style="top:66px;z-index:7">${ic('check')}已是最新版本（v0.3.0）</div>`});
+const checkFail=w3({item:I34,stars:4,extra:`<div class="toast g adapt" style="top:66px;z-index:7">${ic('warn').replace('<svg','<svg style="color:var(--yellow)"')}无法检查更新，请检查网络</div>`});
+function settingsGeneral3(){let h=settings('general');
+  const add=`<div class="grp"><div class="row" data-ann="v0.3 新增"><div class="lb">自动检查更新<small>一览只在检查更新时联网，不会上传任何信息。</small></div><div class="tg on"><i></i></div></div><div class="row" data-ann="v0.3 新增"><div class="lb">上次检查：今天 09:41</div><div class="btn g" style="height:26px;font-size:12px;padding:0 12px">立即检查</div></div></div>`;
+  const a='立即重新打开</div></div></div>\n </div>';
+  if(!h.includes(a))throw new Error('anchor');
+  return h.replace(a,'立即重新打开</div></div></div>'+add+'\n </div>')}
+
 /* ---- 章节 ---- */
 ch('00','封面','v0.3 单独一份设计稿：只含 v0.3 新增和改动的画板。颜色、材质、组件沿用 yilan-design.html 的 01–02 章。',`
 ${fr('封面','1440 × 810',`<div class="cover"><img src="../../../design/photos/p1016.jpg" alt=""><div class="shade"></div>
@@ -808,10 +958,10 @@ ${fr('封面','1440 × 810',`<div class="cover"><img src="../../../design/photos
   ${appIcon(84)}
   <h1>一览<small>v0.3 · 评星与筛选</small></h1>
   <p style="margin:0;color:var(--t2);font-size:16px;line-height:1.6">给每张照片打星，按星级筛选，<br>缩放控件放进顶部栏。macOS 26 · 液态玻璃 · 2026-11-17</p>
-  <div class="toc">${[['1.1','评星：画面、缩略图、信息面板'],['1.2','缩放控件（顶部栏）与窄窗口'],['1.3','评星筛选'],['1.4','提示和首次说明'],['1.5','设置：浏览、快捷键'],['1.6','撤销、菜单与导出筛选结果']].map(([a,b])=>`<div><b>${a}</b>${b}</div>`).join('')}</div>
+  <div class="toc">${[['1.1','评星：画面、缩略图、信息面板'],['1.2','缩放控件（顶部栏）与窄窗口'],['1.3','筛选：星级、格式'],['1.4','提示和首次说明'],['1.5','设置：浏览、快捷键'],['1.6','撤销、菜单与导出筛选结果'],['1.7','更新提醒']].map(([a,b])=>`<div><b>${a}</b>${b}</div>`).join('')}</div>
  </div></div>`)}`);
 
-ch('01','v0.3 评星与筛选','评星（键盘 1–5 / 0，或点画面上的五星）、评星筛选、顶部栏缩放控件、快捷键调整、写入失败和 .xmp 提示、导出筛选结果。亮星用品牌 sun #FFE2A0。',`
+ch('01','v0.3 评星与筛选','评星（键盘 1–5 / 0，或点画面上的五星）、筛选（星级、格式）、顶部栏缩放控件、快捷键调整、写入失败和 .xmp 提示、导出筛选结果、更新提醒。亮星用品牌 sun #FFE2A0。',`
 <h3 class="sub"><span>1.1</span>评星：画面、缩略图、信息面板</h3>
 <div class="frames">
  ${fr('主界面 · 静止','1280 × 800',mainRest,'鼠标没动：左右箭头和底部五星隐藏；顶部栏（含缩放控件）一直在；缩略图上有星角标的是已评星的文件')}
@@ -846,10 +996,13 @@ ${legend([
  ${fr('缩放控件 · 适应窗口（默认宽度）','1280 × 800',zoomFit,'顶部栏右组：[− 38% +] [序号] [工具组]；适应窗口时也显示，显示的是实际缩放比例')}
  ${fr('缩放控件 · 百分比菜单','1280 × 800',zoomMenuFrame,'点百分比向下展开：适应窗口 ⌘9 / 实际大小 ⌘0 / 200%；当前状态前面打勾')}
  ${fr('缩放控件 · 放大 200%','1280 × 800',zoom200,'位置不变；右上角导航图在顶部栏下面，沿用')}
- ${fr('顶部栏 · 1100（< 1200）','1100 × 700',wMid,'第 1 步：缩放控件只留百分比，− / + 进菜单（放大 ⌘+、缩小 ⌘−）')}
- ${fr('顶部栏 · 1000（< 1060）','1000 × 660',wSlim,'第 2 步：类型切换只留图标，评星按钮只留星和值（≥4）')}
- ${fr('顶部栏 · 820（< 920，且 < 900 文件名已隐藏）','820 × 560',wCompact,'第 3 步：缩放整个收进 ⋯ 菜单，顶部栏右组只剩序号和工具组；文件名隐藏是原有规则')}
- ${fr('顶部栏 · 最小宽度 640（< 760）','640 × 440',wMin,'第 4 步：筛选组不再居中，紧跟在红绿灯后面；打开 ⋯ 菜单可见“缩放”组')}
+ ${fr('顶部栏 · 1280（默认宽度，≥ '+TB.sum+'）','1280 × 800',w1280,'筛选按钮写出摘要，缩放控件完整')}
+ ${fr('顶部栏 · 1200（< '+TB.sum+'）','1200 × 720',w1200,'第 1 步：筛选按钮缩成“筛选 · 2”（2 = 生效的筛选种类数）')}
+ ${fr('顶部栏 · 1100（< '+TB.zfull+'）','1100 × 700',wMid,'第 2 步：缩放控件只留百分比，− / + 进菜单（放大 ⌘+、缩小 ⌘−）')}
+ ${fr('顶部栏 · 1000（< '+TB.slim+'）','1000 × 660',wSlim,'第 3 步：全部/图片/视频只留图标；类型数量和右上角序号跟着筛选结果走（3 / 4）')}
+ ${fr('顶部栏 · 910（< '+TB.icon+'）','910 × 600',w910,'第 4 步：筛选按钮缩成漏斗 + 数量徽标')}
+ ${fr('顶部栏 · 820（< '+TB.zmenu+'）','820 × 560',wCompact,'第 5 步：缩放整个收进 ⋯ 菜单；文件名隐藏是原有规则（< 900）')}
+ ${fr('顶部栏 · 最小宽度 640（< '+TB.left+'）','640 × 440',wMin,'第 6 步：筛选组不再居中，紧跟在红绿灯后面；打开 ⋯ 菜单可见“缩放”组')}
  ${fr('缩放控件 · 状态','1440 × 250',zoomStates,'')}
  ${fr('全屏 · 鼠标移到顶部','1440 × 900',fsZoom,'缩放控件和序号、工具组一起随顶部栏滑下，序号里带星级')}
 </div>
@@ -858,23 +1011,39 @@ ${legend([
  ['显示','顶部栏显示它就显示，适应窗口时也显示；随顶部栏一起淡出（开启“自动隐藏控件”时）。没有图片（空文件夹、出错）时不显示。全屏时在鼠标移到屏幕顶部才滑下的那一栏里。'],
  ['操作','点 − 或 + 按 ⌘− / ⌘+ 同样的步长缩放；点百分比弹出菜单，菜单向下展开、右对齐。到达上限 800% 时 + 置灰，到达下限时 − 置灰。'],
  ['菜单和快捷键','适应窗口 ⌘9、实际大小 ⌘0、200%；适应窗口时前面打勾。单键 Z 在适应窗口和实际大小之间切换（和双击图片一样）。数字键 0、1 不再缩放，留给评星。'],
- ['窄窗口怎么收（按顺序）','① 窗口宽度 < 1200：缩放控件只留百分比（38% ⌄），− / + 进它的菜单。② < 1060：全部/图片/视频只留图标，评星按钮只留星和值（≥4）。③ < 920：缩放控件整个收进 ⋯ 菜单的“缩放”组。④ < 760：筛选组不再在窗口中间，改为紧跟红绿灯。另有原有规则：< 900（Theme.compactWidth）隐藏文件名。'],
- ['为什么这样收','缩放有快捷键（⌘+ ⌘− ⌘9 ⌘0 Z）和双击图片，收进菜单代价最小，所以最先收；筛选和序号告诉你“现在看的是哪些、第几张”，要一直看得见，最后才动。先让缩放变窄，再让筛选变窄，再拿走缩放，最后才改筛选的位置。按最宽的情况（序号带“· ★4”）逐个宽度量过，控件之间至少留 8 点，没有重叠和裁切。'],
+ ['窄窗口怎么收（按顺序）','① 窗口宽度 < '+TB.sum+'：筛选按钮从摘要缩成“筛选 · 2”。② < '+TB.zfull+'：缩放控件只留百分比。③ < '+TB.slim+'：全部/图片/视频只留图标。④ < '+TB.icon+'：筛选按钮缩成漏斗 + 数量徽标。⑤ < '+TB.zmenu+'：缩放整个收进 ⋯ 菜单。⑥ < '+TB.left+'：筛选组不再居中，紧跟红绿灯。另有原有规则：< 900（Theme.compactWidth）隐藏文件名。'],
+ ['为什么这样收','筛选摘要和缩放都能在别处找到（面板、⋯ 菜单、快捷键），所以最先让位；全部/图片/视频是最常用的切换，留到最后才缩成图标，筛选入口始终保留（至少是漏斗 + 徽标，徽标有数字就说明有筛选在生效）。阈值是按最宽的情况（筛选摘要最长、序号带“· ★4”）量出每个控件的宽度算出来的，控件之间至少留 14 点；1400 到 640 之间逐个宽度都核对过，没有重叠和裁切。'],
 ])}
 
-<h3 class="sub"><span>1.3</span>评星筛选</h3>
+<h3 class="sub"><span>1.3</span>筛选（星级、格式）</h3>
 <div class="frames">
- ${fr('筛选 · 菜单展开','1280 × 800',filterMenuFrame,'挨着 全部/图片/视频：“评星”按钮；菜单分“不限 / 星级不低于（只画星）/ 未评星”，右侧是符合的文件数')}
- ${fr('筛选 · ≥4 星','1280 × 800',filtered,'按钮变成强调色，只写条件“≥4 星”；右上角“3 / 7”是在结果里的位置和结果总数')}
+ ${fr('筛选 · 入口的状态','1440 × 230',entryBoard,'顶部栏里的一个“筛选”按钮：没筛选时是普通玻璃，有筛选就变成强调色并写出摘要')}
+ ${fr('筛选 · 面板打开，什么都没选','1280 × 800',pNone,'点“筛选”或按 ⌘F；面板向下展开，分区：星级、格式；头部是实时结果数，底部是清除筛选')}
+ ${fr('筛选 · 只选星级（不低于 4 星）','1280 × 800',pRate,'点第 4 颗星 = 不低于 4 星，再点一次第 4 颗取消；格式胶囊上的数字同时更新（只算 ≥4 星的）')}
+ ${fr('筛选 · 只选格式（RAW + HEIC）','1280 × 800',pFmt,'格式多选，点一下选中、再点取消；同一种筛选里是“或”，不同种筛选之间是“且”')}
+ ${frO('推荐','筛选 · 星级 + 格式（弹出面板）','1280 × 800',pBoth,'星级和格式一屏看全，调星级阈值一次点击，格式多选不用反复打开；按钮摘要和右上角“2 / 4”同时更新')}
+ ${frO('备选','筛选 · 原生两级菜单（筛选 ▸ 格式 ▸）','1280 × 800',pAlt,'外观最原生；但调星级阈值要点 3 次，格式每选一个菜单就关，多选要反复打开')}
+ ${fr('筛选 · 类型切到“视频”时','1280 × 800',pVid,'图片类的格式变灰、数量显示“—”，不隐藏，列表位置不跳；星级数字只算视频')}
  ${fr('筛选 · 没有符合条件的文件','1280 × 800',emptyF,'筛选组合（视频 · ≥5 星）没有结果；卡片里给出“清除筛选”')}
+ ${fr('筛选 · 可扩展：第 3、第 4 个分区','1280 × 800',pMore,'再加筛选种类就在格式下面追加分区；面板宽度不变，太高时分区区域滚动，头部和底部固定。粉色标签是设计标注')}
+</div>
+<h3 class="sub" style="font-size:16px;margin-top:0"><span>选择</span>顶部栏怎么显示“正在筛选”</h3>
+<div class="frames">
+ ${frO('推荐','按钮自己带摘要','1280 × 110',actA,'入口和状态合一，不多占位置；窄了依次缩成“筛选 · 2”、漏斗 + 徽标（见 1.2）')}
+ ${frO('备选','按钮只留徽标，条件变成可删除的小标签','1280 × 110',actB,'每个条件一键删除、条件多也放得下；但永久压在照片上沿，窄窗口要占一整行')}
 </div>
 ${legend([
- ['条件','不限、星级不低于 1–5 星、未评星；单选。和 全部/图片/视频 同时生效：先选类型，再选评星，结果取交集。'],
- ['数字只在一处','筛选按钮只显示条件，不显示数量；右上角序号显示“位置 / 结果总数”（3 / 7）；类型旁边的数字是结果里各类型的数量。菜单里每项后面是当前文件夹里的文件数。'],
- ['评星后不再符合时','在筛选状态下改了当前照片的星级、使它不再符合条件：这张照片留在原地，直到用户切到别的照片，它才从结果里消失（序号和总数那时更新）。这样改错了还能马上改回来。'],
- ['切换筛选时','留在当前文件；当前文件不符合时，跳到之后第一个符合的文件，之后没有则跳到之前最近的一个。重新打开文件夹时恢复为不限。'],
- ['清除筛选','点卡片里的“清除筛选”，或菜单里选“不限”。清除后回到清除前正在看的文件。'],
- ['快捷键','全部 / 只看图片 / 只看视频仍是 ⌘1 / ⌘2 / ⌘3，不变。评星筛选先不设快捷键，只在菜单和按钮里。'],
+ ['已定方案 · 入口','顶部栏里一个“筛选”按钮（漏斗图标），放在原来评星按钮的位置，筛选组居中不变。没筛选：普通玻璃；有筛选：强调色填充，摘要写出条件，例如“筛选 · ≥4 星 · RAW”，两种以上格式写“2 种格式”，放不下缩成“筛选 · 2”，再窄缩成漏斗 + 数量徽标。不打开面板也能看出有没有筛选、筛的是什么。'],
+ ['面板','非模态，点按钮或 ⌘F 打开，再点一次、按 Esc、点面板外关闭。分区自上而下：头部（“符合 N 个”和总数）、星级、格式、底部（清除筛选）。改动立即生效，没有“确定”。面板打开时 1–5 仍然是给当前照片评星，不会改筛选。'],
+ ['星级分区','一行：[不限] 五颗可点的星 [未评星]。点第 N 颗 = 不低于 N 星，点当前已亮的最后一颗 = 回到不限；悬停时预览。右上小字显示当前值。'],
+ ['格式分区','只列当前文件夹里有的格式，每个带数量；所有 RAW（CR3、NEF、ARW、DNG 等）合成一项“RAW”。多选，同类之间取“或”。数字是在其他筛选条件下的数量，会随选择实时变化；数量为 0 的变灰但保留，位置不跳。'],
+ ['和类型切换的关系','全部/图片/视频保持原样，三种筛选取交集。类型为“图片”时，视频格式（MP4、MOV）变灰、数量显示“—”，反之亦然，不隐藏，列表不会跳动。切换类型时，已选中的、属于另一类的格式自动取消。'],
+ ['数字只在三处','按钮摘要写条件；面板头部写“符合 N 个”；右上角序号写“位置 / 结果总数”（例如 1 / 4）。类型旁边的数字是结果里各类型的数量。'],
+ ['清除筛选','面板底部或“显示”菜单里的“清除筛选”，一次清掉星级和格式（类型切换不动）；空结果卡片里的“清除筛选”同样。没有筛选时置灰。'],
+ ['评星后不再符合时','筛选状态下改了当前照片的星级、使它不再符合：这张照片留在原地，直到用户切到别的照片，它才从结果里消失（序号和总数那时更新）。'],
+ ['切换文件夹','筛选自动重置为不限；结果里没有当前文件时，跳到之后第一个符合的文件，之后没有则跳到之前最近的一个。'],
+ ['可扩展','每个分区 = 小标题 + 当前值 + 控件，纵向排列。以后加色标、日期，只在格式下面追加分区，入口按钮、摘要规则（“筛选 · 2”按生效的种类数算）、清除筛选都不用改。'],
+ ['快捷键','提议 ⌘F 打开 / 关闭筛选面板（macOS 里 ⌘F 是“查找 / 筛选”的惯例）。已核对：YilanApp.swift 的菜单快捷键（⌘, ⌘O ⇧⌘R ⌥⌘C R ⇧R ⌫ ⌘Z ⇧⌘Z ⌘1–3 ⌘+ ⌘− T I F ↑ ↓ Home End）和 BrowserModel.swift 的按键处理（⌫ ⌘⌫ Esc；⌘ + ⌘1–3 ⌘= ⌘−；方向键、PageUp/PageDown、Home、End；单键 0 1 T R I F；视频的空格 J L M；删除确认里的 Return Esc 空格）里都没有 ⌘F。已经计划占用的还有：1–5、0（评星）、Z、⌘0、⌘9。'],
 ])}
 
 <h3 class="sub"><span>1.4</span>提示和首次说明</h3>
@@ -904,7 +1073,7 @@ ${legend([
  ${fr('菜单 · 编辑（刚评过星）','760 × 500',menubar3('编辑','撤销“评星”'),'⌘Z 也撤销评星：菜单名随最近一次操作变化')}
  ${fr('菜单 · 编辑（刚删除过）','760 × 500',menubar3('编辑','撤销“移到废纸篓”'),'最近一次是删除时显示这一条；评星和删除按时间顺序依次撤销')}
  ${fr('菜单 · 文件','760 × 500',menubar3('文件'),'评星子菜单（1–5、清除星级）；“导出筛选结果…”只在有筛选时可用')}
- ${fr('菜单 · 显示','760 × 500',menubar3('显示'),'评星筛选子菜单；适应窗口 ⌘9、实际大小 ⌘0、切换 Z；类型切换仍是 ⌘1–3')}
+ ${fr('菜单 · 显示','760 × 500',menubar3('显示'),'筛选… ⌘F 和清除筛选；适应窗口 ⌘9、实际大小 ⌘0、切换 Z；类型切换仍是 ⌘1–3')}
  ${fr('导出 · 确认','1280 × 800',exportSheet,'窗口顶部落下的表单：选文件夹、选拷贝或移动')}
  ${fr('导出 · 选“移动”时','640 × 150',exportMoveNote,'')}
  ${fr('导出 · 完成','1280 × 800',exportDone,'完成后显示结果提示，可直接在访达中显示')}
@@ -915,6 +1084,32 @@ ${legend([
  ['拷贝和移动','默认拷贝（保留原文件）。选移动时按钮改为“移动 N 个文件”，并提示“文件会离开当前文件夹”（不进废纸篓）。同名文件自动加序号，不覆盖。'],
  ['完成','导出完成后显示提示“已拷贝 N 个文件到‘文件夹名’ · 在访达中显示”，4 秒后淡出。导出过程较长时顶部显示进度条（沿用加载进度样式）。'],
 ])}
+<h3 class="sub"><span>1.7</span>更新提醒</h3>
+<div class="frames">
+ ${fr('新版本提醒 · 启动后','1280 × 800',updWide,'启动后台检查到新版本：浮在顶部栏下面的玻璃提示，不挡照片中心，不打断操作；点 × 关闭')}
+ ${fr('新版本提醒 · 窄窗口 640','640 × 440',updNarrow,'窗口窄时收成一行：只留“有新版本 v0.3.1”、“更新说明”和 ×；位置在顶部栏正下方，照片中心不被盖住')}
+ ${frO('推荐','关掉提示后 · ⋯ 按钮上的小点 + ⋯ 菜单里的入口','1280 × 800',updDot,'留在窗口里、很安静，不用记得去菜单栏找；顶部栏随控件自动隐藏时小点也一起隐藏，不打扰看图')}
+ ${frO('备选','关掉提示后 · 只在“一览”菜单里放入口','1280 × 800',updMenuApp,'窗口里完全没有痕迹；但用户不打开菜单就不会发现，等于重新错过了提醒')}
+ ${fr('更新说明 · 中文界面','1280 × 800',notesZh,'表单挂在窗口上：当前版本 → 新版本、发布日期，下面是更新说明；按钮“前往下载”（主按钮）、“稍后”、“跳过这个版本”')}
+ ${fr('更新说明 · 英文界面','1280 × 800',notesEn,'同一个表单；只显示英文那一段（New / Improved / Fixed / Upgrade notes），安装段不显示')}
+ ${fr('更新说明 · 内容较长时','1280 × 800',notesLong,'示例：一个大版本的说明（有“新功能”）；超出的部分在表单里滚动，顶部和底部渐隐，页脚按钮不动')}
+ ${fr('菜单 · 一览 › 检查更新…','760 × 500',checkMenu,'随时可用，不需要先打开文件夹')}
+ ${fr('手动检查 · 正在检查','1280 × 800',checking,'点了之后立刻出现，通常不到 1 秒；检查期间可以继续看图')}
+ ${fr('手动检查 · 已是最新版本','1280 × 800',upToDate,'提示条，4 秒后淡出')}
+ ${fr('手动检查 · 无法检查更新','1280 × 800',checkFail,'没有网络或检查失败；只在手动检查时提示，自动检查失败不提示')}
+ ${fr('设置 · 通用（自动检查更新）','820 × 700',`<div class="annwrap">${settingsGeneral3()}</div>`,'新增“自动检查更新”（默认开）和“立即检查”。粉色标签是设计标注，不属于界面')}
+</div>
+${legend([
+ ['新版本提醒','启动后在后台检查（距上次不足 24 小时跳过），检查不影响打开图片；没网或失败时什么都不提示。发现新版本才出现提示：和“快捷键变化”同一族的玻璃提示，浮在顶部栏下面，宽 470（窄窗口收成一行）。不弹对话框、不压暗背景、不阻止任何操作。点“查看更新说明”打开更新说明，点 × 关闭。'],
+ ['两个提示同一次启动都要出现时','先出“快捷键变化”，更新提醒顺延到下一次启动，不叠在一起（一次只出一个提示）。这样刚升级的用户先看懂按键变了，再被问要不要更新。'],
+ ['关掉之后','点 × 关闭、没有选“稍后”或“跳过”：⋯ 按钮右上角出现一个很小的强调色点，⋯ 菜单第一项是“有新版本 v0.3.1…”，点开就是更新说明。这个点一直在，直到用户看了说明、选了稍后或跳过；下次启动提醒重新出现。'],
+ ['为什么更新说明用表单','表单挂在当前窗口上，和删除确认、导出表单是同一种，不多一个窗口要管理；任务很短（读一读、点一下按钮），不需要边看图边读。手动“检查更新…”时即使只开着欢迎窗口，也能挂在它上面。读的时候背景压暗，按 Esc = 稍后。'],
+ ['更新说明的内容','顶部：一览 v0.3.1 现已发布，“v0.3.0 → v0.3.1 · 发布日期”。正文按界面语言只显示中文段或英文段，按“新功能 / 改进 / 修复 / 升级须知”分组（没有的组不显示），每条是粗体短名 + 用户能看到的变化。只支持小标题、列表、粗体、行内代码、链接；内容来自网络，只当文字显示，链接用浏览器打开。安装段只在 GitHub 页面显示。内容多时在表单里滚动。'],
+ ['三个按钮','前往下载（主按钮，系统强调色）：用浏览器打开这一版的 GitHub 发布页。稍后：关闭表单，下次启动再提醒。跳过这个版本：不再提醒这一版，出了更高的版本再提醒。'],
+ ['手动检查','菜单“一览 › 检查更新…”。检查中：顶部出现带转圈的小条；已是最新：“已是最新版本（v0.3.0）”；失败：“无法检查更新，请检查网络”；有新版本：直接打开更新说明表单。结果用提示条，不弹对话框，和删除、导出的反馈一致。'],
+ ['设置','设置 › 通用：“自动检查更新”开关（默认开），说明“一览只在检查更新时联网，不会上传任何信息。”；“立即检查”按钮，旁边是“上次检查：今天 09:41”。关掉开关后只有手动检查才联网。'],
+])}
+
 `);
 
 document.getElementById('doc').innerHTML=chapters.join('');
