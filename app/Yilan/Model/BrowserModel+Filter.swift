@@ -50,6 +50,8 @@ extension BrowserModel {
     }
 
     func setRatingCriterion(_ mode: RatingCriterion.Mode) {
+        // 类型是「视频」时不能有星级条件（视频暂不支持评星）：面板置灰，数字键也不起作用
+        guard filter != .videos || mode == .any else { return }
         var f = browseFilter
         f.rating.mode = mode
         setBrowseFilter(f)

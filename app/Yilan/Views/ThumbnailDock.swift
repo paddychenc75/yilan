@@ -38,36 +38,27 @@ struct DockMeta: Equatable {
     var failed: Bool
 }
 
-/// 信息行让位规则（spec R2-05，2026-11-18 改定）：中间给星留出位置，名称和星之间至少 16。
-/// 放不下时：① 先隐藏右边的「大小 · 格式」② 再隐藏尺寸 ③ 最后名称中间截断。
-/// 左边挤、右边还有地方时，尺寸挪到右边一组，而不是直接隐藏。视频中间留空，两边文字位置不变
+/// 信息行让位规则（spec R2-06，2026-11-18 改定）：左边只放名称，尺寸永远在右边一组
+/// 「4032 × 3024 · 2.3 MB · JPEG」。右边放不下时先隐藏「大小 · 格式」，再隐藏尺寸；
+/// 名称放不下就中间截断（悬停显示全名），和星之间至少 16。左右两半互不影响；视频中间留空，两边位置不变
 struct InfoRowLayout: Equatable {
-    enum DimsPlace: Equatable { case left, right, hidden }
-    var dims: DimsPlace
+    var showDims: Bool
     var showTrailing: Bool
-    /// 左边一组最多多宽（名称超出就截断）
+    /// 每一半最多多宽
     var side: CGFloat
 
     static let starsWidth: CGFloat = 110       // 5 颗 × 22
     static let gap: CGFloat = 16
     static let spacing: CGFloat = 8
-    /// 尺寸挪到右边时和「大小 · 格式」之间加一个「·」，多占的宽度
+    /// 尺寸和「大小 · 格式」之间的「·」多占的宽度
     static let separator: CGFloat = 14
 
-    static func decide(width: CGFloat, name: CGFloat, dims: CGFloat?, trailing: CGFloat) -> InfoRowLayout {
+    static func decide(width: CGFloat, dims: CGFloat?, trailing: CGFloat) -> InfoRowLayout {
         let side = max(0, (width - starsWidth) / 2 - gap)
-        let sp = spacing
-        guard let d = dims else {
-            return InfoRowLayout(dims: .hidden, showTrailing: name <= side && trailing <= side, side: side)
-        }
-        // 左边放得下名称 + 尺寸：尺寸在左；右边放得下就显示「大小 · 格式」
-        if name + sp + d <= side { return .init(dims: .left, showTrailing: trailing <= side, side: side) }
-        // 左边挤：尺寸挪到右边，不直接隐藏（右边和名称互不影响，名称照常截断）
-        if d + separator + sp + trailing <= side { return .init(dims: .right, showTrailing: true, side: side) }
-        // 右边放不下两样：① 先隐藏「大小 · 格式」，尺寸留在右边
-        if d <= side { return .init(dims: .right, showTrailing: false, side: side) }
-        // ② 再隐藏尺寸
-        return .init(dims: .hidden, showTrailing: false, side: side)
+        guard let d = dims else { return .init(showDims: false, showTrailing: trailing <= side, side: side) }
+        if d + separator + spacing + trailing <= side { return .init(showDims: true, showTrailing: true, side: side) }
+        // ① 先隐藏「大小 · 格式」 ② 再隐藏尺寸
+        return .init(showDims: d <= side, showTrailing: false, side: side)
     }
 }
 
@@ -88,22 +79,17 @@ struct MetaLine: View {
     var body: some View {
         GeometryReader { geo in
             let hasDims = meta.failed || meta.dimensions != nil
-            let layout = InfoRowLayout.decide(width: geo.size.width, name: nameWidth,
-                                              dims: hasDims ? dimsWidth : nil, trailing: trailingWidth)
+            let layout = InfoRowLayout.decide(width: geo.size.width, dims: hasDims ? dimsWidth : nil, trailing: trailingWidth)
             ZStack {
                 HStack(spacing: 0) {
-                    HStack(spacing: InfoRowLayout.spacing) {
-                        nameText
-                            .truncationMode(.middle)
-                            .frame(minWidth: 44, alignment: .leading)   // 至少保留约 6 个字符
-                            .layoutPriority(1)
-                        if layout.dims == .left { dimsView.fixedSize() }
-                    }
-                    .frame(maxWidth: layout.side, alignment: .leading)
+                    nameText
+                        .truncationMode(.middle)
+                        .frame(maxWidth: layout.side, alignment: .leading)
+                        .help(nameWidth > layout.side ? meta.name : "")   // 截断时悬停显示全名
                     Spacer(minLength: 0)
                     HStack(spacing: InfoRowLayout.spacing) {
-                        if layout.dims == .right { dimsView.fixedSize() }
-                        if layout.dims == .right, layout.showTrailing {
+                        if layout.showDims { dimsView.fixedSize() }
+                        if layout.showDims, layout.showTrailing {
                             Text(verbatim: "·").font(Theme.mono(11, .regular)).foregroundStyle(Theme.text2)
                         }
                         if layout.showTrailing { trailing.fixedSize() }
@@ -112,7 +98,7 @@ struct MetaLine: View {
                 if let onRate {
                     InfoRowStars(rating: rating ?? 0, enabled: canRate, stripHovered: stripHovered,
                                  tipRoomRight: layout.side - (layout.showTrailing ? trailingWidth : 0)
-                                     - (layout.dims == .right ? dimsWidth + InfoRowLayout.spacing + InfoRowLayout.separator : 0),
+                                     - (layout.showDims ? dimsWidth + InfoRowLayout.spacing + InfoRowLayout.separator : 0),
                                  onRate: onRate)
                 }
                 // 测量用，不显示

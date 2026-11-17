@@ -75,6 +75,7 @@ final class UpdateChecker {
     /// deferNotice：这次启动已经显示了快捷键变化提示，新版本提醒顺延到下次启动
     func launchCheck(deferNotice: Bool) async {
         guard Self.isAvailable, settings.autoCheckUpdates else { return }
+        let started = now()
         let due = lastCheck.map { now().timeIntervalSince($0) >= Self.interval } ?? true
         if due {
             let result = await ReleaseClient.check(current: current, transport: transport)
@@ -82,8 +83,26 @@ final class UpdateChecker {
         }
         guard settings.autoCheckUpdates, let release = remindable(cachedRelease) else { return }
         available = release
-        if !deferNotice { noticeVisible = true }
+        // 只在启动时出提示：联网太慢、结果来时已经在看照片了，就只留 ⋯ 上的小点，不打断浏览
+        if deferNotice { return }
+        if now().timeIntervalSince(started) > Self.launchWindow {
+            dotVisible = true
+            return
+        }
+        noticeVisible = true
+        // 用户什么都不做：约 8 秒后自己收成 ⋯ 上的小点（同点 ×）
+        let seconds = noticeSeconds
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            guard let self, self.noticeVisible else { return }
+            self.dismissNotice()
+        }
     }
+
+    /// 启动后多久之内拿到结果才弹提示
+    static let launchWindow: TimeInterval = 10
+    /// 提示停留多久自动收起；测试可以改短
+    var noticeSeconds: Double = 8
 
     /// 记下一次成功的检查；失败什么都不改（下次启动再试）
     private func record(_ result: ReleaseCheckResult) {

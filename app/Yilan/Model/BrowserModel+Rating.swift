@@ -44,7 +44,7 @@ extension BrowserModel {
         guard let item = current, pendingDelete == nil else { return }
         // 视频：1–5 给一句提示，0 什么都不做；不写、不进撤销记录
         guard RatingFileIO.isRatable(item) else {
-            if value > 0 { showToast(symbol: "video", text: String(localized: "视频暂不支持评星"), duration: 1.6) }
+            if value > 0 { showToast(symbol: "video", text: String(localized: "视频暂不支持评星"), solid: true, duration: 1.6) }
             return
         }
         dismissHint(.shortcutsChanged)
@@ -62,7 +62,7 @@ extension BrowserModel {
         if value != old {
             setRating(value, for: item, old: old, recordUndo: true)
             if value == 0 {
-                showToast(symbol: "star", text: String(localized: "已清除星级"), duration: 1.5)
+                showToast(symbol: "star", text: String(localized: "已清除星级"), solid: true, duration: 1.5)
             }
         }
         // 打星后自动下一张（spec R8-02）：只限键盘，相同数字也跳
@@ -150,7 +150,7 @@ extension BrowserModel {
     }
 
     private func showRatingProblem(_ text: String) {
-        showToast(symbol: "exclamationmark.triangle", text: text, tone: .warning, duration: 4)
+        showToast(symbol: "exclamationmark.triangle", text: text, tone: .warning, solid: true, duration: 4)
     }
 
     // MARK: - 按键评星的闪现

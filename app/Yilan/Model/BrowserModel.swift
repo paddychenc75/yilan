@@ -30,6 +30,8 @@ struct Toast: Equatable {
     /// 点了补充说明要做的事；有它时补充说明显示成蓝色可点的链接（“⌘Z 撤销”）
     var action: ToastAction? = nil
     var tone: ToastTone = .normal
+    /// 深色实底（v0.3 新提示：亮照片上也看得清，同更新提醒）
+    var solid = false
     let serial: Int
 }
 
@@ -397,10 +399,15 @@ final class BrowserModel {
         scheduleHide()
     }
 
-    func next() { step(1) }
-    func previous() { step(-1) }
-    func first() { if !items.isEmpty { select(0) } }
-    func last() { if !items.isEmpty { select(items.count - 1) } }
+    // 切换（方向键、Home / End、PageUp / Down、滚轮、箭头按钮）：筛选面板开着时先关掉再切
+    func next() { closePanelForNavigation(); step(1) }
+    func previous() { closePanelForNavigation(); step(-1) }
+    func first() { closePanelForNavigation(); if !items.isEmpty { select(0) } }
+    func last() { closePanelForNavigation(); if !items.isEmpty { select(items.count - 1) } }
+
+    private func closePanelForNavigation() {
+        if filterPanelOpen { closeFilterPanel() }
+    }
     func step(_ delta: Int) {
         guard let i = currentIndex,
               let target = Navigation.target(from: i, delta: delta > 0 ? 1 : -1, count: items.count, wrap: settings.wrapAround)
@@ -712,12 +719,13 @@ final class BrowserModel {
     // MARK: - 提示条
 
     func showToast(symbol: String, text: String, detail: String? = nil, action: ToastAction? = nil,
-                   tone: ToastTone = .normal, duration: Double = 1.6) {
+                   tone: ToastTone = .normal, solid: Bool = false, duration: Double = 1.6) {
         serial += 1
-        toast = Toast(symbol: symbol, text: text, detail: detail, action: action, tone: tone, serial: serial)
+        toast = Toast(symbol: symbol, text: text, detail: detail, action: action, tone: tone, solid: solid, serial: serial)
         toastTask?.cancel()
         toastTask = Task {
-            try? await Task.sleep(for: .seconds(duration))
+            // 截图时（--shot-hold-flash）提示条一直显示
+            try? await Task.sleep(for: .seconds(ShotHooks.holdFlash ? 600 : duration))
             guard !Task.isCancelled else { return }
             toast = nil
         }

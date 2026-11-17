@@ -44,8 +44,10 @@ struct SettingsView: View {
     static let size = CGSize(width: 820, height: 700)
     /// 文件格式页 20 个格式要一屏放下，窗口加高（屏幕不够高时内容区滚动）
     static func size(for pane: Pane) -> CGSize {
-        pane == .formats ? CGSize(width: 820, height: 860) : size
+        pane == .formats ? CGSize(width: 820, height: max(size.height, formatsHeight)) : size
     }
+    /// 文件格式页内容的实际高度（含上下内边距），量出来之前按 860
+    @MainActor static var formatsHeight: CGFloat = 860
 
     @Bindable var settings: AppSettings
     @Bindable var language: LanguageSettings
@@ -156,6 +158,12 @@ struct SettingsView: View {
             .padding(.horizontal, 28)
             .padding(.vertical, 22)
             .frame(maxWidth: .infinity, alignment: .topLeading)
+            // 文件格式页：窗口高度跟着内容走（不留空白），超过屏幕时列表滚动
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+                guard pane == .formats else { return }
+                SettingsView.formatsHeight = height
+                SettingsWindow.shared.fit(to: .formats)
+            }
         }
         .scrollIndicators(.never)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -645,7 +653,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
 
     private static func clamped(_ size: CGSize, on screen: NSScreen?) -> CGSize {
         guard let visible = screen?.visibleFrame else { return size }
-        return CGSize(width: size.width, height: min(size.height, visible.height))
+        return CGSize(width: size.width, height: min(size.height, visible.height - 40))
     }
 
     /// 设计稿：红绿灯在侧边栏里，第一个距窗口左 24，中心距顶 28

@@ -6,6 +6,9 @@ struct RootView: View {
     @State private var model = BrowserModel.shared
     @State private var window: NSWindow?
     @State private var monitors = EventMonitors()
+    /// 筛选面板打开时的左缘（打开期间固定）
+    @State private var panelAnchor: CGFloat?
+    @State private var panelSettled = false
     /// 正在拖入文件：遮罩上的说明
     @State private var drop: DropSummary?
     /// 顶部栏控件的实测宽度（中英文不同），决定收缩到哪一档
@@ -295,7 +298,9 @@ struct RootView: View {
         let center = tier.centerWidth(widths)
         let groupLeft = tier.leftAligned ? TopBarTier.leftEdge : size.width / 2 - center / 2
         let buttonLeft = groupLeft + (tier.segSlim ? widths.segSlim : widths.segFull) + TopBarTier.groupSpacing
-        let left = max(8, min(buttonLeft, size.width - FilterPanel.width - 8))
+        let computed = max(8, min(buttonLeft, size.width - FilterPanel.width - 8))
+        // 打开期间位置不动：按钮上的摘要变长变短会让按钮挪动，面板仍留在打开时的位置（窗口变窄时仍不出界）
+        let left = min(panelAnchor ?? computed, max(8, size.width - FilterPanel.width - 8))
         Color.black.opacity(0.001)
             .frame(width: size.width, height: size.height)
             .onTapGesture { model.closeFilterPanel() }
@@ -309,6 +314,10 @@ struct RootView: View {
             .padding(.leading, left)
             .frame(width: size.width, height: size.height, alignment: .topLeading)
             .onHover { model.setHovering("filterPanel", $0) }
+            // 面板出现后先等布局稳定；之后按钮因摘要变化而挪动时，面板留在原处
+            .task { try? await Task.sleep(for: .milliseconds(400)); panelSettled = true }
+            .onChange(of: computed) { old, _ in if panelSettled, panelAnchor == nil { panelAnchor = old } }
+            .onDisappear { panelAnchor = nil; panelSettled = false }
             .transition(.opacity.combined(with: .offset(y: -6)))
     }
 

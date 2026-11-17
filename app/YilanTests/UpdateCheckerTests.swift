@@ -156,6 +156,22 @@ struct UpdatePolicyTests {
         #expect(again.noticeVisible)
     }
 
+    @Test("结果来得太晚（已经在浏览）：不弹提示，只留小点；提示约 8 秒后自己收成小点")
+    func onlyAtLaunch() async throws {
+        let (u, _, _) = make([.http(200, release("v0.3.1"))])
+        var clock = Date(timeIntervalSince1970: 1_000_000)
+        u.now = { defer { clock = clock.addingTimeInterval(30) }; return clock }   // 每次读时间过去 30 秒
+        await u.launchCheck(deferNotice: false)
+        #expect(!u.noticeVisible && u.dotVisible)
+
+        let (v, _, _) = make([.http(200, release("v0.3.1"))])
+        v.noticeSeconds = 0.05
+        await v.launchCheck(deferNotice: false)
+        #expect(v.noticeVisible)
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(!v.noticeVisible && v.dotVisible)
+    }
+
     @Test("关掉自动检查：启动时不发请求，也不提醒")
     func autoOff() async {
         let (u, t, _) = make([.http(200, release("v0.3.1"))], auto: false)

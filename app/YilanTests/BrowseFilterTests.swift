@@ -198,7 +198,7 @@ struct BrowseFilterBrowserTests {
         m.setRatingCriterion(.stars(5))
         #expect(m.browseFilter.rating.effectiveComparison == .atLeast)
         #expect(m.items.map(\.name) == ["a.jpg"])
-        #expect(m.browseFilter.summaryParts == [String(localized: "≥\(5) 星")])
+        #expect(m.browseFilter.summaryParts == [String(localized: "5 星")])
     }
 
     @Test("清除筛选、换文件夹后回到及以上")
@@ -247,5 +247,38 @@ struct BrowseFilterBrowserTests {
         m.setRatingCriterion(.stars(3))
         m.setRatingCriterion(.any)
         #expect(!m.browseFilter.rating.isActive)
+    }
+
+    @Test("类型是「视频」时不会出现星级条件：切换时清掉，点星和数字键都不起作用")
+    func noRatingWithVideos() {
+        let m = model(["a.jpg", "b.mov"], ratings: [3, 0])
+        // 有星级条件时「视频」的数量是 0，切不过去（按钮置灰）
+        m.setRatingCriterion(.stars(3))
+        m.setFilter(.videos)
+        #expect(m.filter != .videos)
+        m.setRatingCriterion(.any)
+        m.setFilter(.videos)
+        #expect(m.filter == .videos)
+        m.setRatingCriterion(.stars(4))
+        m.filterPanelOpen = true
+        m.filterDigit(2)
+        #expect(!m.browseFilter.rating.isActive)
+        #expect(m.items.map(\.name) == ["b.mov"])
+    }
+
+    @Test("5 星的摘要写「5 星」，不写 ≥5")
+    func fiveSummary() {
+        let m = model(["a.jpg"], ratings: [5])
+        m.setRatingCriterion(.stars(5))
+        #expect(m.browseFilter.summaryParts == [String(localized: "5 星")])
+    }
+
+    @Test("面板开着时切换（方向键、滚轮、箭头按钮都走这里）先关面板")
+    func navigationClosesPanel() {
+        let m = model(["a.jpg", "b.jpg"], ratings: [0, 0])
+        m.filterPanelOpen = true
+        m.next()
+        #expect(!m.filterPanelOpen)
+        #expect(m.current?.name == "b.jpg")
     }
 }

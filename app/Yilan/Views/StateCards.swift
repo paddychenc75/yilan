@@ -135,7 +135,20 @@ struct ToastView: View {
         .foregroundStyle(.white)
         .padding(.horizontal, 16)
         .frame(height: 34)
-        .regularGlass(Capsule())
+        .background {
+            if toast.solid {
+                Capsule().fill(Color.black.opacity(0.72))
+                    .overlay(Capsule().strokeBorder(Color.white.opacity(0.12), lineWidth: 1))
+            }
+        }
+        .modifier(GlassIfNeeded(enabled: !toast.solid))
+    }
+}
+
+private struct GlassIfNeeded: ViewModifier {
+    let enabled: Bool
+    func body(content: Content) -> some View {
+        if enabled { content.regularGlass(Capsule()) } else { content }
     }
 }
 

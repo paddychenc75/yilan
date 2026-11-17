@@ -138,6 +138,7 @@ struct BrowseFilter: Equatable, Sendable {
         switch rating.mode {
         case .stars(let n):
             switch rating.effectiveComparison {
+            case .atLeast where n >= 5: parts.append(String(localized: "5 星", comment: "筛选面板：选了 5 星时只有一种意思"))
             case .atLeast: parts.append(String(localized: "≥\(n) 星", comment: "筛选按钮摘要：星级不低于 N"))
             case .exactly: parts.append(String(localized: "仅 \(n) 星", comment: "筛选按钮摘要：星级正好是 N"))
             }

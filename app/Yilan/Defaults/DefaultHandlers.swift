@@ -405,7 +405,7 @@ final class DefaultHandlers {
     // MARK: - 临时状态
 
     func appName(_ format: HandlerFormat) -> String {
-        if isYilan(format) { return selfApp.name }
+        if isYilan(format) { return String(localized: "一览", comment: "应用名") }
         return current[format]?.name ?? String(localized: "没有应用", comment: "文件格式：这个格式没有应用能打开")
     }
 

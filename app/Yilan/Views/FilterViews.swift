@@ -134,7 +134,7 @@ struct FilterPanel: View {
         let videoOnly = type == .videos
         return VStack(alignment: .leading, spacing: 8) {
             if videoOnly {
-                sectionTitle(Text("星级"), value: Text("视频不支持星级"))
+                sectionTitle(Text("星级"), value: Text("视频暂不支持评星"))
             } else {
                 // 标题右边：「不低于」|「等于」，只对选中的 N 星起作用；不限 / 未评星时置灰
                 HStack {
@@ -214,7 +214,7 @@ struct FilterPanel: View {
                     .foregroundStyle(filter.isActive ? Theme.link : Theme.text3)
                     .disabled(!filter.isActive)
                 Spacer()
-                Text("数字键选星级 · ⌘F 开关 · Esc 关闭").font(.system(size: 11)).foregroundStyle(Theme.text3)
+                Text(type == .videos ? "⌘F 开关 · Esc 关闭" : "数字键选星级 · ⌘F 开关 · Esc 关闭").font(.system(size: 11)).foregroundStyle(Theme.text3)
             }
         }
     }
@@ -291,19 +291,19 @@ struct ComparisonSegments: View {
     var body: some View {
         if level >= 5 {
             Text("5 星", comment: "筛选面板：选了 5 星时只有一种意思")
-                .font(.system(size: 10.5, weight: .medium))
+                .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(Theme.text2)
-                .padding(.horizontal, 8)
-                .frame(height: 20)
+                .padding(.horizontal, 10)
+                .frame(height: 26)
         } else {
             HStack(spacing: 0) {
                 ForEach(RatingCriterion.Comparison.allCases, id: \.self) { c in
                     Button { onSelect(c) } label: {
                         label(c)
-                            .font(.system(size: 10.5, weight: .medium))
+                            .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(c == selected && level > 0 ? .white : Theme.text2)
-                            .padding(.horizontal, 8)
-                            .frame(height: 18)
+                            .padding(.horizontal, 10)
+                            .frame(height: 24)
                             .background(Capsule().fill(c == selected && level > 0 ? Color.white.opacity(0.2) : .clear))
                             .contentShape(Capsule())
                     }

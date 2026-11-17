@@ -319,6 +319,16 @@
         }
       }
     },
+    "⌘F 开关 · Esc 关闭" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘F toggles · Esc closes"
+          }
+        }
+      }
+    },
     "⌘Z 撤销" : {
       "comment" : "删除后提示条里可以点的链接",
       "localizations" : {
@@ -1632,6 +1642,16 @@
         }
       }
     },
+    "已还原 · 由“%@”打开" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restored · Opened by “%@”"
+          }
+        }
+      }
+    },
     "已选 %lld 种" : {
       "localizations" : {
         "en" : {
@@ -2898,6 +2918,16 @@
         }
       }
     },
+    "未改动 · 由“%@”打开" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unchanged · Opened by “%@”"
+          }
+        }
+      }
+    },
     "未评星" : {
       "localizations" : {
         "en" : {
@@ -3262,6 +3292,16 @@
         }
       }
     },
+    "由“%@”打开" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opened by “%@”"
+          }
+        }
+      }
+    },
     "由一览打开" : {
       "localizations" : {
         "en" : {
@@ -3492,6 +3532,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Longitude"
+          }
+        }
+      }
+    },
+    "继续" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue"
           }
         }
       }

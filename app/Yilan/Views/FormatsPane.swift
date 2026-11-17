@@ -51,6 +51,7 @@ struct FormatsPane: View {
                 Spacer(minLength: 0)
                 TriStateBox(on: on, total: formats.count) { model.requestGroup(group) }
                     .disabled(model.isBusy)
+                    .help(on == formats.count ? String(localized: "全部关闭") : String(localized: "全部打开"))
             }
             .padding(.horizontal, 4)
             .padding(.top, 4)
@@ -105,10 +106,10 @@ struct FormatsPane: View {
         case .restored:
             HStack(spacing: 5) {
                 AppIcon(app: model.current[format])
-                Text("已还原 · 由 \(name) 打开").foregroundStyle(Theme.text3)
+                Text("已还原 · 由“\(name)”打开").foregroundStyle(Theme.text3)
             }
         case .unchanged:
-            Text("未改动 · 由 \(name) 打开").foregroundStyle(Theme.yellow)
+            Text("未改动 · 由“\(name)”打开").foregroundStyle(Theme.yellow)
         case .busy:
             HStack(spacing: 5) {
                 ProgressView().controlSize(.mini)
@@ -117,14 +118,12 @@ struct FormatsPane: View {
         case .waiting:
             Text("等待中…").foregroundStyle(Theme.text3)
         case nil:
-            if isOn {
-                Text("由一览打开").foregroundStyle(Theme.text3)
-            } else if model.current[format] == nil {
+            if model.current[format] == nil {
                 Text("没有应用", comment: "文件格式：这个格式没有应用能打开").foregroundStyle(Theme.text3)
             } else {
                 HStack(spacing: 5) {
                     AppIcon(app: model.current[format])
-                    Text("由 \(name) 打开").foregroundStyle(Theme.text3)
+                    Text("由“\(name)”打开").foregroundStyle(Theme.text3)
                 }
             }
         }
@@ -262,7 +261,7 @@ struct FormatsPlanSheet: View {
                 Button("取消") { model.cancelPlan() }
                     .buttonStyle(GrayButtonStyle(height: 28, fontSize: 12.5))
                     .keyboardShortcut(.cancelAction)
-                Button(String(localized: "继续（\(n) 次确认）")) { Task { await model.runPlan() } }
+                Button("继续") { Task { await model.runPlan() } }
                     .buttonStyle(AccentButtonStyle(height: 28, fontSize: 12.5))
                     .keyboardShortcut(.defaultAction)
             }
