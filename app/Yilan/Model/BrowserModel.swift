@@ -163,8 +163,6 @@ final class BrowserModel {
     var ratingsLoaded = false
     /// 当前文件夹能不能写（只读磁盘、写保护卡时 false，spec S-16）
     var folderWritable = true
-    /// 画面五星胶囊：鼠标移动后显示，静止后淡出（spec R2-03）
-    var starBarMouseVisible = false
     /// 按 0–5 时的闪现（spec R1-05）
     var ratingFlash: RatingFlash?
     /// 顶部提示卡片（快捷键变化、.xmp 说明），一次只显示一个（spec U2-03）
@@ -181,12 +179,10 @@ final class BrowserModel {
     @ObservationIgnored let ratingWriter = RatingWriter()
     @ObservationIgnored var ownWrites = OwnWriteLedger()
     @ObservationIgnored var ratingLoadTask: Task<Void, Never>?
-    @ObservationIgnored var starBarTask: Task<Void, Never>?
     @ObservationIgnored var flashTask: Task<Void, Never>?
     /// 同一种写入失败 10 秒内不重复提示（spec S-14）
     @ObservationIgnored var lastWriteFailure: (error: RatingWriteError, at: Date)?
     @ObservationIgnored var hoveringVideoBar = false
-    @ObservationIgnored var hoveringStarBar = false
 
     // MARK: 全屏（BrowserModel+FullScreen）
 
@@ -665,7 +661,6 @@ final class BrowserModel {
 
     /// 鼠标在窗口里移动
     func noteMouseActivity() {
-        showStarBarForMouse()
         if !chromeVisible {
             withAnimation(.easeOut(duration: 0.15)) { chromeVisible = true }
         }
@@ -675,7 +670,6 @@ final class BrowserModel {
     func setHovering(_ control: String, _ hovering: Bool) {
         if hovering { hoveredControls.insert(control) } else { hoveredControls.remove(control) }
         if control == "vbar" { setHoveringVideoBar(hovering) }
-        if control == "stars" { setHoveringStarBar(hovering) }
         if hovering {
             hideTask?.cancel()
             hideTask = nil

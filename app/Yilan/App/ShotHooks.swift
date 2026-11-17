@@ -34,6 +34,9 @@ enum ShotHooks {
     static let hint: String? = value("shot-hint")
     static let stripHidden = value("shot-strip") == "hidden"
     static let seedRatings = CommandLine.arguments.contains("--shot-seed-ratings")
+    /// `--shot-row-hover=4` 信息行里的星摆成鼠标停在第 4 颗的样子；`--shot-hold-flash` 闪现的胶囊一直显示
+    static let rowHover: Int? = value("shot-row-hover").flatMap(Int.init)
+    static let holdFlash = CommandLine.arguments.contains("--shot-hold-flash")
     static let filterSpec: String? = value("shot-filter")
     static let filterPanel = CommandLine.arguments.contains("--shot-filter-panel")
     static let windowSize: CGSize? = value("shot-window").flatMap { text in
@@ -55,6 +58,8 @@ enum ShotHooks {
     static let hint: String? = nil
     static let stripHidden = false
     static let seedRatings = false
+    static let rowHover: Int? = nil
+    static let holdFlash = false
     static let filterSpec: String? = nil
     static let filterPanel = false
     #endif

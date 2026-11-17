@@ -49,10 +49,7 @@ enum ShotRunner {
                 model.setBrowseFilter(f)
             }
             if ShotHooks.filterPanel { model.filterPanelOpen = true }
-            if ShotHooks.showStars {
-                model.setHoveringStarBar(true)
-                model.starBarMouseVisible = true
-            }
+            if ShotHooks.showStars { model.flash(nil) }
             switch ShotHooks.hint {
             case "shortcuts": model.enqueueHint(.shortcutsChanged)
             case "xmp": model.enqueueHint(.sidecarCreated("DSC_0812.xmp"))

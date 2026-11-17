@@ -87,34 +87,28 @@ struct StarRow: View {
     }
 }
 
-/// 画面上的五星胶囊（设计稿 .rate）：高 38，圆角 19，左右 14，星 22、间距 4；深色玻璃
+/// 按键评星时闪现的五星胶囊（设计稿 .rate，spec R3a）：高 38，圆角 19，左右 14，星 22、间距 4；深色玻璃；不能点
 struct StarBar: View {
     let rating: Int
     let enabled: Bool
     let flash: RatingFlash?
-    let onRate: (Int) -> Void
-    let onDisabledTap: () -> Void
 
     var body: some View {
         let flashing = flash != nil
-        StarRow(rating: rating, size: 22, spacing: 4, enabled: enabled, flash: flash) { value in
-            if enabled { onRate(value) } else { onDisabledTap() }
-        }
-        .padding(.horizontal, 14)
-        .frame(height: 38)
-        .background(Capsule().fill(LinearGradient(
-            colors: [Color(red: 44 / 255, green: 44 / 255, blue: 50 / 255).opacity(0.62),
-                     Color(red: 28 / 255, green: 28 / 255, blue: 32 / 255).opacity(0.68)],
-            startPoint: .top, endPoint: .bottom)))
-        .glassEffect(.regular, in: Capsule())
-        .overlay(Capsule().stroke(flashing ? Theme.Brand.sun.opacity(0.6) : Color.white.opacity(0.16), lineWidth: 1))
-        .shadow(color: Theme.Brand.sun.opacity(flashing ? 0.26 : 0), radius: 13)
-        .shadow(color: .black.opacity(0.3), radius: 14, y: 8)
-        .opacity(enabled ? 1 : 0.4)
-        .animation(.easeOut(duration: 0.2), value: flashing)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text("评星"))
-        .accessibilityValue(rating > 0 ? Text("\(rating) 星", comment: "星级值") : Text("未评星"))
+        StarRow(rating: rating, size: 22, spacing: 4, enabled: false, flash: flash) { _ in }
+            .allowsHitTesting(false)
+            .padding(.horizontal, 14)
+            .frame(height: 38)
+            .background(Capsule().fill(LinearGradient(
+                colors: [Color(red: 44 / 255, green: 44 / 255, blue: 50 / 255).opacity(0.62),
+                         Color(red: 28 / 255, green: 28 / 255, blue: 32 / 255).opacity(0.68)],
+                startPoint: .top, endPoint: .bottom)))
+            .glassEffect(.regular, in: Capsule())
+            .overlay(Capsule().stroke(flashing ? Theme.Brand.sun.opacity(0.6) : Color.white.opacity(0.16), lineWidth: 1))
+            .shadow(color: Theme.Brand.sun.opacity(flashing ? 0.26 : 0), radius: 13)
+            .shadow(color: .black.opacity(0.3), radius: 14, y: 8)
+            .animation(.easeOut(duration: 0.2), value: flashing)
+            .accessibilityHidden(true)
     }
 
     /// 胶囊底边离窗口底边（spec R2-02）
@@ -281,5 +275,74 @@ struct KeycapText: View {
         let renderer = ImageRenderer(content: view)
         renderer.scale = max(scale, 2)
         return renderer.nsImage ?? NSImage()
+    }
+}
+
+/// 缩略图栏信息行里的五颗星（设计稿“评星控件：缩略图栏信息行里的星”，spec R2）：
+/// 星 16、间距 3、整行宽 92；未评星淡空心（白 34%，悬停整行时 60%），亮星 sun；
+/// 悬停第 N 颗时第 1…N 颗预览；悬停当前星级那颗时提示“再点一次 = 清除星级”；不可写时 40%，点击给提示
+struct InfoRowStars: View {
+    let rating: Int
+    let enabled: Bool
+    let onRate: (Int) -> Void
+
+    @State private var hovered: Int? = ShotHooks.rowHover
+    @State private var rowHovered = ShotHooks.rowHover != nil
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(1...5, id: \.self) { n in
+                star(n)
+                    .frame(width: 19, height: 24)   // 热区 19 × 24，相邻不留缝
+                    .contentShape(Rectangle())
+                    .onHover { inside in
+                        if inside { hovered = n } else if hovered == n { hovered = nil }
+                    }
+                    .onTapGesture { onRate(n == rating ? 0 : n) }
+                    .accessibilityElement()
+                    .accessibilityLabel(Text("\(n) 星", comment: "读屏：第 N 颗星"))
+                    .accessibilityAddTraits(.isButton)
+            }
+        }
+        .frame(width: 92, height: 16)
+        .onHover { rowHovered = $0 }
+        .opacity(enabled ? 1 : 0.4)
+        .overlay(alignment: .top) {
+            if enabled, let h = hovered, h == rating, rating > 0 {
+                Text("再点一次 = 清除星级")
+                    .font(.system(size: 11.5, weight: .medium))
+                    .foregroundStyle(.white)
+                    .fixedSize()
+                    .padding(.horizontal, 10)
+                    .frame(height: 26)
+                    .thickGlass(Capsule())
+                    .offset(y: -34)
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.12), value: hovered)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text("评星"))
+        .accessibilityValue(rating > 0 ? Text("\(rating) 星", comment: "星级值") : Text("未评星"))
+    }
+
+    private func star(_ n: Int) -> some View {
+        let line: CGFloat = 1.5 / 24 * 16
+        let preview = enabled && (hovered.map { n <= $0 } ?? false)
+        let lit = n <= rating
+        return ZStack {
+            if preview {
+                StarShape().fill(Theme.Brand.sun.opacity(0.45))
+                StarShape().stroke(Theme.Brand.sun, style: StrokeStyle(lineWidth: line, lineJoin: .round))
+            } else if lit {
+                StarShape().fill(Theme.Brand.sun)
+                StarShape().stroke(Theme.Brand.sun, style: StrokeStyle(lineWidth: line, lineJoin: .round))
+            } else {
+                StarShape().stroke(Color.white.opacity(rowHovered && enabled ? 0.6 : 0.34),
+                                   style: StrokeStyle(lineWidth: line, lineJoin: .round))
+            }
+        }
+        .frame(width: 16, height: 16)
     }
 }

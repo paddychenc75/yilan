@@ -2,6 +2,10 @@ import SwiftUI
 
 /// 底部缩略图栏（设计稿 .dock）：上面一行文件信息，下面横向缩略图
 struct ThumbnailDock: View {
+    /// 信息行中间的五颗星（spec R2）：当前文件的星级（没读出来时 nil）、能不能评、点击
+    var rating: Int? = nil
+    var canRate = false
+    var onRate: ((Int) -> Void)? = nil
     let items: [MediaItem]
     let current: MediaItem?
     let meta: DockMeta
@@ -14,7 +18,7 @@ struct ThumbnailDock: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            MetaLine(meta: meta)
+            MetaLine(meta: meta, rating: rating, canRate: canRate, onRate: onRate)
             ThumbnailStrip(items: items, current: current, fresh: fresh, ratings: ratings, onSelect: onSelect)
                 .frame(height: 62)
         }
@@ -34,29 +38,83 @@ struct DockMeta: Equatable {
 
 struct MetaLine: View {
     let meta: DockMeta
+    var rating: Int? = nil
+    var canRate = false
+    var onRate: ((Int) -> Void)? = nil
+
+    /// 星的整行宽 92，和两边文字至少留 14
+    private static let starsWidth: CGFloat = 92
+    private static let gap: CGFloat = 14
+
+    /// 各段文字的实际宽度（隐藏测量），决定让位
+    @State private var nameWidth: CGFloat = 0
+    @State private var dimsWidth: CGFloat = 0
+    @State private var trailingWidth: CGFloat = 0
 
     var body: some View {
-        HStack(spacing: 16) {
-            HStack(spacing: 8) {
-                Text(meta.name)
-                    .font(.system(size: 11.5, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                if meta.failed {
-                    Text("无法读取").font(.system(size: 11.5)).foregroundStyle(Theme.text2)
-                } else if let d = meta.dimensions {
-                    Text(d).font(Theme.mono(11, .regular)).foregroundStyle(Theme.text2)
+        GeometryReader { geo in
+            // 三段：左（名称 + 尺寸）、中（星，永远在、永远居中）、右（时长 · 大小 · 格式）。
+            // 不够放时：① 先隐藏尺寸 ② 再隐藏右边 ③ 最后名称截断（设计稿“让位顺序”）
+            let side = onRate == nil ? geo.size.width : max(0, (geo.size.width - Self.starsWidth) / 2 - Self.gap)
+            let showDims = nameWidth + 8 + dimsWidth <= side
+            let showTrailing = trailingWidth <= side && nameWidth <= side
+            ZStack {
+                HStack(spacing: 0) {
+                    left(withDimensions: showDims)
+                        .frame(maxWidth: side, alignment: .leading)
+                    Spacer(minLength: 0)
+                    if showTrailing { trailing.fixedSize() }
                 }
+                if let onRate {
+                    InfoRowStars(rating: rating ?? 0, enabled: canRate, onRate: onRate)
+                }
+                // 测量用，不显示
+                ZStack {
+                    nameText.fixedSize().measure { nameWidth = $0 }
+                    if let d = meta.dimensions { dimsText(d).fixedSize().measure { dimsWidth = $0 } }
+                    trailing.fixedSize().measure { trailingWidth = $0 }
+                }
+                .opacity(0)
+                .frame(width: 0, height: 0)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
             }
-            Spacer(minLength: 0)
-            Text(meta.trailing)
-                .font(Theme.mono(11, .regular))
-                .foregroundStyle(Theme.text2)
-                .lineLimit(1)
+            .frame(width: geo.size.width, height: geo.size.height)
         }
         .padding(.horizontal, 4)
         .frame(height: 16)
+    }
+
+    private var nameText: some View {
+        Text(meta.name)
+            .font(.system(size: 11.5, weight: .semibold))
+            .foregroundStyle(.white)
+            .lineLimit(1)
+    }
+
+    private func dimsText(_ d: String) -> some View {
+        Text(d).font(Theme.mono(11, .regular)).foregroundStyle(Theme.text2)
+    }
+
+    private func left(withDimensions: Bool) -> some View {
+        HStack(spacing: 8) {
+            nameText
+                .truncationMode(.middle)
+                .frame(minWidth: 44, alignment: .leading)   // 至少保留约 6 个字符
+                .layoutPriority(1)
+            if meta.failed {
+                Text("无法读取").font(.system(size: 11.5)).foregroundStyle(Theme.text2).fixedSize()
+            } else if withDimensions, let d = meta.dimensions {
+                dimsText(d).fixedSize()
+            }
+        }
+    }
+
+    private var trailing: some View {
+        Text(meta.trailing)
+            .font(Theme.mono(11, .regular))
+            .foregroundStyle(Theme.text2)
+            .lineLimit(1)
     }
 }
 

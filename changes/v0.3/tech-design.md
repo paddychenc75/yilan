@@ -35,7 +35,7 @@
 | `Update/UpdateChecker.swift` | `@MainActor @Observable`：节流、跳过、稍后、小点、手动检查状态；仓库地址只在这里出现一次 |
 | `Views/ZoomControl.swift` | 顶部缩放控件（完整 / 只留百分比）和它的菜单 |
 | `Views/FilterButton.swift`、`Views/FilterPanel.swift` | 筛选按钮三种样子、弹出面板（分区可扩展） |
-| `Views/StarBar.swift` | 画面五星胶囊、信息面板里的星、缩略图角标 `RatingBadge` |
+| `Views/StarBar.swift` | 缩略图栏信息行里的星 `InfoRowStars`（2026-11-17 改定）、按键闪现的胶囊 `StarBar`（不可点）、信息面板里的星、缩略图角标 `RatingBadge` |
 | `Views/TopBarLayout.swift` | 顶部栏收缩档位的纯函数 + 实测宽度 |
 | `Views/HintCard.swift` | 快捷键变化、.xmp、新版本三种提示卡片（同一个外观） |
 | `Views/UpdateSheet.swift` | 更新说明表单、Markdown 块渲染 |
@@ -54,7 +54,7 @@
 | `App/YilanApp.swift` | 菜单（spec 第 14 节）；启动后 3 秒自动检查；`applicationShouldTerminate` 等待未写完的星级（最多 3 秒） |
 | `Views/RootView.swift` | 顶部栏重排（缩放控件、筛选组、收缩）；五星胶囊；提示卡片；空结果卡片；更新表单、导出表单挂载；删除 `ZoomPill` |
 | `Views/TitleBarControls.swift` | `CounterPill` 加「· ★4」；`ToolGroup` 的 ⋯ 菜单加更新项、缩放组、导出；小点 |
-| `Views/ThumbnailDock.swift` | 左上角星级角标；渐隐区内不画（需要知道格子是否完整可见） |
+| `Views/ThumbnailDock.swift` | 左上角星级角标；渐隐区内不画；信息行改成三段（名称 + 尺寸 / 星 / 大小 · 格式），按实测文字宽度决定让位（尺寸 → 大小格式 → 名称截断） |
 | `Views/InfoPanel.swift`、`Model/InfoContent.swift` | 最上面加评星组；拷贝信息加评星行 |
 | `Views/StateCards.swift` | 删 `ZoomPill`；加「没有符合条件的文件」卡片、检查更新小条 |
 | `Views/SettingsView.swift`、`Views/ShortcutsPane.swift`、`Views/WelcomeAndDrop.swift` | 新设置项；快捷键列表改新按键 |
@@ -337,6 +337,10 @@ struct UndoHistory { entries（最多 100）; var menuTitle; push; pop; removeAl
 | 7 | 对照设计稿逐画板验收、中英文、640 宽度、2000 文件性能对比、Lightroom 实测（如有条件） | 可以写更新说明 |
 
 R8、R9 是「尽量做」，按负责人「先发布、余下放到下个补丁版本」的偏好，阶段 6 来不及时可以移到 v0.3.1，不影响前面的阶段。
+
+## 11a. 2026-11-17 评星控件位置改定
+
+PRD R2 / R3a 改为：可点的星放进缩略图栏信息行；画面胶囊只在按 0–5 时闪现（`AppSettings.flashRatingOnStage`，默认开），不可点。实现上删掉了鼠标移动时显示胶囊的计时逻辑（原 PD-01），`BrowserModel.flash(_:)` 只在键盘评星时调用，设置关掉或鼠标停在视频控制条上时直接返回。截图钩子：`--shot-row-hover=N`（信息行悬停样子）、`--shot-hold-flash`（胶囊一直显示）。
 
 ## 12. 发布前待实测
 

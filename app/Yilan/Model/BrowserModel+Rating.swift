@@ -49,7 +49,8 @@ extension BrowserModel {
             return
         }
         let old = ratings[item.url] ?? 0
-        flash(value)
+        // 只有按键才闪现；鼠标点信息行里的星不闪（spec R3a）
+        if fromKeyboard { flash(value) }
         if value != old {
             setRating(value, for: item, old: old, recordUndo: true)
             if value == 0 {
@@ -144,13 +145,16 @@ extension BrowserModel {
         showToast(symbol: "exclamationmark.triangle", text: text, tone: .warning, duration: 4)
     }
 
-    // MARK: - 五星胶囊的显示
+    // MARK: - 按键评星的闪现
 
-    /// 闪现约 1 秒（value 为 nil 时显示当前文件自己的星级，用于自动下一张）
+    /// 按 0–5 后画面底部的胶囊闪现约 1 秒（spec R3a）；设置里关掉时不闪。
+    /// value 为 nil 时显示当前文件自己的星级（自动下一张时）
     func flash(_ value: Int?) {
+        guard settings.flashRatingOnStage, !hoveringVideoBar else { return }
         serial += 1
         ratingFlash = RatingFlash(value: value ?? currentRating ?? 0, serial: serial)
         flashTask?.cancel()
+        if ShotHooks.holdFlash { return }
         flashTask = Task {
             try? await Task.sleep(for: .seconds(1))
             guard !Task.isCancelled else { return }
@@ -158,35 +162,10 @@ extension BrowserModel {
         }
     }
 
-    /// 鼠标在窗口里移动：胶囊淡入，静止“隐藏延迟”后淡出（spec R2-03，不管自动隐藏开没开）
-    func showStarBarForMouse() {
-        guard !hoveringVideoBar else { return }
-        if !starBarMouseVisible { withAnimation(.easeOut(duration: 0.15)) { starBarMouseVisible = true } }
-        scheduleStarBarHide()
-    }
-
-    func scheduleStarBarHide() {
-        starBarTask?.cancel()
-        let delay = settings.hideDelay
-        starBarTask = Task {
-            try? await Task.sleep(for: .seconds(delay))
-            guard !Task.isCancelled, !hoveringStarBar else { return }
-            withAnimation(.easeOut(duration: 0.35)) { starBarMouseVisible = false }
-        }
-    }
-
-    /// 鼠标在视频控制条上：胶囊让开（spec R2-05）
+    /// 鼠标在视频进度条上时不闪现（不挡时间气泡）
     func setHoveringVideoBar(_ hovering: Bool) {
         hoveringVideoBar = hovering
-        if hovering {
-            starBarTask?.cancel()
-            withAnimation(.easeOut(duration: 0.2)) { starBarMouseVisible = false }
-        }
-    }
-
-    func setHoveringStarBar(_ hovering: Bool) {
-        hoveringStarBar = hovering
-        if hovering { starBarTask?.cancel() } else { scheduleStarBarHide() }
+        if hovering, ratingFlash != nil { ratingFlash = nil }
     }
 
     // MARK: - 读取
@@ -312,7 +291,6 @@ extension BrowserModel {
         }
         if let i = items.firstIndex(of: item), currentIndex != i { select(i) }
         setRating(change.old, for: item, old: ratings[item.url] ?? change.new, recordUndo: false)
-        flash(change.old)
     }
 
     // MARK: - 提示卡片

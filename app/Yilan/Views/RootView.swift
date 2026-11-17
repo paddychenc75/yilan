@@ -363,19 +363,16 @@ struct RootView: View {
         }
     }
 
-    /// 画面上的五星胶囊（spec R2）：水平居中，底边按缩略图栏 / 视频控制条让开
+    /// 按键评星的闪现胶囊（spec R3a）：只在按 0–5 后的约 1 秒出现，不能点；水平居中，底边按缩略图栏 / 视频控制条让开
     @ViewBuilder
     private func starBar(_ layout: StageLayout) -> some View {
-        let visible = (model.starBarMouseVisible || model.ratingFlash != nil) && model.pendingDelete == nil
-        StarBar(rating: model.currentRating ?? 0, enabled: model.canRateCurrent, flash: model.ratingFlash,
-                onRate: { model.rateCurrent($0, fromKeyboard: false) },
-                onDisabledTap: { model.rateCurrent(1, fromKeyboard: false) })
-            .onHover { model.setHovering("stars", $0) }
+        let visible = model.ratingFlash != nil && model.pendingDelete == nil
+        StarBar(rating: model.ratingFlash?.value ?? model.currentRating ?? 0, enabled: true, flash: model.ratingFlash)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             .padding(.bottom, StarBar.bottomOffset(isVideo: isVideo, stripVisible: model.stripVisible,
                                                    fullScreen: layout.fullScreen))
             .opacity(visible ? 1 : 0)
-            .allowsHitTesting(visible)
+            .allowsHitTesting(false)
             .animation(.easeOut(duration: 0.2), value: visible)
     }
 
@@ -394,6 +391,9 @@ struct RootView: View {
             }
             if model.stripVisible {
                 ThumbnailDock(
+                    rating: model.currentRating,
+                    canRate: model.canRateCurrent && model.current != nil,
+                    onRate: { model.rateCurrent($0, fromKeyboard: false) },
                     items: model.items,
                     current: model.current,
                     meta: dockMeta,

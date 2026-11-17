@@ -809,6 +809,16 @@
         }
       }
     },
+    "再点一次 = 清除星级" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Click again to clear the rating"
+          }
+        }
+      }
+    },
     "写入文件内部（推荐，其他软件可读）" : {
       "localizations" : {
         "en" : {
@@ -3061,6 +3071,16 @@
         }
       }
     },
+    "评星时在画面上闪现星级" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flash the Rating on Screen When Rating"
+          }
+        }
+      }
+    },
     "评星：%@" : {
       "localizations" : {
         "en" : {
@@ -3327,6 +3347,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Off by default. When on, rating with 1–5 or 0 shows the next file right away."
+          }
+        }
+      }
+    },
+    "默认打开。按 0–5 评星后，画面底部居中闪现约 1 秒五星；关掉后画面上不出现任何东西，反馈只在缩略图栏信息行里" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On by default. After rating with 0–5, five stars flash at the bottom of the photo for about a second. When off, nothing appears on the photo; the rating shows only in the thumbnail strip’s info row."
           }
         }
       }

@@ -20,6 +20,7 @@ final class AppSettings {
         static let scrollZooms = "scrollZooms"
         static let confirmBeforeDelete = "confirmBeforeDelete"
         static let autoAdvanceAfterRating = "autoAdvanceAfterRating"
+        static let flashRatingOnStage = "flashRatingOnStage"
         static let ratingStorage = "ratingStorage"
         static let lastLaunchedVersion = "lastLaunchedVersion"
         static let didShowSidecarHint = "didShowSidecarHint"
@@ -65,6 +66,8 @@ final class AppSettings {
 
     /// 打星后自动跳到下一张（spec R8，默认关）
     var autoAdvanceAfterRating: Bool { didSet { defaults.set(autoAdvanceAfterRating, forKey: Key.autoAdvanceAfterRating) } }
+    /// 评星时在画面上闪现星级（spec R3a，默认开）
+    var flashRatingOnStage: Bool { didSet { defaults.set(flashRatingOnStage, forKey: Key.flashRatingOnStage) } }
     /// 星级保存到哪里（spec S-02）
     var ratingStorage: RatingStorageMode { didSet { defaults.set(ratingStorage.rawValue, forKey: Key.ratingStorage) } }
     /// 第一次为 RAW 创建 .xmp 的提示已经出现过（spec S-17）
@@ -89,6 +92,7 @@ final class AppSettings {
             Key.scrollZooms: false,
             Key.confirmBeforeDelete: true,
             Key.autoAdvanceAfterRating: false,
+            Key.flashRatingOnStage: true,
             Key.didShowSidecarHint: false,
         ])
         loopVideo = defaults.bool(forKey: Key.loopVideo)
@@ -107,6 +111,7 @@ final class AppSettings {
         wrapAround = defaults.bool(forKey: Key.wrapAround)
         confirmBeforeDelete = defaults.bool(forKey: Key.confirmBeforeDelete)
         autoAdvanceAfterRating = defaults.bool(forKey: Key.autoAdvanceAfterRating)
+        flashRatingOnStage = defaults.bool(forKey: Key.flashRatingOnStage)
         ratingStorage = defaults.string(forKey: Key.ratingStorage).flatMap(RatingStorageMode.init(rawValue:)) ?? .embedded
         didShowSidecarHint = defaults.bool(forKey: Key.didShowSidecarHint)
     }

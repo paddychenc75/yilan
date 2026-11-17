@@ -231,6 +231,26 @@ struct RatingModelTests {
         #expect(await waitFor { rating(model, "gears.gif") == 2 })
     }
 
+    @Test("闪现只在按键时出现；设置关掉后不闪；鼠标点星不闪（R3a）")
+    func flashRules() async throws {
+        let dir = try MetaFixtures.copy(["IMG_2034.jpg"])
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let settings = AppSettings(defaults: defaults())
+        #expect(settings.flashRatingOnStage)
+        let model = try makeModel(dir, settings: settings)
+        await waitFor { model.ratingsLoaded }
+        model.rateCurrent(2, fromKeyboard: false)
+        #expect(model.ratingFlash == nil)
+        model.rateCurrent(3, fromKeyboard: true)
+        #expect(model.ratingFlash?.value == 3)
+        model.ratingFlash = nil
+        settings.flashRatingOnStage = false
+        model.rateCurrent(4, fromKeyboard: true)
+        #expect(model.ratingFlash == nil)
+        #expect(model.currentRating == 4)
+        await idle(model)
+    }
+
     @Test("打星后自动下一张：键盘评星后跳到下一张，鼠标不跳")
     func autoAdvance() async throws {
         let dir = try MetaFixtures.copy(["IMG_2034.jpg", "IMG_2052.jpg", "aurora.jpg"])

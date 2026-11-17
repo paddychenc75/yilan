@@ -199,6 +199,9 @@ struct SettingsView: View {
             }
         }
         SettingsGroup {
+            SettingsRow("评星时在画面上闪现星级", note: "默认打开。按 0–5 评星后，画面底部居中闪现约 1 秒五星；关掉后画面上不出现任何东西，反馈只在缩略图栏信息行里") {
+                SettingsSwitch(isOn: $settings.flashRatingOnStage)
+            }
             SettingsRow("打星后自动跳到下一张", note: "默认关闭。打开后，按 1–5 或 0 评星会立刻显示下一张") {
                 SettingsSwitch(isOn: $settings.autoAdvanceAfterRating)
             }
