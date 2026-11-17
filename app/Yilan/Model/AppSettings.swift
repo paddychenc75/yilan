@@ -19,6 +19,10 @@ final class AppSettings {
         static let ambientBackground = "ambientBackground"
         static let scrollZooms = "scrollZooms"
         static let confirmBeforeDelete = "confirmBeforeDelete"
+        static let autoAdvanceAfterRating = "autoAdvanceAfterRating"
+        static let ratingStorage = "ratingStorage"
+        static let lastLaunchedVersion = "lastLaunchedVersion"
+        static let didShowSidecarHint = "didShowSidecarHint"
     }
 
     /// 设置里“默认显示”的选项：沿用上次，或者固定一种
@@ -59,10 +63,20 @@ final class AppSettings {
     /// 移到废纸篓前先确认（确认框里勾选“不再询问”会关掉它）
     var confirmBeforeDelete: Bool { didSet { defaults.set(confirmBeforeDelete, forKey: Key.confirmBeforeDelete) } }
 
-    @ObservationIgnored private let defaults: UserDefaults
+    /// 打星后自动跳到下一张（spec R8，默认关）
+    var autoAdvanceAfterRating: Bool { didSet { defaults.set(autoAdvanceAfterRating, forKey: Key.autoAdvanceAfterRating) } }
+    /// 星级保存到哪里（spec S-02）
+    var ratingStorage: RatingStorageMode { didSet { defaults.set(ratingStorage.rawValue, forKey: Key.ratingStorage) } }
+    /// 第一次为 RAW 创建 .xmp 的提示已经出现过（spec S-17）
+    var didShowSidecarHint: Bool { didSet { defaults.set(didShowSidecarHint, forKey: Key.didShowSidecarHint) } }
 
-    init(defaults: UserDefaults) {
+    @ObservationIgnored private let defaults: UserDefaults
+    /// 设置存放的域名（判断“以前用过一览”时只看这个域，不看全局域）
+    @ObservationIgnored private let domainName: String?
+
+    init(defaults: UserDefaults, domainName: String? = nil) {
         self.defaults = defaults
+        self.domainName = domainName
         defaults.register(defaults: [
             Key.loopVideo: false,
             Key.autoplayVideo: false,
@@ -74,6 +88,8 @@ final class AppSettings {
             Key.ambientBackground: true,
             Key.scrollZooms: false,
             Key.confirmBeforeDelete: true,
+            Key.autoAdvanceAfterRating: false,
+            Key.didShowSidecarHint: false,
         ])
         loopVideo = defaults.bool(forKey: Key.loopVideo)
         autoplayVideo = defaults.bool(forKey: Key.autoplayVideo)
@@ -90,6 +106,22 @@ final class AppSettings {
         scrollZooms = defaults.bool(forKey: Key.scrollZooms)
         wrapAround = defaults.bool(forKey: Key.wrapAround)
         confirmBeforeDelete = defaults.bool(forKey: Key.confirmBeforeDelete)
+        autoAdvanceAfterRating = defaults.bool(forKey: Key.autoAdvanceAfterRating)
+        ratingStorage = defaults.string(forKey: Key.ratingStorage).flatMap(RatingStorageMode.init(rawValue:)) ?? .embedded
+        didShowSidecarHint = defaults.bool(forKey: Key.didShowSidecarHint)
+    }
+
+    /// 从 v0.2 升级后第一次启动（spec K-10）：以前用过（存过任何设置或最近打开）、但没记过版本号。
+    /// 调用一次后记下当前版本，之后都返回 false
+    func consumeUpgradeFromV02(currentVersion: String) -> Bool {
+        let previous = defaults.string(forKey: Key.lastLaunchedVersion)
+        defaults.set(currentVersion, forKey: Key.lastLaunchedVersion)
+        guard previous == nil else { return false }
+        let domain = defaults.persistentDomain(forName: domainName ?? AppDefaults.domainName) ?? [:]
+        let usedBefore = [MediaFilter.defaultsKey, Key.startFilter, Key.wrapAround, Key.autoHideControls,
+                          Key.confirmBeforeDelete, Key.scrollZooms, RecentFolders.defaultsKey]
+            .contains { domain[$0] != nil }
+        return usedBefore
     }
 
     /// 启动时的类型
@@ -116,6 +148,13 @@ final class AppSettings {
 /// 测试和截图时可以用启动参数 `--defaults-suite=名字` 换一个独立的存储，不影响真实数据
 @MainActor
 enum AppDefaults {
+    /// 设置所在的域：默认是程序自己的域，`--defaults-suite=` 时是那个套件
+    static let domainName: String = {
+        if let arg = CommandLine.arguments.first(where: { $0.hasPrefix("--defaults-suite=") }),
+           let name = arg.split(separator: "=", maxSplits: 1).last.map(String.init), !name.isEmpty { return name }
+        return Bundle.main.bundleIdentifier ?? "com.yilan.viewer"
+    }()
+
     static let store: UserDefaults = {
         guard let arg = CommandLine.arguments.first(where: { $0.hasPrefix("--defaults-suite=") }),
               let name = arg.split(separator: "=", maxSplits: 1).last.map(String.init), !name.isEmpty,

@@ -18,11 +18,18 @@ struct Toast: Equatable {
     var detail: String? = nil
     /// 点了补充说明要做的事；有它时补充说明显示成蓝色可点的链接（“⌘Z 撤销”）
     var action: ToastAction? = nil
+    var tone: ToastTone = .normal
     let serial: Int
 }
 
 enum ToastAction: Equatable {
     case undoDelete
+}
+
+/// 提示条的图标颜色：普通白色，警告黄色（设计稿“无法保存星级”）
+enum ToastTone: Equatable {
+    case normal
+    case warning
 }
 
 /// 浏览状态：当前文件夹、类型切换、当前项、大图加载、控件显示
@@ -94,7 +101,7 @@ final class BrowserModel {
     @ObservationIgnored private var hideDeadline = ContinuousClock.now
     @ObservationIgnored private var toastTask: Task<Void, Never>?
     @ObservationIgnored private var hoveredControls: Set<String> = []
-    @ObservationIgnored private var serial = 0
+    @ObservationIgnored var serial = 0
     @ObservationIgnored private let ambientCache = NSCache<NSURL, CGImageBox>()
     /// 大图区所在屏幕的长边物理像素（由大图区报告；没报告前按当前屏幕估算）
     @ObservationIgnored var screenMaxPixel: Int?
@@ -115,7 +122,7 @@ final class BrowserModel {
     var pendingDelete: MediaItem?
     /// 确认对话框里“不再询问”的勾选
     var deleteDontAsk = false
-    var undoStack = TrashUndoStack()
+    var undoHistory = UndoHistory()
     /// 一览自己改动文件夹（删除、撤销）的次数：文件夹同步据此丢弃过期的扫描结果
     @ObservationIgnored var localChangeSerial = 0
     /// 正在移到废纸篓或放回：期间再按 ⌫ / ⌘Z 不重复执行
@@ -128,6 +135,39 @@ final class BrowserModel {
     @ObservationIgnored var watcher: FolderWatcher?
     @ObservationIgnored var syncTask: Task<Void, Never>?
     @ObservationIgnored var freshTask: Task<Void, Never>?
+
+    // MARK: 评星（BrowserModel+Rating）
+
+    /// 已经读出来的星级（0 = 未评星）；没有的键表示还没读到
+    var ratings: [URL: Int] = [:]
+    /// 星级全部读完了
+    var ratingsLoaded = false
+    /// 当前文件夹能不能写（只读磁盘、写保护卡时 false，spec S-16）
+    var folderWritable = true
+    /// 画面五星胶囊：鼠标移动后显示，静止后淡出（spec R2-03）
+    var starBarMouseVisible = false
+    /// 按 0–5 时的闪现（spec R1-05）
+    var ratingFlash: RatingFlash?
+    /// 顶部提示卡片（快捷键变化、.xmp 说明），一次只显示一个（spec U2-03）
+    var hint: HintCard?
+    @ObservationIgnored var hintQueue: [HintCard] = []
+    @ObservationIgnored var ratingInfo: [URL: RatingInfo] = [:]
+    /// 磁盘上已经确认的星级（写失败时界面恢复成它）
+    @ObservationIgnored var persistedRatings: [URL: Int] = [:]
+    /// 每个文件还没写完的评星记录条数（写失败时从撤销记录里拿掉）
+    @ObservationIgnored var unconfirmedRatingEntries: [URL: Int] = [:]
+    @ObservationIgnored var pendingRatingWrites = 0
+    @ObservationIgnored var inFlightRatingWrites: [URL: Int] = [:]
+    @ObservationIgnored var sidecars: SidecarIndex = .empty
+    @ObservationIgnored let ratingWriter = RatingWriter()
+    @ObservationIgnored var ownWrites = OwnWriteLedger()
+    @ObservationIgnored var ratingLoadTask: Task<Void, Never>?
+    @ObservationIgnored var starBarTask: Task<Void, Never>?
+    @ObservationIgnored var flashTask: Task<Void, Never>?
+    /// 同一种写入失败 10 秒内不重复提示（spec S-14）
+    @ObservationIgnored var lastWriteFailure: (error: RatingWriteError, at: Date)?
+    @ObservationIgnored var hoveringVideoBar = false
+    @ObservationIgnored var hoveringStarBar = false
 
     // MARK: 全屏（BrowserModel+FullScreen）
 
@@ -201,7 +241,7 @@ final class BrowserModel {
             switch result {
             case .success(let r):
                 // 换了文件夹：之前的删除不能再撤销（文件夹已经不在眼前）
-                if r.folder.standardizedFileURL.path != folderURL?.standardizedFileURL.path { undoStack.removeAll() }
+                if r.folder.standardizedFileURL.path != folderURL?.standardizedFileURL.path { undoHistory.removeAll() }
                 apply(r)
                 if !r.folderUnreadable {
                     recents.record(folder: r.folder, cover: current?.url, itemCount: r.items.count)
@@ -223,8 +263,11 @@ final class BrowserModel {
     /// 显示扫描结果（测试里直接调用，绕过文件扫描）
     func apply(_ result: FolderScanner.Result) {
         Perf.mark("folder scanned")
+        if result.folder.standardizedFileURL.path != folderURL?.standardizedFileURL.path { resetRatings() }
         folderURL = result.folder
         allItems = result.items
+        sidecars = result.sidecars
+        folderWritable = SafeReplace.isWritable(folder: result.folder)
         hasOpenedFolder = true
         recount()
         let opened = result.initialIndex.map { result.items[$0] }
@@ -237,6 +280,7 @@ final class BrowserModel {
         displayedItem = nil
         let index = FilterSelection.index(keeping: opened, in: allItems, newList: items)
         select(index)
+        loadRatings()
     }
 
     /// 按 allItems 重新数“全部 / 图片 / 视频”
@@ -550,6 +594,7 @@ final class BrowserModel {
 
     func zoom(_ action: ZoomCommand.Action) {
         guard current != nil else { return }
+        dismissHint(.shortcutsChanged)
         serial += 1
         zoomCommand = ZoomCommand(action: action, serial: serial)
     }
@@ -574,6 +619,7 @@ final class BrowserModel {
 
     /// 鼠标在窗口里移动
     func noteMouseActivity() {
+        showStarBarForMouse()
         if !chromeVisible {
             withAnimation(.easeOut(duration: 0.15)) { chromeVisible = true }
         }
@@ -582,6 +628,8 @@ final class BrowserModel {
 
     func setHovering(_ control: String, _ hovering: Bool) {
         if hovering { hoveredControls.insert(control) } else { hoveredControls.remove(control) }
+        if control == "vbar" { setHoveringVideoBar(hovering) }
+        if control == "stars" { setHoveringStarBar(hovering) }
         if hovering {
             hideTask?.cancel()
             hideTask = nil
@@ -620,9 +668,9 @@ final class BrowserModel {
     // MARK: - 提示条
 
     func showToast(symbol: String, text: String, detail: String? = nil, action: ToastAction? = nil,
-                   duration: Double = 1.6) {
+                   tone: ToastTone = .normal, duration: Double = 1.6) {
         serial += 1
-        toast = Toast(symbol: symbol, text: text, detail: detail, action: action, serial: serial)
+        toast = Toast(symbol: symbol, text: text, detail: detail, action: action, tone: tone, serial: serial)
         toastTask?.cancel()
         toastTask = Task {
             try? await Task.sleep(for: .seconds(duration))
@@ -638,7 +686,7 @@ final class BrowserModel {
 
     func performToastAction(_ action: ToastAction) {
         switch action {
-        case .undoDelete: Task { await undoDelete() }
+        case .undoDelete: Task { await undoLast() }
         }
     }
 
@@ -675,10 +723,17 @@ final class BrowserModel {
             if isFullScreen { toggleFullScreen(); return true }
             return false
         }
+        // 数字键 1–5 评星、0 清除（spec R1、K-01）：按键码判断，主键盘和小键盘都算；按住不放的重复不算
+        if mods.isEmpty, !event.modifierFlags.contains(.shift), let value = Self.ratingKey(event.keyCode) {
+            if !event.isARepeat { rateCurrent(value, fromKeyboard: true) }
+            return true
+        }
         if mods.contains(.command) {
             switch event.charactersIgnoringModifiers {
             case "=", "+": zoom(.zoomIn); return true
             case "-", "−": zoom(.zoomOut); return true
+            case "0": zoom(.actualSize); return true   // ⌘0 实际大小（spec K-02）
+            case "9": zoom(.fit); return true          // ⌘9 适应窗口
             case "1": setFilter(.all); return true
             case "2": setFilter(.images); return true
             case "3": setFilter(.videos); return true
@@ -694,8 +749,7 @@ final class BrowserModel {
         default: break
         }
         switch event.charactersIgnoringModifiers?.lowercased() {
-        case "0": zoom(.fit); return true
-        case "1": zoom(.actualSize); return true
+        case "z": zoom(.toggle); return true   // Z：适应窗口 ↔ 实际大小（spec K-03）
         case "t":
             withAnimation(.easeInOut(duration: 0.25)) { stripVisible.toggle() }
             return true
@@ -718,6 +772,21 @@ final class BrowserModel {
         case "l": video.skip(by: VideoTransport.skipSeconds); return true
         case "m": video.toggleMute(); return true
         default: return false
+        }
+    }
+}
+
+extension BrowserModel {
+    /// 键码 → 星级：主键盘 0–5（29, 18, 19, 20, 21, 23），小键盘 0–5（82–87）
+    nonisolated static func ratingKey(_ keyCode: UInt16) -> Int? {
+        switch keyCode {
+        case 29, 82: 0
+        case 18, 83: 1
+        case 19, 84: 2
+        case 20, 85: 3
+        case 21, 86: 4
+        case 23, 87: 5
+        default: nil
         }
     }
 }

@@ -46,7 +46,11 @@ struct SettingsView: View {
     @Bindable var settings: AppSettings
     @Bindable var language: LanguageSettings
     // 截图时可以用 `--shot-settings=general` 直接打开某一页
-    @State private var pane: Pane = ShotHooks.settingsPane.flatMap(Pane.init(rawValue:)) ?? .browsing
+    @State private var nav = SettingsNavigation.shared
+    private var pane: Pane {
+        get { nav.pane }
+        nonmutating set { nav.pane = newValue }
+    }
     @State private var search = ""
 
     var body: some View {
@@ -195,6 +199,12 @@ struct SettingsView: View {
             }
         }
         SettingsGroup {
+            SettingsRow("打星后自动跳到下一张", note: "默认关闭。打开后，按 1–5 或 0 评星会立刻显示下一张") {
+                SettingsSwitch(isOn: $settings.autoAdvanceAfterRating)
+            }
+        }
+        ratingStorageGroup
+        SettingsGroup {
             SettingsRow("自动隐藏控件", note: "鼠标静止一段时间后，只显示图片") {
                 SettingsSwitch(isOn: $settings.autoHideControls)
             }
@@ -224,6 +234,28 @@ struct SettingsView: View {
             }
         }
         defaultViewerGroup
+    }
+
+    /// 星级保存到哪里（spec SE-01、S-02）：两个单选 + 一行说明
+    private var ratingStorageGroup: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("星级保存到哪里")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Theme.text3)
+                .padding(.horizontal, 4)
+            SettingsGroup {
+                SettingsRadioRow(title: "写入文件内部（推荐，其他软件可读）",
+                                 note: "JPEG、PNG、HEIC 等直接写进文件的元数据，其他软件（如 Lightroom）也能读到",
+                                 selected: settings.ratingStorage == .embedded) { settings.ratingStorage = .embedded }
+                SettingsRadioRow(title: "一律使用旁边的 .xmp 小文件",
+                                 note: "不改动图片本身；换到别的软件时要连同 .xmp 一起带走",
+                                 selected: settings.ratingStorage == .sidecar) { settings.ratingStorage = .sidecar }
+            }
+            Text("RAW（ARW、CR3、NEF 等）不能写入文件内部，始终使用旁边的 .xmp。")
+                .font(.system(size: 11.5))
+                .foregroundStyle(Theme.text3)
+                .padding(.horizontal, 4)
+        }
     }
 
     private var defaultViewerGroup: some View {
@@ -402,6 +434,46 @@ struct SettingsSegmented<Value: Hashable>: View {
     }
 }
 
+/// 单选的一行（设计稿 .rd：16 的圆圈，选中时强调色实心 + 白点）
+struct SettingsRadioRow: View {
+    let title: LocalizedStringKey
+    let note: LocalizedStringKey
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(alignment: .top, spacing: 10) {
+                Circle()
+                    .fill(selected ? Theme.accent : Color.white.opacity(0.08))
+                    .overlay(Circle().strokeBorder(Color.white.opacity(selected ? 0 : 0.25), lineWidth: 1))
+                    .overlay(Circle().fill(.white).frame(width: 6, height: 6).opacity(selected ? 1 : 0))
+                    .frame(width: 16, height: 16)
+                    .padding(.top, 1)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.system(size: 13)).foregroundStyle(.white)
+                    Text(note).font(.system(size: 11.5)).foregroundStyle(Theme.text3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+    }
+}
+
+/// 设置窗口当前显示哪一页（“查看快捷键”等地方可以直接跳到某一页）
+@MainActor
+@Observable
+final class SettingsNavigation {
+    static let shared = SettingsNavigation()
+    var pane: SettingsView.Pane = ShotHooks.settingsPane.flatMap(SettingsView.Pane.init(rawValue:)) ?? .browsing
+}
+
 /// 设计稿 .tg：38 × 22 的开关，打开时蓝色
 struct SettingsSwitch: View {
     @Binding var isOn: Bool
@@ -489,6 +561,12 @@ struct SettingsRow<Control: View>: View {
 final class SettingsWindow: NSObject, NSWindowDelegate {
     static let shared = SettingsWindow()
     private var window: NSWindow?
+
+    /// 打开设置并切到某一页
+    func show(pane: SettingsView.Pane) {
+        SettingsNavigation.shared.pane = pane
+        show()
+    }
 
     func show() {
         if window == nil {

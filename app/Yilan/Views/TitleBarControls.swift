@@ -66,9 +66,18 @@ struct FilterControl: View {
 struct CounterPill: View {
     let index: Int
     let total: Int
+    /// 缩略图栏隐藏或全屏时序号后面带星级“· ★4”（spec R3-05）；nil 或 0 不显示
+    var rating: Int? = nil
 
     var body: some View {
-        Text(verbatim: "\(Formatting.count(index + 1)) / \(Formatting.count(total))")
+        HStack(spacing: 0) {
+            Text(verbatim: "\(Formatting.count(index + 1)) / \(Formatting.count(total))")
+            if let rating, rating > 0 {
+                Text(verbatim: " · ").foregroundStyle(Theme.text3)
+                StarShape().fill(Theme.Brand.sun).frame(width: 11, height: 11).padding(.trailing, 3)
+                Text(verbatim: "\(rating)")
+            }
+        }
             .font(Theme.mono(12))
             .foregroundStyle(.white)
             .padding(.horizontal, 14)

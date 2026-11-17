@@ -19,9 +19,7 @@ private func freshDefaults() -> UserDefaults {
 
 /// 把 app/Fixtures/sample 里的几个文件复制到 /tmp 下的新文件夹
 private func fixtureCopy(_ names: [String]) throws -> URL {
-    let source = URL(fileURLWithPath: #filePath)
-        .deletingLastPathComponent().deletingLastPathComponent()
-        .appendingPathComponent("Fixtures/sample")
+    let source = MetaFixtures.sample   // scripts/run-tests.sh 会指向 /tmp 里的镜像
     let dest = URL(fileURLWithPath: "/tmp/yilan-v02-\(UUID().uuidString)")
     try FileManager.default.createDirectory(at: dest, withIntermediateDirectories: true)
     for name in names {
@@ -279,14 +277,14 @@ struct DeleteSelectionTests {
 
     @Test("撤销记录：后删的先撤销")
     func undoStack() {
-        var stack = TrashUndoStack()
+        var stack = UndoHistory()
         #expect(!stack.canUndo)
         let a = TrashEntry(item: fakeItem("a.jpg"), trashedURL: URL(fileURLWithPath: "/tmp/t/a.jpg"))
         let b = TrashEntry(item: fakeItem("b.jpg"), trashedURL: URL(fileURLWithPath: "/tmp/t/b.jpg"))
-        stack.push(a)
-        stack.push(b)
-        #expect(stack.pop() == b)
-        #expect(stack.pop() == a)
+        stack.push(.trash(a))
+        stack.push(.trash(b))
+        #expect(stack.pop() == .trash(b))
+        #expect(stack.pop() == .trash(a))
         #expect(stack.pop() == nil)
     }
 }

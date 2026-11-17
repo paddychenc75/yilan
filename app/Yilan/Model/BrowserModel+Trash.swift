@@ -5,7 +5,7 @@ import SwiftUI
 extension BrowserModel {
     /// 菜单项和 ⌫ 是否可用：主窗口在前、有当前文件、没有在等确认
     var canDelete: Bool { current != nil && pendingDelete == nil && mainWindowIsKey }
-    var canUndoDelete: Bool { undoStack.canUndo && pendingDelete == nil }
+    var canUndoDelete: Bool { canUndo }
 
     /// ⌫ / ⌘⌫ / 菜单：按设置先弹确认框，或者直接删
     func requestDelete() {
@@ -43,10 +43,20 @@ extension BrowserModel {
             localChangeSerial += 1
         }
         let url = item.url
-        let result = await Task.detached(priority: .userInitiated) { Result { try TrashService.trash(url) } }.value
+        let sidecar = sidecars.sidecarToMoveWith(item).flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
+        let result = await Task.detached(priority: .userInitiated) {
+            Result { () throws -> TrashEntry in
+                let trashed = try TrashService.trash(url)
+                var entry = TrashEntry(item: item, trashedURL: trashed)
+                // 照片进了废纸篓，它的 .xmp 小文件也一起进（spec S-23）；小文件失败不影响删除
+                if let sidecar, let t = try? TrashService.trash(sidecar) { entry.sidecar = (sidecar, t) }
+                return entry
+            }
+        }.value
         switch result {
-        case .success(let trashed):
-            undoStack.push(TrashEntry(item: item, trashedURL: trashed))
+        case .success(let entry):
+            undoHistory.push(.trash(entry))
+            if let side = entry.sidecar { sidecars.noteRemoved(side.original) }
             removeAfterDelete(item)
             showToast(symbol: "trash", text: String(localized: "已移到废纸篓"),
                       detail: String(localized: "⌘Z 撤销", comment: "删除后提示条里可以点的链接"),
@@ -74,7 +84,7 @@ extension BrowserModel {
 
     /// ⌘Z / 提示条里的“撤销”：把最近删除的文件从废纸篓放回原处并显示它
     func undoDelete() async {
-        guard let entry = undoStack.last, !trashBusy, pendingDelete == nil else { return }
+        guard case .trash(let entry)? = undoHistory.last, !trashBusy, pendingDelete == nil else { return }
         trashBusy = true
         localChangeSerial += 1
         defer {
@@ -87,7 +97,8 @@ extension BrowserModel {
                 return FolderScanner.item(at: entry.item.url)
             }
         }.value
-        undoStack.pop()
+        undoHistory.pop()
+        if let side = entry.sidecar, FileManager.default.fileExists(atPath: side.original.path) { sidecars.noteWritten(side.original) }
         switch result {
         case .success(let restored):
             hideToast()
@@ -110,7 +121,7 @@ extension BrowserModel {
     /// 菜单“编辑 › 撤销”：主窗口在前时撤销删除；设置窗口在前时交给输入框自己的撤销
     func undoFromMenu() {
         if mainWindowIsKey {
-            Task { await undoDelete() }
+            Task { await undoLast() }
         } else {
             NSApp.sendAction(Selector(("undo:")), to: nil, from: nil)
         }

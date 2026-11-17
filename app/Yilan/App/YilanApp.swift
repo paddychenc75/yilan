@@ -48,6 +48,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         BrowserModel.shared.saveRecentCover()
     }
 
+    /// 还有没写完的星级时先等一等（最多 3 秒，spec S-20）
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard BrowserModel.shared.pendingRatingWrites > 0 else { return .terminateNow }
+        Task { @MainActor in
+            await BrowserModel.shared.flushRatingWrites()
+            NSApp.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         Perf.mark("didFinishLaunching")
         MemoryPressureMonitor.start()
@@ -58,6 +68,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let path = args.first, FileManager.default.fileExists(atPath: path), !BrowserModel.shared.hasOpenedFolder {
             BrowserModel.shared.open(URL(fileURLWithPath: path))
         }
+        // 从 v0.2 升级后第一次启动：说明快捷键变化（spec K-10）
+        BrowserModel.shared.showUpgradeNoticeIfNeeded()
         // 访达“打开方式”的文件在这之前已经送到；稍等一下再决定要不要打开上次的文件夹
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(150))
@@ -90,6 +102,18 @@ struct AppCommands: Commands {
                 Button("清除菜单") { model.recents.clear() }
                     .disabled(recents.isEmpty)
             }
+            Divider()
+            // 评星（spec MN-02）：快捷键 1–5、0
+            Menu("评星") {
+                ForEach(1...5, id: \.self) { n in
+                    Button(String(localized: "\(n) 星", comment: "文件 › 评星 子菜单")) { model.rateCurrent(n, fromKeyboard: false) }
+                        .keyboardShortcut(KeyEquivalent(Character(String(n))), modifiers: [])
+                }
+                Divider()
+                Button("清除星级") { model.rateCurrent(0, fromKeyboard: false) }
+                    .keyboardShortcut("0", modifiers: [])
+            }
+            .disabled(model.current == nil || !model.mainWindowIsKey || model.pendingDelete != nil)
         }
         CommandGroup(after: .newItem) {
             Divider()
@@ -112,9 +136,9 @@ struct AppCommands: Commands {
         }
         // 编辑 › 撤销“移到废纸篓”（⌘Z）。设置窗口在前时交给输入框自己撤销
         CommandGroup(replacing: .undoRedo) {
-            Button(model.canUndoDelete && model.mainWindowIsKey ? "撤销“移到废纸篓”" : "撤销") { model.undoFromMenu() }
+            Button(model.canUndo && model.mainWindowIsKey ? model.undoMenuTitle : String(localized: "撤销")) { model.undoFromMenu() }
                 .keyboardShortcut("z")
-                .disabled(model.mainWindowIsKey && !model.canUndoDelete)
+                .disabled(model.mainWindowIsKey && !model.canUndo)
             Button("重做") { model.redoFromMenu() }
                 .keyboardShortcut("z", modifiers: [.command, .shift])
                 .disabled(model.mainWindowIsKey)
@@ -124,8 +148,10 @@ struct AppCommands: Commands {
             filterToggle("只看图片", .images, key: "2")
             filterToggle("只看视频", .videos, key: "3")
             Divider()
-            Button("适应窗口") { model.zoom(.fit) }.keyboardShortcut("0", modifiers: [])
-            Button("实际大小") { model.zoom(.actualSize) }.keyboardShortcut("1", modifiers: [])
+            // 数字键让给评星：⌘9 适应窗口、⌘0 实际大小、Z 切换（spec 4.2）
+            Button("适应窗口") { model.zoom(.fit) }.keyboardShortcut("9")
+            Button("实际大小") { model.zoom(.actualSize) }.keyboardShortcut("0")
+            Button("切换适应窗口 / 实际大小") { model.zoom(.toggle) }.keyboardShortcut("z", modifiers: [])
             Button("放大") { model.zoom(.zoomIn) }.keyboardShortcut("+")
             Button("缩小") { model.zoom(.zoomOut) }.keyboardShortcut("-")
             Divider()

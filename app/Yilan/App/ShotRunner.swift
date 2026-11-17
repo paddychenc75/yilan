@@ -6,7 +6,7 @@ enum ShotRunner {
     static func run(model: BrowserModel) {
         #if DEBUG
         guard ShotHooks.openInfo || ShotHooks.deleteState != nil || ShotHooks.fullScreenState != nil || ShotHooks.dumpMenus
-                || ShotHooks.windowSize != nil
+                || ShotHooks.windowSize != nil || ShotHooks.anyRatingShot
         else { return }
         Task { @MainActor in
             // 等文件夹打开、当前文件显示出来（最多 5 秒）
@@ -21,7 +21,22 @@ enum ShotRunner {
                 window.toggleFullScreen(nil)
                 try? await Task.sleep(for: .seconds(1.2))
             }
+            if ShotHooks.stripHidden { model.stripVisible = false }
             if ShotHooks.openInfo { model.setInfoVisible(true) }
+            // 评星截图：只对 /tmp 下的测试副本写盘
+            if let n = ShotHooks.rating, let item = model.current, isTemporary(item.url) {
+                for _ in 0..<50 where !model.ratingsLoaded { try? await Task.sleep(for: .milliseconds(100)) }
+                model.rateCurrent(n, fromKeyboard: true)
+            }
+            if ShotHooks.showStars {
+                model.setHoveringStarBar(true)
+                model.starBarMouseVisible = true
+            }
+            switch ShotHooks.hint {
+            case "shortcuts": model.enqueueHint(.shortcutsChanged)
+            case "xmp": model.enqueueHint(.sidecarCreated("DSC_0812.xmp"))
+            default: break
+            }
             switch ShotHooks.deleteState {
             case "confirm":
                 model.settings.confirmBeforeDelete = true

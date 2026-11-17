@@ -206,9 +206,7 @@ private actor GatedDecoder {
 
 /// 把 app/Fixtures/sample 复制到临时目录（测试会删改文件，不动仓库里的）
 private func fixtureCopy() throws -> URL {
-    let source = URL(fileURLWithPath: #filePath)
-        .deletingLastPathComponent().deletingLastPathComponent()
-        .appendingPathComponent("Fixtures/sample")
+    let source = MetaFixtures.sample   // scripts/run-tests.sh 会指向 /tmp 里的镜像
     let dest = URL(fileURLWithPath: "/tmp/yilan-fixtures-\(UUID().uuidString)")
     try FileManager.default.copyItem(at: source, to: dest)
     return dest

@@ -269,7 +269,9 @@ struct UndoHistory { entries（最多 100）; var menuTitle; push; pop; removeAl
 
 ## 8. 测试计划
 
-自动测试放 `app/YilanTests/`，素材只用 `app/Fixtures/sample` 的公开授权文件，测试时复制到临时目录再改；RAW 测试在 `Fixtures/raw` 不存在时跳过（`XCTSkip`）。合成的 XMP 文本是测试代码里自己写的，不需要登记；如果另存成文件放进 `Fixtures/`，在 CREDITS.md 记为「自己生成」。
+自动测试放 `app/YilanTests/`，素材只用 `app/Fixtures/sample` 的公开授权文件，测试时复制到临时目录再改；RAW 测试在 `Fixtures/raw` 不存在时跳过。
+
+跑测试用 `scripts/run-tests.sh`（开发中加的）：先把 `app/Fixtures` 镜像到 `/tmp/yilan-fixtures-mirror`（RAW 用 APFS 克隆），再通过环境变量 `TEST_RUNNER_YILAN_FIXTURES_DIR` 让测试从镜像读。原因：测试宿主程序每次重新编译后第一次读“桌面”下的文件，系统会卡住等隐私授权（实测一次等了 357 秒），直接读仓库里的样例会让整轮测试变得很慢。合成的 XMP 文本是测试代码里自己写的，不需要登记；如果另存成文件放进 `Fixtures/`，在 CREDITS.md 记为「自己生成」。
 
 | PRD 验收 | 自动测试 | 手动 |
 | --- | --- | --- |
@@ -327,7 +329,7 @@ struct UndoHistory { entries（最多 100）; var menuTitle; push; pop; removeAl
 | --- | --- | --- |
 | 0 | 合入 `fix/titlebar-double-click`；按第 8 节手动验证 B1 | v0.2.1 + B1 修复 |
 | 1 | `Metadata/` 全部（读、写、小文件、自检、账本）和它的单元测试；补测多图 JPEG / 带增益图 HEIC；界面不变 | 功能不变，写入层有测试保证 |
-| 2 | 评星：键盘、五星胶囊、角标、信息面板、序号星级、后台读取、文件夹同步、写失败提示、.xmp 提示；`UndoHistory` 替换删除撤销；删除带小文件；快捷键调整（0 / 1 让给评星，加 Z / ⌘0 / ⌘9）、快捷键变化提示、设置 › 浏览新项 | 可以打星、撤销，缩放用新快捷键（左下角比例胶囊暂时保留） |
+| 2 | 评星：键盘、五星胶囊、角标、信息面板、序号星级、后台读取、文件夹同步、写失败提示、.xmp 提示；`UndoHistory` 替换删除撤销；删除带小文件；快捷键调整（0 / 1 让给评星，加 Z / ⌘0 / ⌘9）、快捷键变化提示、设置 › 浏览新项；R8 自动下一张（实现时顺手做了，原计划在阶段 6） | 可以打星、撤销，缩放用新快捷键（左下角比例胶囊暂时保留） |
 | 3 | 顶部缩放控件、删除 `ZoomPill`、顶部栏收缩（先只有类型切换 + 缩放） | E1 完成 |
 | 4 | 筛选：模型、按钮、面板、空结果、暂留、⌘F、菜单；顶部栏收缩加入筛选按钮各档 | R5 系列完成 |
 | 5 | 更新提醒：客户端、策略、提示卡片排队、小点、表单、设置 › 通用、菜单 | U 系列完成 |

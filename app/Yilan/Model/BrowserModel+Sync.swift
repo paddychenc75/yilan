@@ -23,21 +23,46 @@ extension BrowserModel {
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled, let folder = folderURL else { return }
             let serial = localChangeSerial
-            let scanned = await Task.detached(priority: .utility) { try? FolderScanner.scan(folder: folder) }.value
+            let scanned = await Task.detached(priority: .utility) { () -> ([MediaItem], SidecarIndex)? in
+                guard let items = try? FolderScanner.scan(folder: folder) else { return nil }
+                return (items, SidecarIndex.scan(folder: folder, media: items))
+            }.value
             guard !Task.isCancelled, folder == folderURL, let scanned else { return }
-            // 扫描期间一览自己删除或恢复了文件：结果可能已经过时，重新扫一次
-            if serial != localChangeSerial || trashBusy {
+            // 扫描期间一览自己删除、恢复了文件或写了星级：结果可能已经过时，重新扫一次
+            if serial != localChangeSerial || trashBusy || pendingRatingWrites > 0 {
                 folderDidChange()
                 return
             }
-            applySync(scanned)
+            applySync(scanned.0, sidecars: scanned.1)
         }
     }
 
     /// 用新的扫描结果更新列表（测试里直接调用）。
     /// 当前文件还在就不动；被改名时继续显示它；被删除或移走时显示相邻的一个
-    func applySync(_ scanned: [MediaItem]) {
+    func applySync(_ scannedItems: [MediaItem], sidecars newSidecars: SidecarIndex? = nil) {
+        // 一览自己写星级改了的文件（大小变了、修改时间没变）：当作没变，沿用原来的条目（技术方案 3.4、4.5）
+        let oldByPath = Dictionary(allItems.map { ($0.url.path, $0) }, uniquingKeysWith: { a, _ in a })
+        let scanned = scannedItems.map { item -> MediaItem in
+            guard let old = oldByPath[item.url.path], old.fileSize != item.fileSize || old.modificationDate != item.modificationDate,
+                  ownWrites.consume(path: item.url.path, size: item.fileSize, modificationDate: item.modificationDate)
+            else { return item }
+            return old
+        }
+        // 小文件的变化：一览自己写的跳过，其他软件改的要重读主人的星级（spec R4-06）
+        var reread: [MediaItem] = []
+        if let newSidecars {
+            for name in newSidecars.changedNames(comparedTo: sidecars) {
+                let entry = newSidecars.entries[name]
+                let own = entry.map { ownWrites.consume(path: $0.url.path, size: $0.size, modificationDate: $0.modificationDate) }
+                    ?? ownWrites.consumeRemoval(path: sidecars.entries[name]?.url.path ?? "")
+                if !own { reread += newSidecars.owners(ofSidecarNamed: name, in: scanned) }
+            }
+            sidecars = newSidecars
+        }
         let diff = FolderDiff(old: allItems, new: scanned)
+        // 内容被其他程序改了的文件、新出现的文件：重读星级
+        reread += diff.modified + diff.added + diff.renamed.values
+        rereadRatings(Array(Set(reread)))
         guard !diff.isEmpty else { return }
         forgetCaches(for: diff.changedURLs)
 

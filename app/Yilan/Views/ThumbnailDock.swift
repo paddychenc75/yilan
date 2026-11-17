@@ -8,12 +8,14 @@ struct ThumbnailDock: View {
     let width: CGFloat
     /// 文件夹里刚出现的文件：高亮 2 秒
     var fresh: Set<URL> = []
+    /// 星级（左上角角标，spec R3-01）
+    var ratings: [URL: Int] = [:]
     let onSelect: (Int) -> Void
 
     var body: some View {
         VStack(spacing: 6) {
             MetaLine(meta: meta)
-            ThumbnailStrip(items: items, current: current, fresh: fresh, onSelect: onSelect)
+            ThumbnailStrip(items: items, current: current, fresh: fresh, ratings: ratings, onSelect: onSelect)
                 .frame(height: 62)
         }
         .padding(EdgeInsets(top: 9, leading: 12, bottom: 10, trailing: 12))
@@ -63,6 +65,7 @@ struct ThumbnailStrip: View {
     let items: [MediaItem]
     let current: MediaItem?
     let fresh: Set<URL>
+    var ratings: [URL: Int] = [:]
     let onSelect: (Int) -> Void
 
     @State private var fadeLeading = false
@@ -75,7 +78,10 @@ struct ThumbnailStrip: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 6) {
                         ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                            ThumbnailCell(item: item, selected: item == current, fresh: fresh.contains(item.url))
+                            // 被两端 28pt 渐隐区遮住的格子不画星级角标（spec R3-03）
+                            ThumbnailCell(item: item, selected: item == current, fresh: fresh.contains(item.url),
+                                          rating: ratings[item.url] ?? 0,
+                                          badgeZone: (fadeLeading ? 28 : 0)...(geo.size.width - (fadeTrailing ? 28 : 0)))
                                 .id(item.id)
                                 .onTapGesture { onSelect(index) }
                         }
@@ -86,6 +92,7 @@ struct ThumbnailStrip: View {
                     .frame(minWidth: geo.size.width)
                 }
                 .scrollIndicators(.never)
+                .coordinateSpace(name: ThumbnailStrip.space)
                 .onScrollGeometryChange(for: [Bool].self) { g in
                     [g.contentOffset.x > 1, g.contentOffset.x + g.containerSize.width < g.contentSize.width - 1]
                 } action: { _, edges in
@@ -99,6 +106,8 @@ struct ThumbnailStrip: View {
             .mask(edgeMask)
         }
     }
+
+    static let space = "thumbnailStrip"
 
     private func scroll(_ proxy: ScrollViewProxy, animated: Bool) {
         guard let id = current?.id else { return }
@@ -126,14 +135,21 @@ struct ThumbnailCell: View {
     let item: MediaItem
     let selected: Bool
     var fresh = false
+    var rating = 0
+    /// 格子完整露出时才画星级角标：允许的横向范围（缩略图栏坐标）
+    var badgeZone: ClosedRange<CGFloat> = -CGFloat.infinity...CGFloat.infinity
 
     @State private var thumb: Thumbnail?
     @State private var hovering = false
+    @State private var fullyVisible = true
 
-    init(item: MediaItem, selected: Bool, fresh: Bool = false) {
+    init(item: MediaItem, selected: Bool, fresh: Bool = false, rating: Int = 0,
+         badgeZone: ClosedRange<CGFloat> = -CGFloat.infinity...CGFloat.infinity) {
         self.item = item
         self.selected = selected
         self.fresh = fresh
+        self.rating = rating
+        self.badgeZone = badgeZone
         // 内存里有就同步拿到，避免闪一下占位格
         _thumb = State(initialValue: ThumbnailStore.shared.cached(item))
     }
@@ -172,8 +188,18 @@ struct ThumbnailCell: View {
             }
         }
         .shadow(color: .black.opacity(selected ? 0.5 : 0), radius: 8, y: 6)
-        .scaleEffect(selected ? 1.12 : 1)
         .opacity(selected || fresh ? 1 : (hovering ? 0.95 : 0.66))
+        // 星级角标画在压暗之后：不跟着格子变暗（设计稿“缩略图角标”）
+        .overlay(alignment: .topLeading) {
+            if rating > 0, fullyVisible, thumb?.failed != true {
+                RatingBadge(rating: rating).padding(4)
+            }
+        }
+        .scaleEffect(selected ? 1.12 : 1)
+        .onGeometryChange(for: Bool.self) { proxy in
+            let f = proxy.frame(in: .named(ThumbnailStrip.space))
+            return f.minX >= badgeZone.lowerBound - 0.5 && f.maxX <= badgeZone.upperBound + 0.5
+        } action: { fullyVisible = $0 }
         .zIndex(selected ? 1 : 0)
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: selected)
         .contentShape(Rectangle())

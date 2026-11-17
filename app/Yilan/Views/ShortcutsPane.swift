@@ -12,6 +12,8 @@ struct ShortcutsPane: View {
         let action: LocalizedStringResource
         /// 外层之间用“/”隔开，内层是并排的几个键帽
         let keys: [[Key]]
+        /// 键帽之间的分隔：“/”是二选一，“–”是范围（1–5）
+        var separator = "/"
         var id: String { action.key }
     }
 
@@ -22,6 +24,10 @@ struct ShortcutsPane: View {
     }
 
     static let sections: [Section] = [
+        Section(title: "评星", rows: [
+            Shortcut(action: "设置星级", keys: [[.text("1")], [.text("5")]], separator: "–"),
+            Shortcut(action: "清除星级", keys: [[.text("0")]]),
+        ]),
         Section(title: "浏览", rows: [
             Shortcut(action: "上一个 / 下一个", keys: [[
                 .symbol("arrow.left", label: "←"), .symbol("arrow.right", label: "→"),
@@ -32,7 +38,8 @@ struct ShortcutsPane: View {
             Shortcut(action: "显示或隐藏缩略图栏", keys: [[.text("T")]]),
         ]),
         Section(title: "查看", rows: [
-            Shortcut(action: "适应窗口 / 实际大小", keys: [[.text("0")], [.text("1")]]),
+            Shortcut(action: "适应窗口 / 实际大小", keys: [[.text("⌘9")], [.text("⌘0")]]),
+            Shortcut(action: "适应窗口 ↔ 实际大小（切换）", keys: [[.text("Z")]]),
             Shortcut(action: "放大 / 缩小", keys: [[.text("⌘+"), .text("⌘−")]]),
             Shortcut(action: "进入 / 退出全屏", keys: [[.text("F")], [.text("Esc")]]),
             Shortcut(action: "显示或隐藏信息面板", keys: [[.text("I")]]),
@@ -40,7 +47,7 @@ struct ShortcutsPane: View {
         ]),
         Section(title: "文件", rows: [
             Shortcut(action: "移到废纸篓", keys: [[.symbol("delete.left", label: "⌫")]]),
-            Shortcut(action: "撤销上一次删除", keys: [[.text("⌘Z")]]),
+            Shortcut(action: "撤销上一次评星 / 删除", keys: [[.text("⌘Z")]]),
             Shortcut(action: "打开…", keys: [[.text("⌘O")]]),
         ]),
         Section(title: "视频", rows: [
@@ -65,7 +72,7 @@ struct ShortcutsPane: View {
                                     .font(.system(size: 13))
                                     .foregroundStyle(.white)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                KeyCaps(keys: row.keys)
+                                KeyCaps(keys: row.keys, separator: row.separator)
                             }
                             .padding(.horizontal, 14)
                             .padding(.vertical, 4)
@@ -81,12 +88,13 @@ struct ShortcutsPane: View {
 /// 一组键帽（设计稿 .kcs：间距 4，“/”白 44% 11pt）
 struct KeyCaps: View {
     let keys: [[ShortcutsPane.Key]]
+    var separator = "/"
 
     var body: some View {
         HStack(spacing: 4) {
             ForEach(Array(keys.enumerated()), id: \.offset) { index, group in
                 if index > 0 {
-                    Text(verbatim: "/").font(.system(size: 11)).foregroundStyle(Theme.text3)
+                    Text(verbatim: separator).font(.system(size: 11)).foregroundStyle(Theme.text3)
                 }
                 ForEach(group, id: \.self) { KeyCap(key: $0) }
             }

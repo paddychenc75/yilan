@@ -185,7 +185,7 @@ struct FileStamp: Hashable, Sendable {
 
     init(url: URL) {
         let v = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
-        path = url.standardizedFileURL.path
+        path = url.resolvingSymlinksInPath().path
         exists = v != nil && FileManager.default.fileExists(atPath: url.path)
         size = Int64(v?.fileSize ?? 0)
         modificationDate = v?.contentModificationDate ?? .distantPast
@@ -204,12 +204,12 @@ struct OwnWriteLedger: Sendable {
     private var stamps: [String: FileStamp] = [:]
 
     mutating func record(_ list: [FileStamp]) {
-        for s in list { stamps[s.path] = s }
+        for s in list { stamps[URL(fileURLWithPath: s.path).resolvingSymlinksInPath().path] = s }
     }
 
     /// 这个状态是一览自己写出来的（只认一次，之后再变就是别人改的）
     mutating func consume(path: String, size: Int64, modificationDate: Date) -> Bool {
-        let key = URL(fileURLWithPath: path).standardizedFileURL.path
+        let key = URL(fileURLWithPath: path).resolvingSymlinksInPath().path
         guard let s = stamps[key], s.exists, s.size == size,
               abs(s.modificationDate.timeIntervalSince(modificationDate)) < 0.001 else { return false }
         stamps[key] = nil
@@ -218,7 +218,7 @@ struct OwnWriteLedger: Sendable {
 
     /// 这个文件是一览自己删掉的
     mutating func consumeRemoval(path: String) -> Bool {
-        let key = URL(fileURLWithPath: path).standardizedFileURL.path
+        let key = URL(fileURLWithPath: path).resolvingSymlinksInPath().path
         guard let s = stamps[key], !s.exists else { return false }
         stamps[key] = nil
         return true

@@ -175,7 +175,8 @@ struct RootView: View {
                 Spacer(minLength: 0)
                 HStack(spacing: 14) {
                     if let i = model.currentIndex {
-                        CounterPill(index: i, total: model.items.count)
+                        CounterPill(index: i, total: model.items.count,
+                                    rating: !model.stripVisible || layout.fullScreen ? model.currentRating : nil)
                     }
                     // 欢迎界面不显示工具组（设计稿“首次启动 · 欢迎”）
                     if model.hasOpenedFolder {
@@ -235,6 +236,8 @@ struct RootView: View {
                     .opacity(bottomVisible ? 1 : 0)
                     .allowsHitTesting(bottomVisible)
 
+                starBar(layout)
+
                 if let percent = model.zoomPercent {
                     ZoomPill(percent: percent)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
@@ -246,6 +249,22 @@ struct RootView: View {
             }
             .frame(width: size.width, height: size.height, alignment: .topLeading)
         }
+    }
+
+    /// 画面上的五星胶囊（spec R2）：水平居中，底边按缩略图栏 / 视频控制条让开
+    @ViewBuilder
+    private func starBar(_ layout: StageLayout) -> some View {
+        let visible = (model.starBarMouseVisible || model.ratingFlash != nil) && model.pendingDelete == nil
+        StarBar(rating: model.currentRating ?? 0, enabled: model.canRateCurrent, flash: model.ratingFlash,
+                onRate: { model.rateCurrent($0, fromKeyboard: false) },
+                onDisabledTap: { model.rateCurrent(1, fromKeyboard: false) })
+            .onHover { model.setHovering("stars", $0) }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            .padding(.bottom, StarBar.bottomOffset(isVideo: isVideo, stripVisible: model.stripVisible,
+                                                   fullScreen: layout.fullScreen))
+            .opacity(visible ? 1 : 0)
+            .allowsHitTesting(visible)
+            .animation(.easeOut(duration: 0.2), value: visible)
     }
 
     private func bottomControls(_ layout: StageLayout) -> some View {
@@ -269,6 +288,7 @@ struct RootView: View {
                     width: fs ? min(Theme.dockFullScreenWidth, layout.size.width - 48)
                         : min(layout.size.width - 64, Theme.dockMaxWidth),
                     fresh: model.freshURLs,
+                    ratings: model.ratings,
                     onSelect: { model.select($0) }
                 )
                 .onHover {
@@ -321,13 +341,28 @@ struct RootView: View {
                     onClose: { model.setInfoVisible(false) },
                     onReveal: model.revealCurrentInFinder,
                     onCopy: model.copyInfo,
-                    onCopyCoordinates: model.copyCoordinates
+                    onCopyCoordinates: model.copyCoordinates,
+                    rating: model.currentRating,
+                    ratingLocation: model.current.map { model.ratingLocationDescription(for: $0) } ?? "",
+                    canRate: model.canRateCurrent,
+                    onRate: { model.rateCurrent($0, fromKeyboard: false) }
                 )
                 .padding(.top, top)
                 .padding(.trailing, InfoPanel.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .onHover { model.setHovering("info", $0) }
                 .transition(.opacity.combined(with: .offset(x: 24)))
+            }
+
+            // 提示卡片（快捷键变化、.xmp 说明）：顶部栏下面，不压暗、不挡操作
+            if let hint = model.hint {
+                HintCardView(card: hint, onPrimary: {
+                    if hint == .shortcutsChanged { SettingsWindow.shared.show(pane: .shortcuts) }
+                    model.dismissHint()
+                }, onClose: { model.dismissHint() })
+                .padding(.top, toastTop)
+                .transition(.opacity.combined(with: .offset(y: -8)))
+                .onHover { model.setHovering("hint", $0) }
             }
 
             // 提示条画在信息面板上面：窄窗口里居中的提示条可能和面板重叠，不能被盖住
@@ -362,6 +397,7 @@ struct RootView: View {
         }
         .frame(width: size.width, height: size.height, alignment: .top)
         .animation(.easeOut(duration: 0.2), value: model.toast)
+        .animation(.easeOut(duration: 0.2), value: model.hint)
         .animation(.easeOut(duration: 0.2), value: model.isDecodingRaw)
     }
 

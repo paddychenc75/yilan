@@ -89,6 +89,28 @@
         }
       }
     },
+    "%lld 星" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld star"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld stars"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld 秒" : {
       "comment" : "隐藏延迟的秒数",
       "localizations" : {
@@ -102,6 +124,16 @@
     },
     "English" : {
       "shouldTranslate" : false
+    },
+    "JPEG、PNG、HEIC 等直接写进文件的元数据，其他软件（如 Lightroom）也能读到" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JPEG, PNG, HEIC and similar files keep it in their own metadata, where other apps such as Lightroom can read it."
+          }
+        }
+      }
     },
     "MPEG-4 影片" : {
       "localizations" : {
@@ -143,6 +175,26 @@
         }
       }
     },
+    "RAW 文件本身不会被改动，星级记在这个同名的 .xmp 小文件里，Lightroom 等软件也能读取。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The RAW file itself is never changed. The rating is stored in this .xmp file with the same name, which Lightroom and other apps can read."
+          }
+        }
+      }
+    },
+    "RAW（ARW、CR3、NEF 等）不能写入文件内部，始终使用旁边的 .xmp。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RAW files (ARW, CR3, NEF and others) are never changed; their ratings always go in a .xmp file."
+          }
+        }
+      }
+    },
     "SVG 无法解析" : {
       "localizations" : {
         "en" : {
@@ -170,6 +222,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "⌘Z Undo"
+          }
+        }
+      }
+    },
+    "一律使用旁边的 .xmp 小文件" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Always use a separate .xmp file"
           }
         }
       }
@@ -294,6 +356,16 @@
         }
       }
     },
+    "不改动图片本身；换到别的软件时要连同 .xmp 一起带走" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Images aren’t changed. Keep the .xmp files with them when you move to another app."
+          }
+        }
+      }
+    },
     "从列表中移除" : {
       "localizations" : {
         "en" : {
@@ -311,6 +383,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Location"
+          }
+        }
+      }
+    },
+    "保存位置" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved In"
           }
         }
       }
@@ -665,6 +747,16 @@
         }
       }
     },
+    "写入文件内部（推荐，其他软件可读）" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inside the file (recommended, readable by other apps)"
+          }
+        }
+      }
+    },
     "分辨率" : {
       "localizations" : {
         "en" : {
@@ -691,6 +783,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Next/Previous"
+          }
+        }
+      }
+    },
+    "切换适应窗口 / 实际大小" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toggle Zoom to Fit / Actual Size"
           }
         }
       }
@@ -1022,6 +1124,16 @@
         }
       }
     },
+    "已在旁边创建 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Created %@ next to the photo"
+          }
+        }
+      }
+    },
     "已拷贝" : {
       "localizations" : {
         "en" : {
@@ -1058,6 +1170,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Showing next"
+          }
+        }
+      }
+    },
+    "已清除星级" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rating cleared"
           }
         }
       }
@@ -1158,6 +1280,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Keyboard Shortcuts"
+          }
+        }
+      }
+    },
+    "快捷键有变化" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keyboard Shortcuts Have Changed"
           }
         }
       }
@@ -1449,6 +1581,16 @@
         }
       }
     },
+    "打星后自动跳到下一张" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Go to Next After Rating"
+          }
+        }
+      }
+    },
     "把一览设为图片和视频的默认打开方式？" : {
       "localizations" : {
         "en" : {
@@ -1560,12 +1702,32 @@
         }
       }
     },
+    "撤销“评星”" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Undo Rating"
+          }
+        }
+      }
+    },
     "撤销上一次删除" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Undo Last Delete"
+          }
+        }
+      }
+    },
+    "撤销上一次评星 / 删除" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Undo last rating / delete"
           }
         }
       }
@@ -1671,6 +1833,16 @@
         }
       }
     },
+    "数字键 1–5 现在用来评星，0 清除星级。0 和 1 不再用来缩放：按 Z 在适应窗口和实际大小之间切换，⌘0 实际大小，⌘9 适应窗口。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Number keys 1–5 now set star ratings, and 0 clears the rating. 0 and 1 no longer zoom: press Z to switch between Zoom to Fit and Actual Size, ⌘0 for Actual Size, ⌘9 for Zoom to Fit."
+          }
+        }
+      }
+    },
     "文件" : {
       "comment" : "信息面板分组标题",
       "localizations" : {
@@ -1678,6 +1850,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "File"
+          }
+        }
+      }
+    },
+    "文件内部" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inside the file"
           }
         }
       }
@@ -1809,6 +1991,36 @@
         }
       }
     },
+    "无法保存星级：%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can’t save rating: %@"
+          }
+        }
+      }
+    },
+    "无法保存星级：此位置不可写" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can’t save rating: this location is read-only"
+          }
+        }
+      }
+    },
+    "无法保存星级：磁盘已满" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can’t save rating: the disk is full"
+          }
+        }
+      }
+    },
     "无法取得第一帧 · %@" : {
       "comment" : "%@ 是文件大小",
       "localizations" : {
@@ -1852,6 +2064,16 @@
         }
       }
     },
+    "无法撤销：文件已不在这个文件夹" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t undo: the file is no longer in this folder"
+          }
+        }
+      }
+    },
     "无法移到废纸篓：%@" : {
       "comment" : "%@ 是系统给出的原因",
       "localizations" : {
@@ -1859,6 +2081,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Couldn’t move to Trash: %@"
+          }
+        }
+      }
+    },
+    "无法评星：文件无法读取" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can’t rate: the file can’t be read"
           }
         }
       }
@@ -1900,6 +2132,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Duration"
+          }
+        }
+      }
+    },
+    "星级保存到哪里" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Where Ratings Are Saved"
           }
         }
       }
@@ -1994,6 +2236,16 @@
         }
       }
     },
+    "未评星" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unrated"
+          }
+        }
+      }
+    },
     "未闪光" : {
       "localizations" : {
         "en" : {
@@ -2035,6 +2287,16 @@
         }
       }
     },
+    "查看快捷键" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View Shortcuts"
+          }
+        }
+      }
+    },
     "格式" : {
       "localizations" : {
         "en" : {
@@ -2062,6 +2324,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Welcome to Yilan"
+          }
+        }
+      }
+    },
+    "正在读取…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reading…"
           }
         }
       }
@@ -2114,6 +2386,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Altitude"
+          }
+        }
+      }
+    },
+    "清除星级" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear Rating"
           }
         }
       }
@@ -2174,6 +2456,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Camera"
+          }
+        }
+      }
+    },
+    "知道了" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Got It"
           }
         }
       }
@@ -2507,6 +2799,46 @@
         }
       }
     },
+    "设置星级" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set rating"
+          }
+        }
+      }
+    },
+    "设置星级 / 清除星级" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set rating / clear rating"
+          }
+        }
+      }
+    },
+    "评星" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rating"
+          }
+        }
+      }
+    },
+    "评星：%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rating: %@"
+          }
+        }
+      }
+    },
     "语言" : {
       "localizations" : {
         "en" : {
@@ -2627,6 +2959,16 @@
         }
       }
     },
+    "适应窗口 ↔ 实际大小（切换）" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toggle zoom to fit / actual size"
+          }
+        }
+      }
+    },
     "选择一张图片、一个视频或一个文件夹" : {
       "localizations" : {
         "en" : {
@@ -2743,6 +3085,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Audio"
+          }
+        }
+      }
+    },
+    "默认关闭。打开后，按 1–5 或 0 评星会立刻显示下一张" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off by default. When on, rating with 1–5 or 0 shows the next file right away."
           }
         }
       }

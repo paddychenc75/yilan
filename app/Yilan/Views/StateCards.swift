@@ -112,6 +112,7 @@ struct ToastView: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: toast.symbol).font(.system(size: 13, weight: .medium))
+                .foregroundStyle(toast.tone == .warning ? Theme.yellow : .white)
             Text(verbatim: toast.text).font(.system(size: 12, weight: .medium))
             if let detail = toast.detail {
                 // 设计稿：圆点白 44%，补充说明白 68%；可以点的是蓝色链接（#64B5FF，600 字重）

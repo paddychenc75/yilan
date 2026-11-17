@@ -4,25 +4,13 @@ import Foundation
 struct TrashEntry: Equatable, Sendable {
     let item: MediaItem
     let trashedURL: URL
-}
+    /// 一起进废纸篓的 .xmp 小文件：原位置、废纸篓里的位置（spec S-23）
+    var sidecar: (original: URL, trashed: URL)? = nil
 
-/// 可以连续撤销的删除记录（后删的先撤销）
-struct TrashUndoStack: Equatable {
-    private(set) var entries: [TrashEntry] = []
-
-    var canUndo: Bool { !entries.isEmpty }
-    var last: TrashEntry? { entries.last }
-
-    mutating func push(_ entry: TrashEntry) {
-        entries.append(entry)
-        // 只记最近的 100 次，够用了
-        if entries.count > 100 { entries.removeFirst(entries.count - 100) }
+    static func == (a: TrashEntry, b: TrashEntry) -> Bool {
+        a.item == b.item && a.trashedURL == b.trashedURL
+            && a.sidecar?.original == b.sidecar?.original && a.sidecar?.trashed == b.sidecar?.trashed
     }
-
-    @discardableResult
-    mutating func pop() -> TrashEntry? { entries.popLast() }
-
-    mutating func removeAll() { entries.removeAll() }
 }
 
 /// 移到废纸篓和放回原处（会碰磁盘，在后台线程调用）
@@ -84,6 +72,10 @@ enum TrashService {
         guard fm.fileExists(atPath: entry.trashedURL.path) else { throw Failure.missingInTrash(name) }
         guard !fm.fileExists(atPath: entry.item.url.path) else { throw Failure.originalExists(name) }
         try fm.moveItem(at: entry.trashedURL, to: entry.item.url)
+        // 小文件放不回去（原位置又有了同名小文件、废纸篓里没了）不影响照片本身
+        if let side = entry.sidecar, fm.fileExists(atPath: side.trashed.path), !fm.fileExists(atPath: side.original.path) {
+            try? fm.moveItem(at: side.trashed, to: side.original)
+        }
     }
 }
 

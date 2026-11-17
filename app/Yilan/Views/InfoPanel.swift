@@ -16,6 +16,11 @@ struct InfoPanel: View {
     let onReveal: () -> Void
     let onCopy: () -> Void
     let onCopyCoordinates: () -> Void
+    /// 评星组（spec R3-06、R3-07）：星级（还没读出来时 nil）、保存位置、能不能评
+    var rating: Int? = nil
+    var ratingLocation = ""
+    var canRate = true
+    var onRate: (Int) -> Void = { _ in }
 
     /// 滚动区下面还有没显示的内容
     @State private var hasMoreBelow = false
@@ -101,6 +106,8 @@ struct InfoPanel: View {
     private var sections: some View {
         if let content {
             VStack(alignment: .leading, spacing: 14) {
+                InfoSectionView(title: "评星") { ratingRows }
+                Divider14()
                 InfoSectionView(title: "文件") { InfoRows(rows: content.file) }
                 if let video = content.video {
                     Divider14()
@@ -134,6 +141,37 @@ struct InfoPanel: View {
                     }) { InfoRows(rows: location) }
                 }
             }
+        }
+    }
+
+    /// 评星组：可以点的五颗星 + “N 星 / 未评星”，下面一行保存位置
+    private var ratingRows: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 10) {
+                StarRow(rating: rating ?? 0, size: 16, spacing: 3, enabled: canRate, onRate: onRate)
+                    .opacity(canRate ? 1 : 0.4)
+                Spacer(minLength: 0)
+                Group {
+                    if let rating {
+                        rating > 0 ? Text("\(rating) 星", comment: "星级值") : Text("未评星")
+                    } else {
+                        Text("正在读取…", comment: "信息面板：星级还没读出来")
+                    }
+                }
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.white)
+            }
+            .frame(minHeight: 17)
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text("保存位置").font(.system(size: 12)).foregroundStyle(Theme.text2).fixedSize()
+                Spacer(minLength: 0)
+                Text(verbatim: ratingLocation)
+                    .font(Theme.mono(11.5))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            .frame(minHeight: 17)
         }
     }
 
