@@ -402,7 +402,30 @@ final class ImageStageView: NSView {
         toggleZoom(at: convert(event.locationInWindow, from: nil))
     }
 
+    /// 点在顶部标题栏区域（高度同设计稿标题栏）里：全屏时没有标题栏，不算
+    private func isInTitleBarZone(_ event: NSEvent) -> Bool {
+        guard let window, !window.styleMask.contains(.fullScreen),
+              let content = window.contentView else { return false }
+        return event.locationInWindow.y >= content.bounds.height - Theme.titleBarHeight
+    }
+
+    /// 双击标题栏：按系统设置（桌面与程序坞 › 连按窗口标题栏）缩放或最小化窗口
+    private func performTitleBarDoubleClick() {
+        guard let window else { return }
+        switch UserDefaults.standard.string(forKey: "AppleActionOnDoubleClick") {
+        case "Minimize": window.performMiniaturize(nil)
+        case "None": break
+        default: window.performZoom(nil)
+        }
+    }
+
     override func mouseDown(with event: NSEvent) {
+        // 标题栏区域归窗口：双击缩放窗口、拖动移动窗口，不碰图片的缩放
+        if isInTitleBarZone(event) {
+            if event.clickCount == 2 { performTitleBarDoubleClick() }
+            else if event.clickCount == 1 { window?.performDrag(with: event) }
+            return
+        }
         if event.clickCount == 2 {
             toggleZoom(at: convert(event.locationInWindow, from: nil))
             return
