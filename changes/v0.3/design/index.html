@@ -399,7 +399,7 @@ html,body{margin:0;background:var(--canvas);color:var(--t1);font-family:var(--sf
 /* 画布上的“推荐 / 备选”标签（只在设计稿里出现） */
 .tag{font:600 11px var(--sf);padding:2px 8px;border-radius:6px;flex:none}
 .tag.rec{background:rgba(48,209,88,.16);color:#5ee07f}
-.tag.alt{background:rgba(255,255,255,.09);color:var(--label-2)}
+.tag.alt{background:rgba(255,69,58,.16);color:#ff8a82}
 .cmp{display:flex;gap:40px;align-items:flex-start}
 .cmp>div{display:flex;flex-direction:column;gap:12px}
 .rd{width:16px;height:16px;border-radius:8px;border:1.5px solid rgba(255,255,255,.4);flex:none;position:relative}
@@ -472,6 +472,13 @@ html,body{margin:0;background:var(--canvas);color:var(--t1);font-family:var(--sf
 .rsb{position:absolute;right:9px;width:3px;border-radius:2px;background:rgba(255,255,255,.3);z-index:13}
 .rsh-ft{padding:14px 24px 18px;display:flex;align-items:center;gap:10px;border-top:1px solid rgba(255,255,255,.1)}
 .rsh-ft .lk{font:500 13px var(--sf);color:var(--t2);margin-right:auto}
+
+.devn{background:#0e0f11;border-radius:20px;padding:28px 32px 30px;width:1440px;box-shadow:0 0 0 1px #2a2c31;display:flex;flex-direction:column;gap:20px}
+.devn h4{margin:0 0 8px;font:700 15px var(--sfd);color:#fff}
+.devn .g2{display:grid;grid-template-columns:190px 1fr;gap:6px 24px;font-size:12.5px;line-height:1.7;color:#c9ccd2}
+.devn .g2 b{color:var(--label-2);font-weight:600}
+.devn code{font:500 11.5px var(--mono);color:#fff;background:#1d1e22;border-radius:5px;padding:1px 6px}
+.devn .sw2{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:4px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
 </style>
 </head>
 <body>
@@ -707,7 +714,7 @@ const atLeast=n=>RL.filter(x=>x.r>=n).length, unrated=RL.filter(x=>!x.r).length;
 
 /* 画面上的五星控件：深色玻璃胶囊，锚在舞台底边正中，缩略图栏上沿再往上 8（栏隐藏或全屏时距底 32 / 140）。
    和箭头、缩放控件一起出现（鼠标移动）；按 0–5 时单独闪现约 1 秒 */
-function stageStars(n,o={}){const bt=o.nodock?32:140;
+function stageStars(n,o={}){const bt=o.video?(o.nodock?70:182):(o.nodock?32:140);   /* 视频：贴着控制条上沿再往上 8（控制条距底 128 或 16，高 46） */
   return`<div class="rate g adapt ${o.flash?'flash':''}" style="bottom:${bt}px">${stars5(n,22,{hv:o.hv,pop:o.pop})}</div>`}
 /* 顶部缩放控件：− 百分比 +，高 36，和序号胶囊同高同材质，在顶部栏右组里、序号胶囊左边。
    mode：full = − 38% +；pct = 只留百分比（− / + 进菜单）；none = 整个收进 ⋯ 菜单 */
@@ -780,7 +787,7 @@ function infoV3(it,kind,note){const h=infoV2(it,kind);
   const sec3=`<section><h5>评星</h5><div class="kv"><div style="align-items:center"><span style="display:flex;gap:3px;align-items:center">${stars5(it.r||0,16)}</span><b>${it.r?it.r+' 星':'未评星'}</b></div>${note?`<div><span>保存位置</span><b class="m">${note}</b></div>`:''}</div></section><div class="hr"></div>`;
   return h.replace('<div class="ipb">','<div class="ipb">'+sec3)}
 const crop=(html,x,y,w,h)=>`<div style="width:${w}px;height:${h}px;overflow:hidden;border-radius:16px;position:relative;flex:none;box-shadow:0 0 0 1px rgba(255,255,255,.12)"><div style="position:absolute;left:${-x}px;top:${-y}px">${html}</div></div>`;
-const frO=(tag,name,size,html,reason)=>`<div class="frame"><div class="cap"><span class="tag ${tag==='推荐'?'rec':'alt'}">${tag}</span><b>${name}</b><span>${size}</span><i>${reason}</i></div>${html}</div>`;
+const frO=(tag,name,size,html,reason)=>`<div class="frame"><div class="cap"><span class="tag ${tag==='已定方案'?'rec':'alt'}">${tag}</span><b>${name}</b><span>${size}</span><i>${tag==='未采用'?'不要实现 · ':''}${reason}</i></div>${html}</div>`;
 const scaled=(html,w,h,k)=>`<div style="width:${w*k}px;height:${h*k}px;flex:none"><div style="width:${w}px;height:${h}px;transform:scale(${k});transform-origin:0 0">${html}</div></div>`;
 
 const I34=rby('IMG_2034.HEIC'), I31=rby('IMG_2031.HEIC');
@@ -793,7 +800,7 @@ function w3(o){const W=o.w||1280,compact=o.compact??W<900,T=tiers(W),st=o.st||ST
   const zm=o.zm||T.zoom;
   const hasZ=o.item&&!o.item.err&&!o.nozoom&&zm!=='none';
   const zcHtml=hasZ?zoomTop(o.pct||38,{mode:zm,...(o.zo||{})}):'';
-  const extra=(o.nofg?'':filterGroup(st,{mode:o.bm||T.btn,slim:T.slim,left:T.left,panel:o.panel}))+(o.chips?chipsBar(st):'')+(o.stars!=null?stageStars(o.stars,{nodock:o.nodock,flash:o.flash,pop:o.pop}):'')+(o.extra||'');
+  const extra=(o.nofg?'':filterGroup(st,{mode:o.bm||T.btn,slim:T.slim,left:T.left,panel:o.panel}))+(o.chips?chipsBar(st):'')+(o.stars!=null?stageStars(o.stars,{nodock:o.nodock,flash:o.flash,pop:o.pop,video:!!(o.item&&o.item.vid)}):'')+(o.extra||'');
   const {st:_s,bm:_bm,panel:_p,chips:_ch,zm:_b,stars:_c,flash:_d,pop:_e,nozoom:_f,nofg:_g,zo:_h,pct:_i,extra:_j,...rest}=o;
   return win({list:R.list,noseg:1,compact,zcHtml,...rest,extra})}
 
@@ -858,7 +865,7 @@ const pRate=w3({item:I34,stars:4,st:STR,panel:filterPanel(STR)});
 const pFmt=w3({item:I34,stars:4,st:STF,panel:filterPanel(STF)});
 const pBoth=w3({item:I34,stars:4,st:STC,panel:filterPanel(STC)});
 const IV=rby('IMG_2032.MOV');
-const pVid=w3({item:IV,st:STV,panel:filterPanel(STV),extra:vbar(IV,0,false)});
+const pVid=w3({item:IV,st:STV,stars:4,panel:filterPanel(STV),extra:vbar(IV,0,false)});
 const pAlt=w3({item:I34,stars:4,st:STF,panel:filterMenuNative(STF,'fmt','HEIC')});
 const pMoreSecs=`<div class="fsec" data-ann="示意：第 3 个分区（色标）"><h6>色标<span>不限</span></h6><div style="display:flex;gap:10px">${['#ff453a','#ff9f0a','#ffd60a','#30d158','#8e8e93'].map(c=>`<i class="dot5" style="background:${c}"></i>`).join('')}</div></div><div class="fsec" data-ann="示意：第 4 个分区（日期）"><h6>日期<span>不限</span></h6><div class="fchips"><div class="fchip">今天</div><div class="fchip">本周</div><div class="fchip">本月</div><div class="fchip">自选…</div></div></div>`;
 const pMore=`<div class="annwrap">${w3({item:I34,stars:4,panel:filterPanel(ST0,{more:pMoreSecs})})}</div>`.replace('class="annwrap"','class="annwrap" style="padding-right:220px"');
@@ -951,6 +958,67 @@ function settingsGeneral3(){let h=settings('general');
   if(!h.includes(a))throw new Error('anchor');
   return h.replace(a,'立即重新打开</div></div></div>'+add+'\n </div>')}
 
+
+/* ---- 视频文件上的五星：贴着视频控制条上沿 ---- */
+const bigplay=`<div class="bigplay g" style="left:601px;top:298px">${ic('play')}</div>`;
+const vidRest=w3({item:IV,nonav:1,extra:bigplay+vbar(IV,12,false)});
+const vidMove=w3({item:IV,stars:4,extra:bigplay+vbar(IV,12,false)+cursorSVG(700,480)});
+const vidFlash=w3({item:IV,nonav:1,stars:4,flash:1,pop:4,extra:vbar(IV,27,true)});
+const vidFiltered=w3({item:IV,st:STV,stars:4,extra:bigplay+vbar(IV,12,false)});
+const ruleCrop=(html,capB,note)=>{const y0=520,top=800-y0-capB;   /* 胶囊底边在局部图里的 y；窗口底在 y = 280 */
+  return `<div style="position:relative;flex:none">${crop(html,290,y0,700,280)}
+   <div class="rl v" style="left:620px;top:${top}px;height:${capB}px"></div><div class="rl h" style="left:600px;width:40px;top:${top}px"></div><div class="rlb" style="left:524px;top:${top+capB/2-9}px">${note}</div></div>`};
+const ruleBoard=`<div class="board" style="width:1440px;height:380px;padding:32px 36px;flex-direction:row;gap:40px"><img class="bg" src="../../../design/photos/p1043.jpg" alt="">
+ <div style="display:flex;flex-direction:column;gap:8px"><span style="font:600 12px var(--sf);color:rgba(255,255,255,.7)">图片：胶囊底边距窗口底 140 = 缩略图栏上沿 132 + 8</span>${ruleCrop(mainMove,140,'距底 140')}</div>
+ <div style="display:flex;flex-direction:column;gap:8px"><span style="font:600 12px var(--sf);color:rgba(255,255,255,.7)">视频：胶囊底边距窗口底 182 = 控制条底 128 + 控制条高 46 + 8</span>${ruleCrop(vidMove,182,'距底 182')}</div></div>`;
+const devNotes=`<div class="devn">
+ <div><h4>给开发的说明 · 这一页集中列出本版设计里所有要照着做的数字</h4><div class="g2" style="color:var(--label)"><b>怎么读</b><span>长度单位都是点（pt）。“已定方案”是要实现的，“未采用”只是对照，不要实现。颜色用 #RRGGBB / 不透明度。未列出的尺寸沿用 yilan-design.html（v1.0）里的值。</span></div></div>
+ <div><h4>顶部栏：按窗口宽度收缩（≥ 阈值用左边的状态，< 阈值进入下一步）</h4><div class="g2">
+  <b>① 筛选按钮摘要</b><span>窗口宽 &lt; <code>${TB.sum}</code>：“筛选 · ≥4 星 · 2 种格式”缩成“筛选 · 2”（2 = 生效的筛选种类数）</span>
+  <b>② 缩放控件</b><span>&lt; <code>${TB.zfull}</code>：“− 38% +”只留百分比（− / + 进它的菜单）</span>
+  <b>③ 全部/图片/视频</b><span>&lt; <code>${TB.slim}</code>：只留图标（数量保留）</span>
+  <b>④ 筛选按钮</b><span>&lt; <code>${TB.icon}</code>：缩成漏斗 + 数量徽标</span>
+  <b>⑤ 缩放控件</b><span>&lt; <code>${TB.zmenu}</code>：整个收进 ⋯ 菜单的“缩放”组</span>
+  <b>⑥ 筛选组</b><span>&lt; <code>${TB.left}</code>：不再在窗口中间，改为距左 84（紧跟红绿灯）</span>
+  <b>原有规则</b><span>&lt; <code>900</code>（Theme.compactWidth）隐藏文件名；窗口最小宽 640</span>
+  <b>控件尺寸（宽）</b><span>全部/图片/视频：完整 263，只留图标 152 · 筛选按钮：摘要 ≤199，“筛选 · 2”116，漏斗 + 徽标 63 · 缩放：完整 132，只留百分比 68 · 序号胶囊 72（带“· ★4”时 102）· 工具组 102</span>
+  <b>高度和间距</b><span>顶部栏控件高 <code>36</code>；右组各控件间距 <code>14</code>，右边距 16；筛选组内部间距 10；所有阈值都按最宽情况算过，控件之间至少留 14</span>
+  <b>缩放控件</b><span>−/+ 按钮 30 × 28；百分比最小宽 62（只留百分比时 58）；点百分比的菜单向下展开、右对齐，距控件 6，最小宽 196；只留百分比时菜单多“放大 ⌘+ / 缩小 ⌘−”</span>
+  <b>筛选面板</b><span>宽 <code>336</code>，圆角 22，内边距 14 / 16，厚玻璃；距按钮下沿 8，左缘和按钮左缘对齐；格式胶囊高 26、间距 6；星级行的星 21，行高 28；图片格式和视频格式之间换行</span>
+ </div></div>
+ <div><h4>五星控件（画面上）</h4><div class="g2">
+  <b>尺寸</b><span>胶囊高 <code>38</code>，圆角 19，左右内边距 14；星 <code>22</code> × 22，星间距 4（宽约 154）；深色玻璃，边框 1pt rgba(255,255,255,.16)，背景渐变 rgba(44,44,50,.62) → rgba(28,28,32,.68)</span>
+  <b>位置（水平）</b><span>窗口 / 舞台水平居中，不随照片走（竖图、小窗口、放大后都一样）</span>
+  <b>位置（垂直）</b><span>底边距窗口底：图片且缩略图栏显示 <code>140</code>（= 栏上沿 132 + 8）；栏隐藏 <code>32</code>；<b style="color:#fff">视频且栏显示 <code>182</code>（= 控制条底 128 + 控制条高 46 + 8）</b>；视频且栏隐藏 <code>70</code>（= 16 + 46 + 8）；全屏同图片的 140。公式：胶囊底边 = 下面最近的控件上沿 + 8</span>
+  <b>出现和消失</b><span>和左右箭头同一时机：鼠标一动出现，静止后（沿用箭头的现有时长）一起淡出；方向键切换照片时不出现；鼠标移到视频控制条上时淡出，避免挡住进度条的时间气泡</span>
+  <b>按 0–5 闪现</b><span>单独出现约 <code>1</code> 秒（不带出箭头、缩放控件）；第 N 颗放大 <code>130%</code>，0.15 秒弹出、0.6 秒回落；发光：外发光 0 0 26 rgba(255,226,160,.26)，边框改为 1pt rgba(255,226,160,.6)；清除星级时显示文字提示“已清除星级”约 1.5 秒</span>
+  <b>点击</b><span>点第 N 颗 = N 星；点当前已亮的最后一颗 = 清除；悬停预览：高于当前星级的星填充 rgba(255,226,160,.42)</span>
+  <b>序号里的星级</b><span>缩略图栏隐藏或全屏时，序号显示“9 / 20 · ★4”，星 11，亮黄；未评星只显示“9 / 20”</span>
+ </div></div>
+ <div><h4>缩略图角标和信息面板</h4><div class="g2">
+  <b>缩略图角标</b><span>缩略图 76 × 52；角标在左上角，距边 4；高 <code>16</code>，圆角 5，内边距 左 4 右 6；星 <code>10</code>、数字 SF Pro Text 10.5 Bold 白色，间距 3；底 rgba(0,0,0,.78)；只有评了星的缩略图才画</span>
+  <b>压暗</b><span>有星级的缩略图，图片压暗到 66%（和别的缩略图一样），角标和 RAW / 时长角标按各自规则，不跟着变灰；被栏两端 <code>28</code> 渐隐区遮住（没完整露出）的缩略图不画角标；加载失败的不画</span>
+  <b>信息面板评星行</b><span>在面板最上面一组；星 16，间距 3；右边写“N 星 / 未评星”；RAW 多一行“保存位置 xxx.xmp”</span>
+ </div></div>
+ <div><h4>颜色</h4><div class="g2">
+  <b>星和角标</b><span><i class="sw2" style="background:#ffe2a0"></i>亮星 #FFE2A0（品牌 sun）· 描边星 rgba(255,255,255,.62)，线宽 1.7 / 24 · 角标底 <i class="sw2" style="background:#000;opacity:.78"></i>rgba(0,0,0,.78)，数字 #FFFFFF。星只放在深色玻璃或深色角标上，不直接压在照片上</span>
+  <b>控件强调色</b><span>筛选按钮生效、格式胶囊选中、主按钮（前往下载 / 查看更新说明）、更新小点：用系统强调色，不用品牌色</span>
+  <b>品牌色</b><span><i class="sw2" style="background:#3fc4b0"></i>jade #3FC4B0 只用在更新提示的图标上；其余品牌色规则沿用 v1.0</span>
+ </div></div>
+ <div><h4>提示、更新</h4><div class="g2">
+  <b>提示条（toast）</b><span>水平居中，距窗口顶 <code>66</code>，高 34；4 秒淡出（“已清除星级”约 1.5 秒）</span>
+  <b>卡片式提示</b><span>距窗口顶 <code>66</code>，水平居中，圆角 22：新版本提示宽 470（高约 64），快捷键变化提示宽 480，.xmp 提示宽 430；不压暗背景、不阻止操作，有 ×。窗口宽 &lt; <code>760</code> 时，新版本提示收成一行：距顶 60，宽 100% − 32（最大 520），高约 44</span>
+  <b>一次只出一个</b><span>快捷键变化提示先出，新版本提示顺延到下次启动</span>
+  <b>更新小点</b><span>⋯ 按钮右上角，直径 9，系统强调色，1pt 深色描边，距按钮上、右边 3；⋯ 菜单第一项“有新版本 v0.3.1…”</span>
+  <b>更新说明表单</b><span>宽 540，圆角 26，距窗口顶 40；短说明高 540，长说明最高 620 内滚动，顶部 10、底部 26 渐隐；页脚按钮：跳过这个版本（文字）、稍后、前往下载（主按钮）；背景压暗 38%</span>
+ </div></div>
+ <div><h4>快捷键（本版新增或改动）</h4><div class="g2">
+  <b>评星</b><span><code>1</code>–<code>5</code> 设置，<code>0</code> 清除；<code>⌘Z</code> 撤销最近一次评星或删除</span>
+  <b>缩放</b><span><code>⌘0</code> 实际大小，<code>⌘9</code> 适应窗口，<code>Z</code> 切换；<code>⌘1</code>/<code>⌘2</code>/<code>⌘3</code> 类型切换不变</span>
+  <b>筛选</b><span><code>⌘F</code> 打开 / 关闭筛选面板；Esc 关闭</span>
+ </div></div>
+</div>`;
+
 /* ---- 章节 ---- */
 ch('00','封面','v0.3 单独一份设计稿：只含 v0.3 新增和改动的画板。颜色、材质、组件沿用 yilan-design.html 的 01–02 章。',`
 ${fr('封面','1440 × 810',`<div class="cover"><img src="../../../design/photos/p1016.jpg" alt=""><div class="shade"></div>
@@ -959,7 +1027,8 @@ ${fr('封面','1440 × 810',`<div class="cover"><img src="../../../design/photos
   <h1>一览<small>v0.3 · 评星与筛选</small></h1>
   <p style="margin:0;color:var(--t2);font-size:16px;line-height:1.6">给每张照片打星，按星级筛选，<br>缩放控件放进顶部栏。macOS 26 · 液态玻璃 · 2026-11-17</p>
   <div class="toc">${[['1.1','评星：画面、缩略图、信息面板'],['1.2','缩放控件（顶部栏）与窄窗口'],['1.3','筛选：星级、格式'],['1.4','提示和首次说明'],['1.5','设置：浏览、快捷键'],['1.6','撤销、菜单与导出筛选结果'],['1.7','更新提醒']].map(([a,b])=>`<div><b>${a}</b>${b}</div>`).join('')}</div>
- </div></div>`)}`);
+ </div></div>`)}
+${fr('给开发的说明','1440',devNotes,'')}`);
 
 ch('01','v0.3 评星与筛选','评星（键盘 1–5 / 0，或点画面上的五星）、筛选（星级、格式）、顶部栏缩放控件、快捷键调整、写入失败和 .xmp 提示、导出筛选结果、更新提醒。亮星用品牌 sun #FFE2A0。',`
 <h3 class="sub"><span>1.1</span>评星：画面、缩略图、信息面板</h3>
@@ -974,6 +1043,21 @@ ${legend([
  ['已定方案 · 五星控件位置','深色玻璃胶囊，锚在舞台底边正中、缩略图栏上沿之上 8 点，不贴照片边缘。竖图、小窗口、放大后位置都一样；缩略图栏隐藏时距窗口底 32；全屏时距屏幕底 140，给从底部滑入的缩略图栏留位置。'],
  ['已定方案 · 缩略图角标','左上角黑底小角标“★ 4”（亮黄星 + 白色数字），不和右下角的 RAW / 时长、左下角的“新”冲突。'],
 ])}
+<h3 class="sub" style="font-size:16px;margin-top:0"><span>视频</span>视频文件上的五星</h3>
+<div class="frames">
+ ${fr('视频 · 静止','1280 × 800',vidRest,'视频控制条一直在；箭头和五星隐藏，中间是播放按钮（停在第一帧）')}
+ ${fr('视频 · 鼠标移动','1280 × 800',vidMove,'箭头出现，五星出现在控制条正上方，和控制条之间留 8；五星不盖控制条，控制条也不盖五星')}
+ ${fr('视频 · 播放中按下 4','1280 × 800',vidFlash,'只闪现五星（约 1 秒），视频继续播放，控制条不变')}
+ ${fr('视频 · 筛选状态（视频 · ≥4 星）','1280 × 800',vidFiltered,'筛选按钮“筛选 · ≥4 星”，类型是视频，序号“1 / 2”；五星规则不变')}
+ ${fr('五星位置 · 图片和视频对比','1440 × 380',ruleBoard,'同一个水平位置，只是垂直方向让开控制条：140 → 182（上移 42）')}
+</div>
+${legend([
+ ['视频上的规则','五星胶囊的底边永远在“它下面最近的控件”上沿再往上 8：图片时下面是缩略图栏（上沿距窗口底 132），所以是 140；视频时下面是视频控制条（底 128、高 46），所以是 182。水平方向不变，仍然居中，用户的视线和鼠标位置只需要往上移一点。缩略图栏隐藏时：图片 32，视频 70（控制条距底 16）。'],
+ ['为什么放在控制条上面','控制条宽 580 居中，占满了舞台底部中间；五星和它同一条竖轴，向上挪 42 是最小的改动，用户不用重新找位置。放到控制条两侧会偏离中轴，放进控制条里会让它变得更挤、也更容易误点进度条。'],
+ ['不遮挡进度条','五星在控制条上方，控制条在下方，两者之间始终留 8 点，不重叠。鼠标悬停进度条时会出现时间气泡（在进度条上方 16 点），这时五星淡出让位，鼠标离开后回来。播放时按 0–5：只闪现五星，视频不暂停，控制条不动。'],
+ ['图片区','视频文件的画面区在控制条上方再让出 16（原有规则：底部让出 190），五星浮在画面下沿上，不改变画面大小。'],
+])}
+
 <div class="frames" style="margin-top:8px">
  ${fr('评星控件 · 状态','1440 × 330',rateStates,'悬停预览、刚评分、清除、不可写')}
  ${fr('星的可读性 · 亮、中、暗三种照片','1440 × 260',contrast,'星一律在深色玻璃 / 深色角标上，亮星用 sun #FFE2A0；三种照片上对比度都够')}
@@ -1021,16 +1105,14 @@ ${legend([
  ${fr('筛选 · 面板打开，什么都没选','1280 × 800',pNone,'点“筛选”或按 ⌘F；面板向下展开，分区：星级、格式；头部是实时结果数，底部是清除筛选')}
  ${fr('筛选 · 只选星级（不低于 4 星）','1280 × 800',pRate,'点第 4 颗星 = 不低于 4 星，再点一次第 4 颗取消；格式胶囊上的数字同时更新（只算 ≥4 星的）')}
  ${fr('筛选 · 只选格式（RAW + HEIC）','1280 × 800',pFmt,'格式多选，点一下选中、再点取消；同一种筛选里是“或”，不同种筛选之间是“且”')}
- ${frO('推荐','筛选 · 星级 + 格式（弹出面板）','1280 × 800',pBoth,'星级和格式一屏看全，调星级阈值一次点击，格式多选不用反复打开；按钮摘要和右上角“2 / 4”同时更新')}
- ${frO('备选','筛选 · 原生两级菜单（筛选 ▸ 格式 ▸）','1280 × 800',pAlt,'外观最原生；但调星级阈值要点 3 次，格式每选一个菜单就关，多选要反复打开')}
+ ${frO('已定方案','筛选 · 星级 + 格式（弹出面板）','1280 × 800',pBoth,'星级和格式一屏看全，调星级阈值一次点击，格式多选不用反复打开；按钮摘要和右上角“2 / 4”同时更新')}
  ${fr('筛选 · 类型切到“视频”时','1280 × 800',pVid,'图片类的格式变灰、数量显示“—”，不隐藏，列表位置不跳；星级数字只算视频')}
  ${fr('筛选 · 没有符合条件的文件','1280 × 800',emptyF,'筛选组合（视频 · ≥5 星）没有结果；卡片里给出“清除筛选”')}
  ${fr('筛选 · 可扩展：第 3、第 4 个分区','1280 × 800',pMore,'再加筛选种类就在格式下面追加分区；面板宽度不变，太高时分区区域滚动，头部和底部固定。粉色标签是设计标注')}
 </div>
-<h3 class="sub" style="font-size:16px;margin-top:0"><span>选择</span>顶部栏怎么显示“正在筛选”</h3>
+<h3 class="sub" style="font-size:16px;margin-top:0"><span>已定</span>顶部栏怎么显示“正在筛选”</h3>
 <div class="frames">
- ${frO('推荐','按钮自己带摘要','1280 × 110',actA,'入口和状态合一，不多占位置；窄了依次缩成“筛选 · 2”、漏斗 + 徽标（见 1.2）')}
- ${frO('备选','按钮只留徽标，条件变成可删除的小标签','1280 × 110',actB,'每个条件一键删除、条件多也放得下；但永久压在照片上沿，窄窗口要占一整行')}
+ ${frO('已定方案','按钮自己带摘要','1280 × 110',actA,'入口和状态合一，不多占位置；窄了依次缩成“筛选 · 2”、漏斗 + 徽标（见 1.2）')}
 </div>
 ${legend([
  ['已定方案 · 入口','顶部栏里一个“筛选”按钮（漏斗图标），放在原来评星按钮的位置，筛选组居中不变。没筛选：普通玻璃；有筛选：强调色填充，摘要写出条件，例如“筛选 · ≥4 星 · RAW”，两种以上格式写“2 种格式”，放不下缩成“筛选 · 2”，再窄缩成漏斗 + 数量徽标。不打开面板也能看出有没有筛选、筛的是什么。'],
@@ -1045,6 +1127,12 @@ ${legend([
  ['可扩展','每个分区 = 小标题 + 当前值 + 控件，纵向排列。以后加色标、日期，只在格式下面追加分区，入口按钮、摘要规则（“筛选 · 2”按生效的种类数算）、清除筛选都不用改。'],
  ['快捷键','提议 ⌘F 打开 / 关闭筛选面板（macOS 里 ⌘F 是“查找 / 筛选”的惯例）。已核对：YilanApp.swift 的菜单快捷键（⌘, ⌘O ⇧⌘R ⌥⌘C R ⇧R ⌫ ⌘Z ⇧⌘Z ⌘1–3 ⌘+ ⌘− T I F ↑ ↓ Home End）和 BrowserModel.swift 的按键处理（⌫ ⌘⌫ Esc；⌘ + ⌘1–3 ⌘= ⌘−；方向键、PageUp/PageDown、Home、End；单键 0 1 T R I F；视频的空格 J L M；删除确认里的 Return Esc 空格）里都没有 ⌘F。已经计划占用的还有：1–5、0（评星）、Z、⌘0、⌘9。'],
 ])}
+
+<h3 class="sub" style="font-size:16px;margin-top:0"><span>未采用</span>1.3 里没被选中的方案（只供对照，开发不要照着做）</h3>
+<div class="frames">
+ ${frO('未采用','筛选 · 原生两级菜单（筛选 ▸ 格式 ▸）','1280 × 800',pAlt,'外观最原生；但调星级阈值要点 3 次，格式每选一个菜单就关，多选要反复打开')}
+ ${frO('未采用','按钮只留徽标，条件变成可删除的小标签','1280 × 110',actB,'每个条件一键删除、条件多也放得下；但永久压在照片上沿，窄窗口要占一整行')}
+</div>
 
 <h3 class="sub"><span>1.4</span>提示和首次说明</h3>
 <div class="frames">
@@ -1088,8 +1176,7 @@ ${legend([
 <div class="frames">
  ${fr('新版本提醒 · 启动后','1280 × 800',updWide,'启动后台检查到新版本：浮在顶部栏下面的玻璃提示，不挡照片中心，不打断操作；点 × 关闭')}
  ${fr('新版本提醒 · 窄窗口 640','640 × 440',updNarrow,'窗口窄时收成一行：只留“有新版本 v0.3.1”、“更新说明”和 ×；位置在顶部栏正下方，照片中心不被盖住')}
- ${frO('推荐','关掉提示后 · ⋯ 按钮上的小点 + ⋯ 菜单里的入口','1280 × 800',updDot,'留在窗口里、很安静，不用记得去菜单栏找；顶部栏随控件自动隐藏时小点也一起隐藏，不打扰看图')}
- ${frO('备选','关掉提示后 · 只在“一览”菜单里放入口','1280 × 800',updMenuApp,'窗口里完全没有痕迹；但用户不打开菜单就不会发现，等于重新错过了提醒')}
+ ${frO('已定方案','关掉提示后 · ⋯ 按钮上的小点 + ⋯ 菜单里的入口','1280 × 800',updDot,'留在窗口里、很安静，不用记得去菜单栏找；顶部栏随控件自动隐藏时小点也一起隐藏，不打扰看图')}
  ${fr('更新说明 · 中文界面','1280 × 800',notesZh,'表单挂在窗口上：当前版本 → 新版本、发布日期，下面是更新说明；按钮“前往下载”（主按钮）、“稍后”、“跳过这个版本”')}
  ${fr('更新说明 · 英文界面','1280 × 800',notesEn,'同一个表单；只显示英文那一段（New / Improved / Fixed / Upgrade notes），安装段不显示')}
  ${fr('更新说明 · 内容较长时','1280 × 800',notesLong,'示例：一个大版本的说明（有“新功能”）；超出的部分在表单里滚动，顶部和底部渐隐，页脚按钮不动')}
@@ -1109,6 +1196,11 @@ ${legend([
  ['手动检查','菜单“一览 › 检查更新…”。检查中：顶部出现带转圈的小条；已是最新：“已是最新版本（v0.3.0）”；失败：“无法检查更新，请检查网络”；有新版本：直接打开更新说明表单。结果用提示条，不弹对话框，和删除、导出的反馈一致。'],
  ['设置','设置 › 通用：“自动检查更新”开关（默认开），说明“一览只在检查更新时联网，不会上传任何信息。”；“立即检查”按钮，旁边是“上次检查：今天 09:41”。关掉开关后只有手动检查才联网。'],
 ])}
+
+<h3 class="sub" style="font-size:16px;margin-top:0"><span>未采用</span>1.7 里没被选中的方案（只供对照，开发不要照着做）</h3>
+<div class="frames">
+ ${frO('未采用','关掉提示后 · 只在“一览”菜单里放入口','1280 × 800',updMenuApp,'窗口里完全没有痕迹；但用户不打开菜单就不会发现，等于重新错过了提醒')}
+</div>
 
 `);
 
