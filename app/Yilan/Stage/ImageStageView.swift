@@ -409,13 +409,30 @@ final class ImageStageView: NSView {
         return event.locationInWindow.y >= content.bounds.height - Theme.titleBarHeight
     }
 
-    /// 双击标题栏：按系统设置（桌面与程序坞 › 连按窗口标题栏）缩放或最小化窗口
+    /// 双击标题栏：按系统设置（桌面与程序坞 › 连按窗口标题栏）缩放、填充、最小化窗口或什么都不做
     private func performTitleBarDoubleClick() {
         guard let window else { return }
-        switch UserDefaults.standard.string(forKey: "AppleActionOnDoubleClick") {
-        case "Minimize": window.performMiniaturize(nil)
-        case "None": break
-        default: window.performZoom(nil)
+        switch TitleBarDoubleClick.action() {
+        case .minimize: window.performMiniaturize(nil)
+        case .none: break
+        case .zoom: window.performZoom(nil)
+        case .fill: fill(window)
+        }
+    }
+
+    /// 填充前的窗口位置：再双击一次时恢复
+    private var frameBeforeFill: NSRect?
+
+    /// “填充”：铺满所在屏幕的可用区域（不进全屏）；已经铺满时恢复原来的大小
+    private func fill(_ window: NSWindow) {
+        guard let screen = window.screen ?? NSScreen.main else { return }
+        let target = screen.visibleFrame
+        if TitleBarDoubleClick.isFilled(window.frame, in: target), let previous = frameBeforeFill {
+            frameBeforeFill = nil
+            window.setFrame(previous, display: true, animate: true)
+        } else {
+            frameBeforeFill = window.frame
+            window.setFrame(target, display: true, animate: true)
         }
     }
 
@@ -487,5 +504,27 @@ struct ImageStage: NSViewRepresentable {
             view.apply(cmd.action)
         }
         view.window?.invalidateCursorRects(for: view)
+    }
+}
+
+/// 双击标题栏要做什么：读系统设置“连按窗口标题栏以”
+enum TitleBarDoubleClick: Equatable {
+    case zoom, fill, minimize, none
+
+    /// 系统存的值：Maximize（缩放）、Fill（填充）、Minimize（最小化）、None（不执行任何操作）；
+    /// 没设过时系统默认是“缩放”
+    static func action(defaults: UserDefaults = .standard) -> TitleBarDoubleClick {
+        switch defaults.string(forKey: "AppleActionOnDoubleClick") {
+        case "Minimize": return .minimize
+        case "None": return .none
+        case "Fill": return .fill
+        default: return .zoom
+        }
+    }
+
+    /// 窗口是否已经铺满可用区域（允许 2 点误差）
+    static func isFilled(_ frame: NSRect, in target: NSRect) -> Bool {
+        abs(frame.minX - target.minX) <= 2 && abs(frame.minY - target.minY) <= 2
+            && abs(frame.width - target.width) <= 2 && abs(frame.height - target.height) <= 2
     }
 }
