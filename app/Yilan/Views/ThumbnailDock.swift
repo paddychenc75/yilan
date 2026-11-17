@@ -15,16 +15,18 @@ struct ThumbnailDock: View {
     /// 星级（左上角角标，spec R3-01）
     var ratings: [URL: Int] = [:]
     let onSelect: (Int) -> Void
+    @State private var hovered = ShotHooks.stripHover
 
     var body: some View {
         VStack(spacing: 6) {
-            MetaLine(meta: meta, rating: rating, canRate: canRate, onRate: onRate)
+            MetaLine(meta: meta, rating: rating, canRate: canRate, onRate: onRate, stripHovered: hovered)
             ThumbnailStrip(items: items, current: current, fresh: fresh, ratings: ratings, onSelect: onSelect)
                 .frame(height: 62)
         }
         .padding(EdgeInsets(top: 9, leading: 12, bottom: 10, trailing: 12))
         .frame(width: width)
         .regularGlass(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .onHover { inside in if !ShotHooks.stripHover { hovered = inside } }
     }
 }
 
@@ -36,15 +38,47 @@ struct DockMeta: Equatable {
     var failed: Bool
 }
 
+/// 信息行让位规则（spec R2-05，2026-11-18 改定）：中间给星留出位置，名称和星之间至少 16。
+/// 放不下时：① 先隐藏右边的「大小 · 格式」② 再隐藏尺寸 ③ 最后名称中间截断。
+/// 左边挤、右边还有地方时，尺寸挪到右边一组，而不是直接隐藏。视频中间留空，两边文字位置不变
+struct InfoRowLayout: Equatable {
+    enum DimsPlace: Equatable { case left, right, hidden }
+    var dims: DimsPlace
+    var showTrailing: Bool
+    /// 左边一组最多多宽（名称超出就截断）
+    var side: CGFloat
+
+    static let starsWidth: CGFloat = 110       // 5 颗 × 22
+    static let gap: CGFloat = 16
+    static let spacing: CGFloat = 8
+    /// 尺寸挪到右边时和「大小 · 格式」之间加一个「·」，多占的宽度
+    static let separator: CGFloat = 14
+
+    static func decide(width: CGFloat, name: CGFloat, dims: CGFloat?, trailing: CGFloat) -> InfoRowLayout {
+        let side = max(0, (width - starsWidth) / 2 - gap)
+        let sp = spacing
+        guard let d = dims else {
+            return InfoRowLayout(dims: .hidden, showTrailing: name <= side && trailing <= side, side: side)
+        }
+        // 左边放得下名称 + 尺寸：尺寸在左；右边放得下就显示「大小 · 格式」
+        if name + sp + d <= side { return .init(dims: .left, showTrailing: trailing <= side, side: side) }
+        // 左边挤：尺寸挪到右边，不直接隐藏（右边和名称互不影响，名称照常截断）
+        if d + separator + sp + trailing <= side { return .init(dims: .right, showTrailing: true, side: side) }
+        // 右边放不下两样：① 先隐藏「大小 · 格式」，尺寸留在右边
+        if d <= side { return .init(dims: .right, showTrailing: false, side: side) }
+        // ② 再隐藏尺寸
+        return .init(dims: .hidden, showTrailing: false, side: side)
+    }
+}
+
+/// 缩略图栏上方一行：左（名称 + 尺寸）、中（星，永远居中）、右（尺寸 · 时长 · 大小 · 格式）
 struct MetaLine: View {
     let meta: DockMeta
     var rating: Int? = nil
     var canRate = false
     var onRate: ((Int) -> Void)? = nil
-
-    /// 星的整行宽 92，和两边文字至少留 14
-    private static let starsWidth: CGFloat = 92
-    private static let gap: CGFloat = 14
+    /// 鼠标在缩略图栏里（没评的星描边变亮）
+    var stripHovered = false
 
     /// 各段文字的实际宽度（隐藏测量），决定让位
     @State private var nameWidth: CGFloat = 0
@@ -53,25 +87,38 @@ struct MetaLine: View {
 
     var body: some View {
         GeometryReader { geo in
-            // 三段：左（名称 + 尺寸）、中（星，永远在、永远居中）、右（时长 · 大小 · 格式）。
-            // 不够放时：① 先隐藏尺寸 ② 再隐藏右边 ③ 最后名称截断（设计稿“让位顺序”）
-            let side = onRate == nil ? geo.size.width : max(0, (geo.size.width - Self.starsWidth) / 2 - Self.gap)
-            let showDims = nameWidth + 8 + dimsWidth <= side
-            let showTrailing = trailingWidth <= side && nameWidth <= side
+            let hasDims = meta.failed || meta.dimensions != nil
+            let layout = InfoRowLayout.decide(width: geo.size.width, name: nameWidth,
+                                              dims: hasDims ? dimsWidth : nil, trailing: trailingWidth)
             ZStack {
                 HStack(spacing: 0) {
-                    left(withDimensions: showDims)
-                        .frame(maxWidth: side, alignment: .leading)
+                    HStack(spacing: InfoRowLayout.spacing) {
+                        nameText
+                            .truncationMode(.middle)
+                            .frame(minWidth: 44, alignment: .leading)   // 至少保留约 6 个字符
+                            .layoutPriority(1)
+                        if layout.dims == .left { dimsView.fixedSize() }
+                    }
+                    .frame(maxWidth: layout.side, alignment: .leading)
                     Spacer(minLength: 0)
-                    if showTrailing { trailing.fixedSize() }
+                    HStack(spacing: InfoRowLayout.spacing) {
+                        if layout.dims == .right { dimsView.fixedSize() }
+                        if layout.dims == .right, layout.showTrailing {
+                            Text(verbatim: "·").font(Theme.mono(11, .regular)).foregroundStyle(Theme.text2)
+                        }
+                        if layout.showTrailing { trailing.fixedSize() }
+                    }
                 }
                 if let onRate {
-                    InfoRowStars(rating: rating ?? 0, enabled: canRate, onRate: onRate)
+                    InfoRowStars(rating: rating ?? 0, enabled: canRate, stripHovered: stripHovered,
+                                 tipRoomRight: layout.side - (layout.showTrailing ? trailingWidth : 0)
+                                     - (layout.dims == .right ? dimsWidth + InfoRowLayout.spacing + InfoRowLayout.separator : 0),
+                                 onRate: onRate)
                 }
                 // 测量用，不显示
                 ZStack {
                     nameText.fixedSize().measure { nameWidth = $0 }
-                    if let d = meta.dimensions { dimsText(d).fixedSize().measure { dimsWidth = $0 } }
+                    dimsView.fixedSize().measure { dimsWidth = $0 }
                     trailing.fixedSize().measure { trailingWidth = $0 }
                 }
                 .opacity(0)
@@ -92,21 +139,11 @@ struct MetaLine: View {
             .lineLimit(1)
     }
 
-    private func dimsText(_ d: String) -> some View {
-        Text(d).font(Theme.mono(11, .regular)).foregroundStyle(Theme.text2)
-    }
-
-    private func left(withDimensions: Bool) -> some View {
-        HStack(spacing: 8) {
-            nameText
-                .truncationMode(.middle)
-                .frame(minWidth: 44, alignment: .leading)   // 至少保留约 6 个字符
-                .layoutPriority(1)
-            if meta.failed {
-                Text("无法读取").font(.system(size: 11.5)).foregroundStyle(Theme.text2).fixedSize()
-            } else if withDimensions, let d = meta.dimensions {
-                dimsText(d).fixedSize()
-            }
+    @ViewBuilder private var dimsView: some View {
+        if meta.failed {
+            Text("无法读取").font(.system(size: 11.5)).foregroundStyle(Theme.text2)
+        } else if let d = meta.dimensions {
+            Text(d).font(Theme.mono(11, .regular)).foregroundStyle(Theme.text2)
         }
     }
 

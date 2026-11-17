@@ -41,7 +41,8 @@ enum ShotRunner {
                 for token in spec.split(separator: ",") {
                     if token.hasPrefix("t:"), let t = MediaFilter(rawValue: String(token.dropFirst(2))) { model.setFilter(t) }
                     if token == "ru" { f.rating.mode = .unrated }
-                    if token.hasPrefix("r"), let n = Int(token.dropFirst()) { f.rating.mode = .atLeast(n) }
+                    if token.hasPrefix("r"), let n = Int(token.dropFirst()) { f.rating.mode = .stars(n) }
+                    if token.hasPrefix("e"), let n = Int(token.dropFirst()) { f.rating.mode = .stars(n); f.rating.comparison = .exactly }
                     if token.hasPrefix("f:") {
                         f.format.selected = Set(token.dropFirst(2).split(separator: "+").compactMap { FormatGroup(rawValue: String($0)) })
                     }

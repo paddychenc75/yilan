@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 @testable import Yilan
@@ -29,7 +30,7 @@ struct BrowseFilterModelTests {
 
     @Test("星级：不低于 N、未评星；没读出来的按未评星")
     func rating() {
-        let f = RatingCriterion(mode: .atLeast(3))
+        let f = RatingCriterion(mode: .stars(3))
         #expect(f.matches(ItemFacts(item: items[0], rating: 4)))
         #expect(!f.matches(ItemFacts(item: items[0], rating: 2)))
         #expect(!f.matches(ItemFacts(item: items[0], rating: nil)))
@@ -40,7 +41,7 @@ struct BrowseFilterModelTests {
     func combine() {
         var f = BrowseFilter()
         f.format.selected = [.raw, .jpeg]
-        f.rating.mode = .atLeast(4)
+        f.rating.mode = .stars(4)
         let ratings: [URL: Int] = [items[0].url: 5, items[2].url: 3, items[3].url: 4, items[4].url: 5]
         let result = items.filter { f.matches(ItemFacts(item: $0, rating: ratings[$0.url])) }
         #expect(result.map(\.name) == ["a.ARW", "d.JPEG"])
@@ -53,7 +54,7 @@ struct BrowseFilterModelTests {
     @Test("数量：格式数按其他条件算，类型排除的不计；列出文件夹里实际有的格式")
     func facets() {
         var f = BrowseFilter()
-        f.rating.mode = .atLeast(4)
+        f.rating.mode = .stars(4)
         let ratings: [URL: Int] = [items[0].url: 5, items[3].url: 4, items[7].url: 4]
         let facets = FilterFacets.compute(items: items, ratings: ratings, type: .images, filter: f)
         #expect(facets.presentFormats == [.raw, .heic, .jpeg, .png, .gif, .mp4, .mov])
@@ -84,7 +85,7 @@ struct BrowseFilterModelTests {
         var ratings: [URL: Int] = [:]
         for (i, it) in many.enumerated() { ratings[it.url] = i % 6 }
         var f = BrowseFilter()
-        f.rating.mode = .atLeast(3)
+        f.rating.mode = .stars(3)
         f.format.selected = [.raw, .jpeg]
         let start = ContinuousClock.now
         let result = many.filter { f.matches(ItemFacts(item: $0, rating: ratings[$0.url])) }
@@ -112,7 +113,7 @@ struct BrowseFilterBrowserTests {
     @Test("筛选后序号和方向键只在结果里；清除后回到全部")
     func basic() {
         let m = model(["a.jpg", "b.jpg", "c.jpg", "d.jpg"], ratings: [5, 1, 4, 0])
-        m.setRatingCriterion(.atLeast(4))
+        m.setRatingCriterion(.stars(4))
         #expect(m.items.map(\.name) == ["a.jpg", "c.jpg"])
         #expect(m.current?.name == "a.jpg")
         m.next()
@@ -125,7 +126,7 @@ struct BrowseFilterBrowserTests {
     @Test("给当前文件改星导致不符合：暂留到切走（F-01、F-02）")
     func sticky() {
         let m = model(["a.jpg", "b.jpg", "c.jpg"], ratings: [5, 5, 5])
-        m.setRatingCriterion(.atLeast(4))
+        m.setRatingCriterion(.stars(4))
         m.next()                                         // b
         // 直接改内存里的星级（不写盘），模拟打星
         m.ratings[m.current!.url] = 2
@@ -145,7 +146,7 @@ struct BrowseFilterBrowserTests {
         #expect(m.items.map(\.name) == ["d.jpg"])                     // 未评星也不含视频
         var f = BrowseFilter()
         f.format.selected = [.jpeg, .mov]
-        f.rating.mode = .atLeast(1)
+        f.rating.mode = .stars(1)
         m.setBrowseFilter(f)
         m.setFilter(.images)
         m.setFilter(.all)
@@ -157,7 +158,7 @@ struct BrowseFilterBrowserTests {
         #expect(m.browseFilter.format.selected == [.mov])
         #expect(!m.browseFilter.rating.isActive)
         m.setFilter(.images)
-        m.setRatingCriterion(.atLeast(5))
+        m.setRatingCriterion(.stars(5))
         f = m.browseFilter
         f.format.selected = [.png]
         m.setBrowseFilter(f)
@@ -174,5 +175,77 @@ struct BrowseFilterBrowserTests {
         m.apply(FolderScanner.Result(folder: URL(fileURLWithPath: "/tmp/yilan-filter-2"), items: [item("x.jpg")], initialIndex: 0))
         #expect(!m.browseFilter.isActive)
         #expect(!m.filterPanelOpen)
+    }
+
+    @Test("「及以上」和「仅」：保留 N，立即生效；数量跟着变；视频不在结果里")
+    func comparisonModes() {
+        let m = model(["a.jpg", "b.jpg", "c.jpg", "d.jpg", "e.mov"], ratings: [3, 4, 3, 0, 3])
+        m.setRatingCriterion(.stars(3))
+        #expect(m.items.map(\.name) == ["a.jpg", "b.jpg", "c.jpg"])
+        #expect(m.browseFilter.summaryParts == [String(localized: "≥\(3) 星")])
+        m.setRatingComparison(.exactly)
+        #expect(m.browseFilter.rating.mode == .stars(3))
+        #expect(m.items.map(\.name) == ["a.jpg", "c.jpg"])
+        #expect(m.filterFacets.resultCount == 2)
+        #expect(m.browseFilter.summaryParts == [String(localized: "仅 \(3) 星")])
+        #expect(m.filterFacets.exactCounts[3] == 2 && m.filterFacets.atLeastCount(3) == 3)
+    }
+
+    @Test("5 星：两种方式是一回事，按及以上；摘要是 ≥5 星")
+    func levelFive() {
+        let m = model(["a.jpg", "b.jpg"], ratings: [5, 4])
+        m.setRatingComparison(.exactly)
+        m.setRatingCriterion(.stars(5))
+        #expect(m.browseFilter.rating.effectiveComparison == .atLeast)
+        #expect(m.items.map(\.name) == ["a.jpg"])
+        #expect(m.browseFilter.summaryParts == [String(localized: "≥\(5) 星")])
+    }
+
+    @Test("清除筛选、换文件夹后回到及以上")
+    func comparisonReset() {
+        let m = model(["a.jpg"], ratings: [3])
+        m.setRatingCriterion(.stars(3))
+        m.setRatingComparison(.exactly)
+        m.clearBrowseFilter()
+        #expect(m.browseFilter.rating.comparison == .atLeast)
+        m.setRatingComparison(.exactly)
+        m.resetBrowseFilter()
+        #expect(m.browseFilter.rating.comparison == .atLeast)
+    }
+
+    @Test("面板开着时数字键只选星级、绝不评星：再按同一个数字切换方式，0 = 不限")
+    func digitsInPanel() throws {
+        let m = model(["a.jpg", "b.jpg"], ratings: [3, 0])
+        m.filterPanelOpen = true
+        func press(_ keyCode: UInt16, _ chars: String) throws {
+            let e = try #require(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+                                                  windowNumber: 0, context: nil, characters: chars,
+                                                  charactersIgnoringModifiers: chars, isARepeat: false, keyCode: keyCode))
+            #expect(m.handleKey(e))
+        }
+        try press(20, "3")
+        #expect(m.browseFilter.rating.mode == .stars(3) && m.browseFilter.rating.comparison == .atLeast)
+        try press(20, "3")
+        #expect(m.browseFilter.rating.comparison == .exactly)
+        try press(20, "3")
+        #expect(m.browseFilter.rating.comparison == .atLeast)
+        try press(29, "0")
+        #expect(m.browseFilter.rating.mode == .any)
+        // 当前照片的星级没被改，也没有写入或撤销记录
+        #expect(m.ratings[m.allItems[0].url] == 3 && m.ratings[m.allItems[1].url] == 0)
+        #expect(!m.canUndo)
+        // 面板关上后数字键回到评星（这里的文件是假的，评星会因读不到文件而提示，不改筛选）
+        m.filterPanelOpen = false
+        try press(18, "1")
+        #expect(m.browseFilter.rating.mode == .any)
+    }
+
+    @Test("点已选中的那颗星 = 回到不限")
+    func toggleOff() {
+        // StarRow 点当前已亮的最后一颗传 0，面板把 0 当成不限
+        let m = model(["a.jpg"], ratings: [3])
+        m.setRatingCriterion(.stars(3))
+        m.setRatingCriterion(.any)
+        #expect(!m.browseFilter.rating.isActive)
     }
 }

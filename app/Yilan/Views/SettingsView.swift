@@ -42,6 +42,10 @@ struct SettingsView: View {
     }
 
     static let size = CGSize(width: 820, height: 700)
+    /// 文件格式页 20 个格式要一屏放下，窗口加高（屏幕不够高时内容区滚动）
+    static func size(for pane: Pane) -> CGSize {
+        pane == .formats ? CGSize(width: 820, height: 860) : size
+    }
 
     @Bindable var settings: AppSettings
     @Bindable var language: LanguageSettings
@@ -69,7 +73,9 @@ struct SettingsView: View {
                     .padding(.leading, 236)
             }
         }
-        .frame(width: Self.size.width, height: Self.size.height)
+        .frame(width: Self.size.width)
+        .frame(maxHeight: .infinity)
+        .onChange(of: nav.pane) { _, value in SettingsWindow.shared.fit(to: value) }
         .background(Color(hex: 0x1E1E21))
         .ignoresSafeArea()
         .preferredColorScheme(.dark)
@@ -590,7 +596,8 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
 
     func show() {
         if window == nil {
-            let w = NSWindow(contentRect: NSRect(origin: .zero, size: SettingsView.size),
+            let size = SettingsView.size(for: SettingsNavigation.shared.pane)
+            let w = NSWindow(contentRect: NSRect(origin: .zero, size: size),
                              styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
                              backing: .buffered, defer: false)
             w.titleVisibility = .hidden
@@ -604,21 +611,41 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
             // SwiftUI 视图套一层普通 NSView：窗口大小由这里定，SwiftUI 不会再按“内容区 + 标题栏”把窗口撑高
             let hosting = NSHostingView(rootView: SettingsView(settings: AppSettings.shared, language: LanguageSettings.shared))
             hosting.sizingOptions = []
-            let container = NSView(frame: NSRect(origin: .zero, size: SettingsView.size))
+            let container = NSView(frame: NSRect(origin: .zero, size: size))
             hosting.frame = container.bounds
             hosting.autoresizingMask = [.width, .height]
             container.addSubview(hosting)
             w.contentView = container
             w.delegate = self
             // 内容伸到标题栏下面：整个窗口就是 820 × 700（按内容区创建会多出标题栏的高度）
-            w.setFrame(NSRect(origin: .zero, size: SettingsView.size), display: false)
+            w.setFrame(NSRect(origin: .zero, size: Self.clamped(size, on: NSScreen.main)), display: false)
             w.center()
             window = w
+        } else if let window {
+            fit(to: SettingsNavigation.shared.pane)
+            _ = window
         }
         guard let window else { return }
         placeTrafficLights(window)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate()
+    }
+
+    /// 换页时调整窗口高度，左上角不动
+    func fit(to pane: SettingsView.Pane) {
+        guard let window else { return }
+        let size = Self.clamped(SettingsView.size(for: pane), on: window.screen)
+        guard window.frame.size != size else { return }
+        var frame = window.frame
+        frame.origin.y += frame.height - size.height
+        frame.size = size
+        if let visible = window.screen?.visibleFrame, frame.minY < visible.minY { frame.origin.y = visible.minY }
+        window.setFrame(frame, display: true, animate: true)
+    }
+
+    private static func clamped(_ size: CGSize, on screen: NSScreen?) -> CGSize {
+        guard let visible = screen?.visibleFrame else { return size }
+        return CGSize(width: size.width, height: min(size.height, visible.height))
     }
 
     /// 设计稿：红绿灯在侧边栏里，第一个距窗口左 24，中心距顶 28

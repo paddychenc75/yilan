@@ -64,15 +64,35 @@ protocol FilterCriterion: Equatable, Sendable {
     func matches(_ facts: ItemFacts) -> Bool
 }
 
-/// 星级分区（spec R5a）：不限 / 不低于 N 星 / 未评星，单选
+/// 星级分区（spec R5a）：不限 / N 星 / 未评星，单选；N 星再分「不低于」「等于」
 struct RatingCriterion: FilterCriterion {
     enum Mode: Equatable, Sendable {
         case any
-        case atLeast(Int)
+        case stars(Int)
         case unrated
     }
 
+    /// 选了 N 星时怎么比（以后可以加「不高于」）
+    enum Comparison: String, CaseIterable, Equatable, Sendable {
+        case atLeast
+        case exactly
+
+        func test(_ rating: Int, _ n: Int) -> Bool {
+            switch self {
+            case .atLeast: rating >= n
+            case .exactly: rating == n
+            }
+        }
+    }
+
     var mode: Mode = .any
+    var comparison: Comparison = .atLeast
+
+    /// 5 星时「及以上」和「仅」是一回事，一律按及以上
+    var effectiveComparison: Comparison {
+        if case .stars(let n) = mode, n >= 5 { return .atLeast }
+        return comparison
+    }
 
     var isActive: Bool { mode != .any }
 
@@ -82,7 +102,7 @@ struct RatingCriterion: FilterCriterion {
         let r = facts.rating ?? 0
         switch mode {
         case .any: return true
-        case .atLeast(let n): return r >= n
+        case .stars(let n): return effectiveComparison.test(r, n)
         case .unrated: return r == 0
         }
     }
@@ -116,7 +136,11 @@ struct BrowseFilter: Equatable, Sendable {
     var summaryParts: [String] {
         var parts: [String] = []
         switch rating.mode {
-        case .atLeast(let n): parts.append(String(localized: "≥\(n) 星", comment: "筛选按钮摘要：星级不低于 N"))
+        case .stars(let n):
+            switch rating.effectiveComparison {
+            case .atLeast: parts.append(String(localized: "≥\(n) 星", comment: "筛选按钮摘要：星级不低于 N"))
+            case .exactly: parts.append(String(localized: "仅 \(n) 星", comment: "筛选按钮摘要：星级正好是 N"))
+            }
         case .unrated: parts.append(String(localized: "未评星"))
         case .any: break
         }
@@ -137,6 +161,8 @@ struct FilterFacets: Equatable {
     var formatCounts: [FormatGroup: Int] = [:]
     /// 在“类型 + 格式条件”下的未评星数量
     var unratedCount = 0
+    /// 在“类型 + 格式条件”下正好 N 星的图片数（下标 1…5；视频不算）
+    var exactCounts = [Int](repeating: 0, count: 6)
     /// 结果数（类型 + 全部条件）
     var resultCount = 0
     /// 文件夹里全部文件数
@@ -149,6 +175,8 @@ struct FilterFacets: Equatable {
         unratedOnly.rating = RatingCriterion(mode: .unrated)
         var noFormat = filter
         noFormat.format = FormatCriterion()
+        var noRating = filter
+        noRating.rating = RatingCriterion()
         for item in items {
             let group = FormatGroup.of(item)
             if let group { present.insert(group) }
@@ -157,10 +185,14 @@ struct FilterFacets: Equatable {
             if filter.matches(facts) { facets.resultCount += 1 }
             if unratedOnly.matches(facts) { facets.unratedCount += 1 }   // 只算图片（视频没有星级）
             if let group, noFormat.matches(facts) { facets.formatCounts[group, default: 0] += 1 }
+            if item.kind != .video, noRating.matches(facts), let r = facts.rating, (1...5).contains(r) { facets.exactCounts[r] += 1 }
         }
         facets.presentFormats = FormatGroup.allCases.filter(present.contains)
         return facets
     }
+
+    /// N 星及以上的数量（星上悬停的提示用）
+    func atLeastCount(_ n: Int) -> Int { exactCounts[max(1, min(5, n))...].reduce(0, +) }
 
     /// 类型切换上的数字：各类型在当前筛选条件下的结果数（spec R6-03）
     static func typeCounts(items: [MediaItem], ratings: [URL: Int], filter: BrowseFilter) -> [MediaFilter: Int] {

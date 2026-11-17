@@ -302,6 +302,7 @@ struct RootView: View {
         FilterPanel(filter: model.browseFilter, type: model.filter, facets: model.filterFacets,
                     loadingRatings: !model.ratingsLoaded && model.browseFilter.rating.isActive,
                     onRating: { model.setRatingCriterion($0) },
+                    onComparison: { model.setRatingComparison($0) },
                     onToggleFormat: { model.toggleFormat($0) },
                     onClear: { model.clearBrowseFilter() })
             .padding(.top, 10 + 36 + 8)

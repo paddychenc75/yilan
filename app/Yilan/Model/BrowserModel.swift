@@ -775,7 +775,10 @@ final class BrowserModel {
         }
         // 数字键 1–5 评星、0 清除（spec R1、K-01）：按键码判断，主键盘和小键盘都算；按住不放的重复不算
         if mods.isEmpty, !event.modifierFlags.contains(.shift), let value = Self.ratingKey(event.keyCode) {
-            if !event.isARepeat { rateCurrent(value, fromKeyboard: true) }
+            // 筛选面板开着时数字键只用来选星级，绝不给当前照片评星（避免在面板后面悄悄写文件）
+            if !event.isARepeat {
+                if filterPanelOpen { filterDigit(value) } else { rateCurrent(value, fromKeyboard: true) }
+            }
             return true
         }
         if mods.contains(.command) {

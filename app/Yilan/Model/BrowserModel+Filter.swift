@@ -55,6 +55,24 @@ extension BrowserModel {
         setBrowseFilter(f)
     }
 
+    /// 筛选面板开着时的数字键：1–5 选星级，再按同一个数字在「及以上」和「仅」之间切换，0 = 不限
+    func filterDigit(_ value: Int) {
+        guard value > 0 else { setRatingCriterion(.any); return }
+        if browseFilter.rating.mode == .stars(value) {
+            guard value < 5 else { return }
+            setRatingComparison(browseFilter.rating.comparison == .atLeast ? .exactly : .atLeast)
+        } else {
+            setRatingCriterion(.stars(value))
+        }
+    }
+
+    /// 「及以上」/「仅」：保留选中的 N，立即生效
+    func setRatingComparison(_ comparison: RatingCriterion.Comparison) {
+        var f = browseFilter
+        f.rating.comparison = comparison
+        setBrowseFilter(f)
+    }
+
     func toggleFormat(_ group: FormatGroup) {
         var f = browseFilter
         if f.format.selected.contains(group) { f.format.selected.remove(group) } else { f.format.selected.insert(group) }

@@ -16,7 +16,7 @@ struct StarShape: Shape {
 
 /// 一颗星：亮星实心 sun #FFE2A0；未亮的白 62% 描边（线宽 1.7 / 24）；悬停预览半透明填充（设计稿 .st）
 struct RatingStar: View {
-    enum Look { case off, on, preview }
+    enum Look { case off, on, preview, included }
     let look: Look
     let size: CGFloat
 
@@ -32,6 +32,9 @@ struct RatingStar: View {
                 StarShape().stroke(Theme.Brand.sun, style: StrokeStyle(lineWidth: line, lineJoin: .round))
             case .off:
                 StarShape().stroke(Color.white.opacity(0.62), style: StrokeStyle(lineWidth: line, lineJoin: .round))
+            case .included:
+                // 筛选「及以上」：更高的星级也算在内，同样的黄色 40%
+                StarShape().fill(Theme.Brand.sun.opacity(0.4))
             }
         }
         .frame(width: size, height: size)
@@ -47,6 +50,10 @@ struct StarRow: View {
     var enabled = true
     /// 正在闪现的星级（第 N 颗放大 130% 并发光）
     var flash: RatingFlash?
+    /// 筛选「及以上」：N 以上的星画成半透明黄色
+    var includesHigher = false
+    /// 悬停第 N 颗星时的提示（筛选面板里写两种数量）
+    var help: ((Int) -> String)? = nil
     let onRate: (Int) -> Void
 
     @State private var hovered: Int?
@@ -64,6 +71,7 @@ struct StarRow: View {
                         if inside { hovered = n } else if hovered == n { hovered = nil }
                     }
                     .onTapGesture { onRate(n == rating ? 0 : n) }
+                    .help(help?(n) ?? "")
                     .accessibilityElement()
                     .accessibilityLabel(Text("\(n) 星", comment: "读屏：第 N 颗星"))
                     .accessibilityAddTraits(.isButton)
@@ -83,6 +91,7 @@ struct StarRow: View {
     private func look(_ n: Int) -> RatingStar.Look {
         if n <= rating { return .on }
         if enabled, let h = hovered, h > rating, n <= h { return .preview }
+        if includesHigher, rating > 0 { return .included }
         return .off
     }
 }
@@ -279,17 +288,29 @@ struct KeycapText: View {
 struct InfoRowStars: View {
     let rating: Int
     let enabled: Bool
+    /// 鼠标在缩略图栏里
+    var stripHovered = false
+    /// 星右边到右侧文字之间的空位；放得下提示就放在星右边，不压住照片
+    var tipRoomRight: CGFloat = 0
     let onRate: (Int) -> Void
 
+    /// 每颗星占 22（星 16 + 间距约 6）
+    static let pitch: CGFloat = 22
+    /// 热区向上、向下伸出的量：整行高 16 + 6 + 3 = 25，向下只伸 3，碰不到缩略图（缩略图上沿离信息行至少 8）
+    static let hitTop: CGFloat = 6
+    static let hitBottom: CGFloat = 3
+
     @State private var hovered: Int? = ShotHooks.rowHover
-    @State private var rowHovered = ShotHooks.rowHover != nil
+    @State private var showsTip = false
+    @State private var tipWidth: CGFloat = 140
+    @State private var tipTask: Task<Void, Never>?
 
     var body: some View {
         HStack(spacing: 0) {
             ForEach(1...5, id: \.self) { n in
                 star(n)
-                    .frame(width: 19, height: 24)   // 热区 19 × 24，相邻不留缝
-                    .contentShape(Rectangle())
+                    .frame(width: Self.pitch, height: 16)   // 相邻不留缝
+                    .contentShape(ExpandedRect(top: Self.hitTop, bottom: Self.hitBottom))
                     .onHover { inside in
                         if inside { hovered = n } else if hovered == n { hovered = nil }
                     }
@@ -299,27 +320,52 @@ struct InfoRowStars: View {
                     .accessibilityAddTraits(.isButton)
             }
         }
-        .frame(width: 92, height: 16)
-        .onHover { rowHovered = $0 }
+        .frame(width: Self.pitch * 5, height: 16)
         .opacity(enabled ? 1 : 0.4)
-        .overlay(alignment: .top) {
-            if enabled, let h = hovered, h == rating, rating > 0 {
-                Text("再点一次 = 清除星级")
-                    .font(.system(size: 11.5, weight: .medium))
-                    .foregroundStyle(.white)
-                    .fixedSize()
-                    .padding(.horizontal, 10)
-                    .frame(height: 26)
-                    .thickGlass(Capsule())
-                    .offset(y: -34)
+        .overlay(alignment: tipBeside ? .leading : .top) {
+            if showsTip {
+                tip
+                    .offset(x: tipBeside ? Self.pitch * 5 + 8 : 0, y: tipBeside ? 0 : -34)
                     .allowsHitTesting(false)
                     .transition(.opacity)
             }
         }
+        // 在亮着的最后一颗星上停约 1 秒才出提示，一动就消失
+        .onChange(of: hovered) { _, value in
+            tipTask?.cancel()
+            withAnimation(.easeOut(duration: 0.12)) { showsTip = false }
+            guard enabled, let value, value == rating, rating > 0 else { return }
+            tipTask = Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled, hovered == value else { return }
+                withAnimation(.easeOut(duration: 0.15)) { showsTip = true }
+            }
+        }
         .animation(.easeOut(duration: 0.12), value: hovered)
+        .animation(.easeOut(duration: 0.15), value: stripHovered)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text("评星"))
         .accessibilityValue(rating > 0 ? Text("\(rating) 星", comment: "星级值") : Text("未评星"))
+    }
+
+    /// 右边空位放得下就放在星右边（不压住照片），否则放在星上面
+    private var tipBeside: Bool { tipRoomRight >= tipWidth + 8 }
+
+    private var tip: some View {
+        Text("再点一次 = 清除星级")
+            .font(.system(size: 11.5, weight: .medium))
+            .foregroundStyle(.white)
+            .fixedSize()
+            .padding(.horizontal, 10)
+            .frame(height: tipBeside ? 22 : 26)
+            .thickGlass(Capsule())
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { tipWidth = $0 }
+    }
+
+    /// 没亮的星：静止时淡（没评 0.28，评过的行 0.30），鼠标进入缩略图栏后 0.58
+    private var unlitOpacity: Double {
+        if stripHovered && enabled { return 0.58 }
+        return rating > 0 ? 0.30 : 0.28
     }
 
     private func star(_ n: Int) -> some View {
@@ -334,10 +380,20 @@ struct InfoRowStars: View {
                 StarShape().fill(Theme.Brand.sun)
                 StarShape().stroke(Theme.Brand.sun, style: StrokeStyle(lineWidth: line, lineJoin: .round))
             } else {
-                StarShape().stroke(Color.white.opacity(rowHovered && enabled ? 0.6 : 0.34),
+                StarShape().stroke(Color.white.opacity(unlitOpacity),
                                    style: StrokeStyle(lineWidth: line, lineJoin: .round))
             }
         }
         .frame(width: 16, height: 16)
+    }
+}
+
+/// 热区比显示的范围上下各多出一些（左右不变，相邻的星之间不留缝）
+struct ExpandedRect: Shape {
+    var top: CGFloat
+    var bottom: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        Path(CGRect(x: rect.minX, y: rect.minY - top, width: rect.width, height: rect.height + top + bottom))
     }
 }

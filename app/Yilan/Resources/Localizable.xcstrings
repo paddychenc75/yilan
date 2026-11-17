@@ -131,6 +131,26 @@
         }
       }
     },
+    "%lld 星及以上" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld★ and up"
+          }
+        }
+      }
+    },
+    "%lld 星及以上 %lld 个 · 仅 %lld 星 %lld 个" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld★ and up: %2$lld · Only %3$lld★: %4$lld"
+          }
+        }
+      }
+    },
     "%lld 次" : {
       "localizations" : {
         "en" : {
@@ -170,6 +190,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld s"
+          }
+        }
+      }
+    },
+    "5 星" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5★"
           }
         }
       }
@@ -440,16 +470,6 @@
         }
       }
     },
-    "不低于 %lld 星" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "At least %lld stars"
-          }
-        }
-      }
-    },
     "不再询问" : {
       "localizations" : {
         "en" : {
@@ -466,6 +486,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Any"
+          }
+        }
+      }
+    },
+    "仅 %lld 星" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only %lld★"
+          }
+        }
+      }
+    },
+    "仅此星级" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only"
           }
         }
       }
@@ -1051,16 +1091,6 @@
         }
       }
     },
-    "即时生效 · ⌘F 开关 · Esc 关闭" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Applies instantly · ⌘F toggles · Esc closes"
-          }
-        }
-      }
-    },
     "原位置已经有“%@”" : {
       "localizations" : {
         "en" : {
@@ -1077,6 +1107,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Originals aren’t changed at all. Keep the .xmp files with them when you move to another app. With sidecars, Lightroom, Bridge and Windows won’t show ratings for JPEG-type images."
+          }
+        }
+      }
+    },
+    "及以上" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "And up"
           }
         }
       }
@@ -2365,6 +2405,16 @@
         }
       }
     },
+    "数字键选星级 · ⌘F 开关 · Esc 关闭" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Digits pick a level · ⌘F toggles · Esc closes"
+          }
+        }
+      }
+    },
     "文件" : {
       "comment" : "信息面板分组标题",
       "localizations" : {
@@ -2694,6 +2744,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Where Ratings Are Saved"
+          }
+        }
+      }
+    },
+    "星级比较方式" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rating comparison"
           }
         }
       }

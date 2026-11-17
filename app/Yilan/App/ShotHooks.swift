@@ -14,7 +14,7 @@ import Foundation
 /// `--shot-rating=4` 启动后给当前文件评 4 星（会写进 /tmp 下的测试副本）；`--shot-stars` 一直显示画面五星；
 /// `--shot-hint=shortcuts|xmp` 显示提示卡片；`--shot-strip=hidden` 隐藏缩略图栏；
 /// `--shot-seed-ratings` 给 /tmp 下的副本按固定规律评星；`--shot-filter=t:videos,r4,ru,f:jpeg+heic` 设筛选
-/// （t: 类型，r4 不低于 4 星，ru 未评星，f: 格式）；`--shot-filter-panel` 打开筛选面板。
+/// （t: 类型，r4 不低于 4 星，e3 等于 3 星，ru 未评星，f: 格式）；`--shot-filter-panel` 打开筛选面板。
 enum ShotHooks {
     #if DEBUG
     private static func value(_ name: String) -> String? {
@@ -37,6 +37,8 @@ enum ShotHooks {
     /// `--shot-row-hover=4` 信息行里的星摆成鼠标停在第 4 颗的样子；`--shot-hold-flash` 闪现的胶囊一直显示
     static let rowHover: Int? = value("shot-row-hover").flatMap(Int.init)
     static let holdFlash = CommandLine.arguments.contains("--shot-hold-flash")
+    /// `--shot-strip-hover` 摆成鼠标在缩略图栏里的样子
+    static let stripHover = CommandLine.arguments.contains("--shot-strip-hover")
     /// `--shot-update=notice|dot|sheet|long|checking|uptodate|failed` 用内置的假数据摆出更新提醒的样子（不联网）
     static let update: String? = value("shot-update")
     /// `--shot-formats=fresh|some|group|mixed|justset|restored|declined|confirm|progress|restoreall`
@@ -67,6 +69,7 @@ enum ShotHooks {
     static let holdFlash = false
     static let update: String? = nil
     static let formats: String? = nil
+    static let stripHover = false
     static let filterSpec: String? = nil
     static let filterPanel = false
     #endif

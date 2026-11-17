@@ -90,8 +90,8 @@ struct FormatsPane: View {
             .accessibilityLabel(Text("默认用一览打开 \(format.name)"))
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .frame(maxWidth: .infinity, minHeight: 44)
+        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, minHeight: 40)
         .background(model.notes[format] == .busy ? Color.white.opacity(0.06) : .clear)
     }
 

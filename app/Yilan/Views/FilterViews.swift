@@ -81,6 +81,7 @@ struct FilterPanel: View {
     /// 星级还在后台读取（spec R4-08）
     let loadingRatings: Bool
     let onRating: (RatingCriterion.Mode) -> Void
+    var onComparison: (RatingCriterion.Comparison) -> Void = { _ in }
     let onToggleFormat: (FormatGroup) -> Void
     let onClear: () -> Void
 
@@ -125,24 +126,32 @@ struct FilterPanel: View {
     // MARK: 星级
 
     private var ratingValue: Int {
-        if case .atLeast(let n) = filter.rating.mode { return n }
+        if case .stars(let n) = filter.rating.mode { return n }
         return 0
     }
 
     private var ratingSection: some View {
         let videoOnly = type == .videos
         return VStack(alignment: .leading, spacing: 8) {
-            sectionTitle(Text("星级"), value: videoOnly ? Text("视频不支持星级") : {
-                switch filter.rating.mode {
-                case .any: Text("不限")
-                case .unrated: Text("未评星")
-                case .atLeast(let n): Text("不低于 \(n) 星", comment: "筛选面板星级分区的当前值")
+            if videoOnly {
+                sectionTitle(Text("星级"), value: Text("视频不支持星级"))
+            } else {
+                // 标题右边：「不低于」|「等于」，只对选中的 N 星起作用；不限 / 未评星时置灰
+                HStack {
+                    Text("星级").font(.system(size: 10.5, weight: .semibold)).tracking(0.63).foregroundStyle(Theme.text3)
+                    Spacer()
+                    ComparisonSegments(level: ratingValue, selected: filter.rating.effectiveComparison, onSelect: onComparison)
                 }
-            }())
+            }
             HStack(spacing: 8) {
                 FilterChip(title: Text("不限"), count: nil, selected: filter.rating.mode == .any, enabled: true) { onRating(.any) }
-                StarRow(rating: ratingValue, size: 21, spacing: 4) { value in
-                    onRating(value == 0 ? .any : .atLeast(value))
+                StarRow(rating: ratingValue, size: 21, spacing: 4,
+                        includesHigher: filter.rating.effectiveComparison == .atLeast,
+                        help: { n in
+                            String(localized: "\(n) 星及以上 \(facets.atLeastCount(n)) 个 · 仅 \(n) 星 \(facets.exactCounts[n]) 个",
+                                   comment: "筛选面板：悬停第 N 颗星时的两种数量")
+                        }) { value in
+                    onRating(value == 0 ? .any : .stars(value))
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 28)
@@ -205,7 +214,7 @@ struct FilterPanel: View {
                     .foregroundStyle(filter.isActive ? Theme.link : Theme.text3)
                     .disabled(!filter.isActive)
                 Spacer()
-                Text("即时生效 · ⌘F 开关 · Esc 关闭").font(.system(size: 11)).foregroundStyle(Theme.text3)
+                Text("数字键选星级 · ⌘F 开关 · Esc 关闭").font(.system(size: 11)).foregroundStyle(Theme.text3)
             }
         }
     }
@@ -270,5 +279,53 @@ struct EmptyFilterResultCard: View {
         .padding(EdgeInsets(top: 30, leading: 32, bottom: 26, trailing: 32))
         .frame(width: 420)
         .thickGlass(RoundedRectangle(cornerRadius: 26, style: .continuous))
+    }
+}
+
+/// 星级比较方式的两段小开关（高 20）：「3 星及以上」|「仅 3 星」；没选星级时是置灰的通用说法；5 星只有一个标签
+struct ComparisonSegments: View {
+    let level: Int
+    let selected: RatingCriterion.Comparison
+    let onSelect: (RatingCriterion.Comparison) -> Void
+
+    var body: some View {
+        if level >= 5 {
+            Text("5 星", comment: "筛选面板：选了 5 星时只有一种意思")
+                .font(.system(size: 10.5, weight: .medium))
+                .foregroundStyle(Theme.text2)
+                .padding(.horizontal, 8)
+                .frame(height: 20)
+        } else {
+            HStack(spacing: 0) {
+                ForEach(RatingCriterion.Comparison.allCases, id: \.self) { c in
+                    Button { onSelect(c) } label: {
+                        label(c)
+                            .font(.system(size: 10.5, weight: .medium))
+                            .foregroundStyle(c == selected && level > 0 ? .white : Theme.text2)
+                            .padding(.horizontal, 8)
+                            .frame(height: 18)
+                            .background(Capsule().fill(c == selected && level > 0 ? Color.white.opacity(0.2) : .clear))
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(c == selected ? .isSelected : [])
+                }
+            }
+            .padding(1)
+            .background(Capsule().fill(Color.white.opacity(0.07)))
+            .disabled(level == 0)
+            .opacity(level == 0 ? 0.4 : 1)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(Text("星级比较方式"))
+        }
+    }
+
+    private func label(_ c: RatingCriterion.Comparison) -> Text {
+        switch (c, level > 0) {
+        case (.atLeast, true): Text("\(level) 星及以上", comment: "筛选面板：N 星及以上")
+        case (.exactly, true): Text("仅 \(level) 星", comment: "筛选面板：只要 N 星")
+        case (.atLeast, false): Text("及以上", comment: "筛选面板：没选星级时的比较方式")
+        case (.exactly, false): Text("仅此星级", comment: "筛选面板：没选星级时的比较方式")
+        }
     }
 }
