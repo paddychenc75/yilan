@@ -1,6 +1,6 @@
 # 一览 v0.3 技术方案（tech-design）
 
-状态：草稿，待评审（2026-11-17）。依据 `prd.md`、`design/`、`spec.md`。所有「实测」数字来自 2026-11-17 在本机（Apple M3 Max，16 核，**macOS 27.2.1**，Xcode 27.0，Swift 6.4）用 `app/Fixtures` 里的公开授权素材做的实验，实验代码是一次性的，没有进仓库（第 7 节）。
+状态：产品已确认（2026-11-17）。依据 `prd.md`、`design/`、`spec.md`。所有「实测」数字来自 2026-11-17 在本机（Apple M3 Max，16 核，**macOS 27.2.1**，Xcode 27.0，Swift 6.4）用 `app/Fixtures` 里的公开授权素材做的实验，实验代码是一次性的，没有进仓库（第 7 节）。
 
 ## 1. 目标和范围
 
@@ -335,3 +335,15 @@ struct UndoHistory { entries（最多 100）; var menuTitle; push; pop; removeAl
 | 7 | 对照设计稿逐画板验收、中英文、640 宽度、2000 文件性能对比、Lightroom 实测（如有条件） | 可以写更新说明 |
 
 R8、R9 是「尽量做」，按负责人「先发布、余下放到下个补丁版本」的偏好，阶段 6 来不及时可以移到 v0.3.1，不影响前面的阶段。
+
+## 12. 发布前待实测
+
+开发期间没有条件验证，发布 v0.3.0 前必须有人实测并把结果补到这里：
+
+- Lightroom Classic：读一览写的 JPEG / HEIC / PNG / TIFF 内嵌星级、RAW 旁边的 .xmp；一览读 Lightroom 写的星级（「将元数据存储到文件」后）。
+- DNG（spec PD-15）：Lightroom 是否读 DNG 旁边的 .xmp。读不到时在 README 和更新说明里写明限制。
+- Capture One：同 Lightroom 两个方向。
+- exiftool：读一览写的文件和小文件，确认 `XMP-xmp:Rating` 正确、其他标签没有警告。
+- 「预览」App：检查器里是否显示星级（只影响说明文字，不影响功能）。
+- macOS 26 上跑一遍全部自动测试（实验和开发在 macOS 27.2.1 上做）。
+- 存储卡上 2000 个 RAW 的冷读取速度。
