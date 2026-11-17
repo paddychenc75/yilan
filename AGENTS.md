@@ -33,4 +33,4 @@
 | `yilan-spec` | 设计稿确认后，写 `spec.md` |
 | `yilan-tech-design` | 开发前，写 `tech-design.md` |
 | `yilan-dev` | 方案确认后，写代码、构建、测试、安装、对照设计稿验收 |
-| `yilan-release` | 验收完成后，写更新说明、准备发布 |
+| `yilan-release` | 验收完成后，写更新说明、打发布包、发布到 GitHub、发布后检查 |
