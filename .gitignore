@@ -18,7 +18,8 @@ build/
 
 # 其他
 *.xcodeproj/project.xcworkspace/xcuserdata/
-.claude/
+.claude/*
+!.claude/skills/
 
 # 介绍视频、封面和配套素材：只在本机用，不放进仓库
 design/intro-video*

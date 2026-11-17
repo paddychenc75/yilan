@@ -20,3 +20,15 @@
 - 给负责人看的文档用中文。
 
 详细说明和各版本状态见 `changes/README.md`。
+
+## 项目技能（Skills）
+
+`.claude/skills/` 里有五个技能，对应版本流程的每一步，做到哪一步就用哪一个：
+
+| 技能 | 什么时候用 |
+| --- | --- |
+| `yilan-prd` | 写或修改 `prd.md`（版本开始、范围变化） |
+| `yilan-design` | PRD 确认后，做 `design/index.html` 和 `shots/` |
+| `yilan-spec` | 设计稿确认后，写 `spec.md` |
+| `yilan-tech-design` | 开发前，写 `tech-design.md` |
+| `yilan-dev` | 方案确认后，写代码、构建、测试、安装、对照设计稿验收 |
