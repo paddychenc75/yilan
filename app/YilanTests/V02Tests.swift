@@ -534,3 +534,46 @@ struct FloatingPanelLayoutTests {
         #expect(StageLayout.panelBottomMargin(chromeTop: StageLayout.bottomChromeTop(isVideo: true, stripVisible: true, shown: false)) == 16)
     }
 }
+
+@Suite("视频缩略图")
+struct VideoThumbnailTests {
+    @Test("取帧时间：时长的 40%，最多 6 秒；读不到时长就取第 0 秒")
+    func frameTime() {
+        #expect(ThumbnailGenerator.videoFrameTime(duration: 10).seconds == 4)
+        #expect(ThumbnailGenerator.videoFrameTime(duration: 600).seconds == 6)
+        #expect(ThumbnailGenerator.videoFrameTime(duration: nil) == .zero)
+        #expect(ThumbnailGenerator.videoFrameTime(duration: .nan) == .zero)
+        #expect(ThumbnailGenerator.videoFrameTime(duration: 0) == .zero)
+    }
+
+    @Test("样例视频 trail.mp4（开头是一片泥沙）能生成有画面的缩略图，带时长；缓存键已换版本")
+    func trailThumbnail() async throws {
+        let folder = try fixtureCopy(["trail.mp4"])
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let thumb = await ThumbnailGenerator.generate(try item(folder.appendingPathComponent("trail.mp4")))
+        let image = try #require(thumb.image)
+        #expect(max(image.width, image.height) <= ThumbnailGenerator.maxPixel)
+        #expect(abs(try #require(thumb.duration) - 10.64) < 0.1)
+        #expect(ThumbnailCacheKey.version >= 2)
+    }
+}
+
+@Suite("缩略图磁盘缓存")
+struct ThumbnailDiskCacheTests {
+    @Test("视频缩略图写进磁盘缓存再读回来，时长不丢（缩略图栏的时长角标靠它）")
+    func durationSurvivesCache() throws {
+        let ctx = try #require(CGContext(data: nil, width: 8, height: 8, bitsPerComponent: 8, bytesPerRow: 0,
+                                         space: CGColorSpaceCreateDeviceRGB(),
+                                         bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue))
+        ctx.setFillColor(CGColor(red: 0.5, green: 0.4, blue: 0.3, alpha: 1))
+        ctx.fill(CGRect(x: 0, y: 0, width: 8, height: 8))
+        let image = try #require(ctx.makeImage())
+        let url = URL(fileURLWithPath: "/tmp/yilan-cache-\(UUID().uuidString).jpg")
+        defer { try? FileManager.default.removeItem(at: url) }
+        ThumbnailGenerator.writeCache(url, image: image, duration: 10.64)
+        let back = try #require(ThumbnailGenerator.readCache(url))
+        #expect(abs(try #require(back.duration) - 10.64) < 0.001)
+        ThumbnailGenerator.writeCache(url, image: image, duration: nil)
+        #expect(ThumbnailGenerator.readCache(url)?.duration == nil)
+    }
+}

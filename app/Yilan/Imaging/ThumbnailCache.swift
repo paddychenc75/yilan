@@ -7,7 +7,7 @@ import UniformTypeIdentifiers
 /// 缩略图磁盘缓存的文件名：由 路径 + 修改时间 + 文件大小 算出，任何一个变了就重新生成
 enum ThumbnailCacheKey {
     /// 生成规则的版本号，改动缩略图尺寸或格式时加 1，旧缓存自动失效
-    static let version = 1
+    static let version = 2
 
     static func make(path: String, modificationDate: Date, fileSize: Int64) -> String {
         // 修改时间取到毫秒，避免浮点误差导致同一文件算出不同的键
@@ -94,6 +94,13 @@ enum ThumbnailGenerator {
         }
     }
 
+    /// 视频缩略图取哪一秒：时长的 40%，最多 6 秒。第 0 秒常常是黑帧、淡入或还没对好焦的画面
+    /// （比如 trail.mp4 的开头只有一片几乎没有细节的泥沙，缩成 76 × 52 就是一块灰），取靠后一点更有代表性
+    static func videoFrameTime(duration: Double?) -> CMTime {
+        guard let duration, duration.isFinite, duration > 0 else { return .zero }
+        return CMTime(seconds: min(duration * 0.4, 6), preferredTimescale: 600)
+    }
+
     static func videoThumbnail(_ item: MediaItem) async -> Thumbnail {
         let asset = AVURLAsset(url: item.url)
         let duration = try? await asset.load(.duration)
@@ -101,8 +108,10 @@ enum ThumbnailGenerator {
         generator.appliesPreferredTrackTransform = true
         generator.maximumSize = CGSize(width: maxPixel, height: maxPixel)
         generator.requestedTimeToleranceAfter = CMTime(seconds: 1, preferredTimescale: 600)
-        let image = try? await generator.image(at: .zero).image
         let seconds = duration.map(\.seconds).flatMap { $0.isFinite ? $0 : nil }
+        // 取帧失败（时间点解码不出来）时退回第 0 秒
+        var image = try? await generator.image(at: videoFrameTime(duration: seconds)).image
+        if image == nil { image = try? await generator.image(at: .zero).image }
         return Thumbnail(image: image, duration: seconds)
     }
 
@@ -158,11 +167,16 @@ enum ThumbnailGenerator {
               let image = CGImageSourceCreateImageAtIndex(source, 0, [kCGImageSourceShouldCacheImmediately: true] as CFDictionary)
         else { return nil }
         var duration: Double?
-        if let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
-           let tiff = props[kCGImagePropertyTIFFDictionary] as? [CFString: Any],
-           let desc = tiff[kCGImagePropertyTIFFImageDescription] as? String,
-           desc.hasPrefix(durationPrefix) {
-            duration = Double(desc.dropFirst(durationPrefix.count))
+        if let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] {
+            // 写进 JPEG 的 TIFF ImageDescription，ImageIO 读回来时会放在 IPTC 的 Caption/Abstract 里，
+            // 两处都要找（只找 TIFF 的话，从磁盘缓存读回的视频缩略图会丢掉时长角标）
+            let tiff = props[kCGImagePropertyTIFFDictionary] as? [CFString: Any]
+            let iptc = props[kCGImagePropertyIPTCDictionary] as? [CFString: Any]
+            let desc = (tiff?[kCGImagePropertyTIFFImageDescription] as? String)
+                ?? (iptc?[kCGImagePropertyIPTCCaptionAbstract] as? String)
+            if let desc, desc.hasPrefix(durationPrefix) {
+                duration = Double(desc.dropFirst(durationPrefix.count))
+            }
         }
         return Thumbnail(image: image, duration: duration)
     }

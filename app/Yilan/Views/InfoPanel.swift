@@ -17,6 +17,9 @@ struct InfoPanel: View {
     let onCopy: () -> Void
     let onCopyCoordinates: () -> Void
 
+    /// 滚动区下面还有没显示的内容
+    @State private var hasMoreBelow = false
+
     var body: some View {
         ViewThatFits(in: .vertical) {
             panel(scrolls: false)
@@ -32,8 +35,24 @@ struct InfoPanel: View {
         VStack(alignment: .leading, spacing: 14) {
             header
             if scrolls {
+                // 内容放不下时：底部渐隐 + 打开时闪一下滚动条，告诉人下面还有内容（设计稿 .ipb 的做法）。
+                // 以前这里没有任何提示，下面的“位置”组被生硬地截掉，看起来像是空的
                 ScrollView(.vertical) { sections.padding(.trailing, 2) }
                     .scrollIndicators(.automatic)
+                    .scrollIndicatorsFlash(onAppear: true)
+                    .onScrollGeometryChange(for: Bool.self) { geo in
+                        geo.contentOffset.y + geo.containerSize.height < geo.contentSize.height - 1
+                    } action: { _, more in
+                        hasMoreBelow = more
+                    }
+                    .mask(alignment: .top) {
+                        VStack(spacing: 0) {
+                            Rectangle()
+                            LinearGradient(colors: [.black, hasMoreBelow ? .clear : .black],
+                                           startPoint: .top, endPoint: .bottom)
+                                .frame(height: 28)
+                        }
+                    }
                     .frame(maxHeight: .infinity)
             } else {
                 sections
