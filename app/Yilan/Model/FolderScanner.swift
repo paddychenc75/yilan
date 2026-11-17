@@ -9,6 +9,8 @@ enum FolderScanner {
         let initialIndex: Int?
         /// 没有权限列出文件夹（例如“桌面”“文稿”受系统隐私保护，用户拒绝了授权），只显示打开的这一个文件
         var folderUnreadable = false
+        /// 文件夹里的 .xmp 小文件（评星用）
+        var sidecars: SidecarIndex = .empty
     }
 
     /// 打开文件或文件夹。传入文件时扫描它所在的文件夹并选中它；传入文件夹时从第一个开始
@@ -16,7 +18,9 @@ enum FolderScanner {
         let values = try url.resourceValues(forKeys: [.isDirectoryKey])
         if values.isDirectory == true {
             let items = try scan(folder: url)
-            return Result(folder: url, items: items, initialIndex: items.isEmpty ? nil : 0)
+            SafeReplace.cleanStaleTemps(in: url)
+            return Result(folder: url, items: items, initialIndex: items.isEmpty ? nil : 0,
+                          sidecars: SidecarIndex.scan(folder: url, media: items))
         }
         let folder = url.deletingLastPathComponent()
         let items: [MediaItem]
@@ -32,7 +36,9 @@ enum FolderScanner {
         }
         let target = url.standardizedFileURL.resolvingSymlinksInPath().path
         let index = items.firstIndex { $0.url.standardizedFileURL.resolvingSymlinksInPath().path == target }
-        return Result(folder: folder, items: items, initialIndex: index ?? (items.isEmpty ? nil : 0))
+        SafeReplace.cleanStaleTemps(in: folder)
+        return Result(folder: folder, items: items, initialIndex: index ?? (items.isEmpty ? nil : 0),
+                      sidecars: SidecarIndex.scan(folder: folder, media: items))
     }
 
     private static let keys: [URLResourceKey] = [.isRegularFileKey, .isDirectoryKey, .fileSizeKey,
