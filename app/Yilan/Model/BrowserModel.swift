@@ -168,6 +168,8 @@ final class BrowserModel {
     /// 顶部提示卡片（快捷键变化、.xmp 说明），一次只显示一个（spec U2-03）
     var hint: HintCard?
     @ObservationIgnored var hintQueue: [HintCard] = []
+    /// 这次启动显示了快捷键变化提示（新版本提醒顺延，spec U2-03）
+    @ObservationIgnored var upgradeNoticeShown = false
     @ObservationIgnored var ratingInfo: [URL: RatingInfo] = [:]
     /// 磁盘上已经确认的星级（写失败时界面恢复成它）
     @ObservationIgnored var persistedRatings: [URL: Int] = [:]
@@ -742,6 +744,11 @@ final class BrowserModel {
 
     private func handleKeyCommand(_ event: NSEvent) -> Bool {
         let mods = event.modifierFlags.intersection([.command, .control, .option])
+        // 更新说明表单打开时：Esc = 稍后，其他单键不起作用（spec U3-01、K-08）
+        if UpdateChecker.shared.sheetRelease != nil {
+            if event.keyCode == 53 { UpdateChecker.shared.later() }
+            return mods.isEmpty || event.keyCode == 53
+        }
         // 删除确认对话框：Return 确认，Esc 取消；其他按键不起作用（菜单里的 ⌘ 快捷键也已置灰）
         if pendingDelete != nil {
             switch event.keyCode {

@@ -70,6 +70,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         // 从 v0.2 升级后第一次启动：说明快捷键变化（spec K-10）
         BrowserModel.shared.showUpgradeNoticeIfNeeded()
+        // 更新检查：启动约 3 秒后在后台（spec U1-01）；跑测试和截图时不联网
+        let updater = UpdateChecker.shared
+        updater.toast = { symbol, text, warning in
+            BrowserModel.shared.showToast(symbol: symbol, text: text, tone: warning ? .warning : .normal, duration: 4)
+        }
+        let underTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+        if !underTests && ShotHooks.update == nil && !CommandLine.arguments.contains(where: { $0.hasPrefix("--shot-") }) {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(3))
+                // 这次启动已经有快捷键变化提示：新版本提醒顺延到下次启动（spec U2-03）
+                await updater.launchCheck(deferNotice: BrowserModel.shared.upgradeNoticeShown)
+            }
+        }
         // 访达“打开方式”的文件在这之前已经送到；稍等一下再决定要不要打开上次的文件夹
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(150))
@@ -83,9 +96,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 /// 菜单栏：文件 / 显示 / 前往（设计稿 05 系统界面）
 struct AppCommands: Commands {
     private var model: BrowserModel { BrowserModel.shared }
+    private var updater: UpdateChecker { UpdateChecker.shared }
 
     var body: some Commands {
         // 设置窗口由 AppKit 承载（见 SettingsWindow），菜单项自己接
+        // 一览菜单：有新版本时第一项（spec U2-04）、关于下面的“检查更新…”（spec U6-01）
+        CommandGroup(before: .appInfo) {
+            if let release = updater.available, updater.dotVisible || updater.noticeVisible {
+                Button(String(localized: "有新版本 v\(release.version)…", comment: "菜单：有新版本；%@ 是版本号")) { updater.showNotes() }
+                Divider()
+            }
+        }
+        CommandGroup(after: .appInfo) {
+            if UpdateChecker.isAvailable {
+                Button("检查更新…") { Task { await updater.checkNow() } }
+                    .disabled(updater.checking)
+            }
+        }
         CommandGroup(replacing: .appSettings) {
             Button("设置…") { SettingsWindow.shared.show() }
                 .keyboardShortcut(",", modifiers: .command)

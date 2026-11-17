@@ -11,6 +11,16 @@
         }
       }
     },
+    "%@ 发布" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Released %@"
+          }
+        }
+      }
+    },
     "%@ 影片" : {
       "comment" : "信息面板：视频格式名，%@ 是容器格式",
       "localizations" : {
@@ -278,6 +288,26 @@
         }
       }
     },
+    "一览 %@ 现已发布" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yilan %@ is available"
+          }
+        }
+      }
+    },
+    "一览只在检查更新时联网，不会上传任何信息。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yilan goes online only to check for updates and never sends any information."
+          }
+        }
+      }
+    },
     "一览可以打开 JPEG、PNG、HEIF、RAW、WebP、GIF、SVG、TIFF、MP4、MOV。\n也可以把其他文件夹拖到这里。" : {
       "localizations" : {
         "en" : {
@@ -344,6 +374,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Previous (← ↑)"
+          }
+        }
+      }
+    },
+    "上次检查：%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last checked: %@"
           }
         }
       }
@@ -418,6 +458,16 @@
         }
       }
     },
+    "今天 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Today %@"
+          }
+        }
+      }
+    },
     "从列表中移除" : {
       "localizations" : {
         "en" : {
@@ -435,6 +485,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Location"
+          }
+        }
+      }
+    },
+    "你正在使用 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You’re using %@"
           }
         }
       }
@@ -909,6 +969,16 @@
         }
       }
     },
+    "前往下载" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Go to Download"
+          }
+        }
+      }
+    },
     "单声道" : {
       "localizations" : {
         "en" : {
@@ -1206,6 +1276,16 @@
         }
       }
     },
+    "尚未检查" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not checked yet"
+          }
+        }
+      }
+    },
     "已在旁边创建 %@" : {
       "localizations" : {
         "en" : {
@@ -1222,6 +1302,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Copied"
+          }
+        }
+      }
+    },
+    "已是最新版本（%@）" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You’re up to date (%@)"
           }
         }
       }
@@ -2206,6 +2296,16 @@
         }
       }
     },
+    "无法检查更新，请检查网络" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t check for updates. Check your network connection."
+          }
+        }
+      }
+    },
     "无法移到废纸篓：%@" : {
       "comment" : "%@ 是系统给出的原因",
       "localizations" : {
@@ -2288,6 +2388,16 @@
         }
       }
     },
+    "昨天 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yesterday %@"
+          }
+        }
+      }
+    },
     "显示或隐藏信息面板" : {
       "localizations" : {
         "en" : {
@@ -2358,6 +2468,16 @@
         }
       }
     },
+    "更新说明" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Release Notes"
+          }
+        }
+      }
+    },
     "最后一个" : {
       "localizations" : {
         "en" : {
@@ -2374,6 +2494,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Recent"
+          }
+        }
+      }
+    },
+    "有新版本 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New version %@ available"
+          }
+        }
+      }
+    },
+    "有新版本 v%@…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Version v%@…"
           }
         }
       }
@@ -2439,12 +2579,32 @@
         }
       }
     },
+    "查看更新说明" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View Release Notes"
+          }
+        }
+      }
+    },
     "格式" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Format"
+          }
+        }
+      }
+    },
+    "检查更新…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check for Updates…"
           }
         }
       }
@@ -2466,6 +2626,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Welcome to Yilan"
+          }
+        }
+      }
+    },
+    "正在检查更新…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Checking for updates…"
           }
         }
       }
@@ -2662,6 +2832,16 @@
         }
       }
     },
+    "稍后" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Later"
+          }
+        }
+      }
+    },
     "空格" : {
       "comment" : "快捷键列表里的空格键",
       "localizations" : {
@@ -2679,6 +2859,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Stereo"
+          }
+        }
+      }
+    },
+    "立即检查" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check Now"
           }
         }
       }
@@ -2892,6 +3082,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Autoplay"
+          }
+        }
+      }
+    },
+    "自动检查更新" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check for Updates Automatically"
           }
         }
       }
@@ -3117,6 +3317,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "System Default uses your Mac’s language if it’s Chinese or English, otherwise English."
+          }
+        }
+      }
+    },
+    "跳过这个版本" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skip This Version"
           }
         }
       }

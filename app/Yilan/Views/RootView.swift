@@ -10,6 +10,7 @@ struct RootView: View {
     @State private var drop: DropSummary?
     /// 顶部栏控件的实测宽度（中英文不同），决定收缩到哪一档
     @State private var barWidths = TopBarWidths()
+    @State private var updater = UpdateChecker.shared
 
     var body: some View {
         GeometryReader { geo in
@@ -28,6 +29,7 @@ struct RootView: View {
                 topBar(layout)
                 cards(size)
                 overlays(layout)
+                updateSheet(size)
                 // 筛选面板画在提示卡片、提示条上面（spec R5-06）
                 if model.filterPanelOpen && model.hasOpenedFolder && topVisible {
                     let widths = effectiveBarWidths
@@ -228,6 +230,24 @@ struct RootView: View {
         .allowsHitTesting(visible)
     }
 
+    /// 更新说明表单：挂在窗口上，背景压暗 38%（spec U3）
+    @ViewBuilder
+    private func updateSheet(_ size: CGSize) -> some View {
+        if let release = updater.sheetRelease {
+            ZStack(alignment: .top) {
+                Color.black.opacity(0.38)
+                    .contentShape(Rectangle())
+                    .onTapGesture {}
+                UpdateSheet(release: release, current: updater.current.display, language: LanguageSettings.shared.running,
+                            maxHeight: min(620, size.height - 80),
+                            onSkip: { updater.skip() }, onLater: { updater.later() }, onDownload: { updater.openDownload() })
+                    .padding(.top, 40)
+            }
+            .frame(width: size.width, height: size.height)
+            .transition(.opacity)
+        }
+    }
+
     /// 测量视图一直在量；没有序号、没有工具组时按 0 算
     private var effectiveBarWidths: TopBarWidths {
         var widths = barWidths
@@ -252,7 +272,9 @@ struct RootView: View {
             onOpen: model.showOpenPanel,
             zoomState: model.zoomState,
             zoomInMenu: zoomInMenu,
-            onZoom: { model.zoom($0) }
+            onZoom: { model.zoom($0) },
+            updateVersion: updater.dotVisible ? updater.available?.version : nil,
+            onUpdate: { updater.showNotes() }
         )
     }
 
@@ -475,6 +497,19 @@ struct RootView: View {
                 .padding(.top, toastTop)
                 .transition(.opacity.combined(with: .offset(y: -8)))
                 .onHover { model.setHovering("hint", $0) }
+            }
+
+            // 新版本提示（spec U2-01、U2-02）：一次只显示一个卡片，快捷键 / .xmp 卡片优先
+            if updater.noticeVisible, model.hint == nil, let release = updater.available {
+                UpdateNoticeCard(version: "v" + release.version, current: updater.current.display, narrow: size.width < 760,
+                                 onOpen: { updater.showNotes() }, onClose: { updater.dismissNotice() })
+                    .padding(.horizontal, size.width < 760 ? 16 : 0)
+                    .padding(.top, size.width < 760 ? (layout.fullScreen ? toastTop - 6 : 60) : toastTop)
+                    .transition(.opacity.combined(with: .offset(y: -8)))
+                    .onHover { model.setHovering("update", $0) }
+            }
+            if updater.checking {
+                UpdateCheckingChip().padding(.top, toastTop).transition(.opacity)
             }
 
             // 提示条画在信息面板上面：窄窗口里居中的提示条可能和面板重叠，不能被盖住

@@ -100,6 +100,9 @@ struct ToolGroup: View {
     var zoomState: ZoomState? = nil
     var zoomInMenu = false
     var onZoom: (ZoomCommand.Action) -> Void = { _ in }
+    /// 有新版本：⋯ 按钮上的小点和菜单第一项（spec U2-04）
+    var updateVersion: String? = nil
+    var onUpdate: () -> Void = {}
 
     var body: some View {
         HStack(spacing: 2) {
@@ -109,6 +112,10 @@ struct ToolGroup: View {
             ToolButton(symbol: "info.circle", help: "信息（I）", selected: infoSelected, action: onInfo)
                 .disabled(!enabled)
             Menu {
+                if let updateVersion {
+                    Button(String(localized: "有新版本 v\(updateVersion)…", comment: "菜单：有新版本；%@ 是版本号"), action: onUpdate)
+                    Divider()
+                }
                 if zoomInMenu, let zoomState {
                     Section(String(localized: "缩放 · \(ZoomPercentLabel.text(zoomState.percent))", comment: "⋯ 菜单里缩放组的标题；%@ 是当前比例")) {
                         ZoomMenuItems(state: zoomState, includeSteps: true, stepsFirst: true, onZoom: onZoom)
@@ -121,6 +128,14 @@ struct ToolGroup: View {
                 Button("打开…", action: onOpen)
             } label: {
                 ToolButtonLabel(symbol: "ellipsis")
+                    .overlay(alignment: .topTrailing) {
+                        if updateVersion != nil {
+                            // 直径 9，系统强调色，1pt 深色描边，距按钮上、右 3
+                            Circle().fill(Theme.accent).frame(width: 9, height: 9)
+                                .overlay(Circle().stroke(Color.black.opacity(0.5), lineWidth: 1))
+                                .padding(3)
+                        }
+                    }
             }
             .menuStyle(.button)
             .menuIndicator(.hidden)

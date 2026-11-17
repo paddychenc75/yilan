@@ -50,6 +50,7 @@ enum ShotRunner {
             }
             if ShotHooks.filterPanel { model.filterPanelOpen = true }
             if ShotHooks.showStars { model.flash(nil) }
+            if let state = ShotHooks.update { showUpdate(state, model: model) }
             switch ShotHooks.hint {
             case "shortcuts": model.enqueueHint(.shortcutsChanged)
             case "xmp": model.enqueueHint(.sidecarCreated("DSC_0812.xmp"))
@@ -75,6 +76,60 @@ enum ShotRunner {
         }
         #endif
     }
+
+    #if DEBUG
+    /// 截图用的假更新数据（格式和 changes/release-notes-template.md 一致）
+    private static func showUpdate(_ state: String, model: BrowserModel) {
+        let updater = UpdateChecker.shared
+        let short = """
+        ## 中文
+
+        ### 改进
+
+        - **大文件夹读星级更快**：文件夹里有 2000 张以上 RAW 时，星级在后台读取，首张图出现的时间不再受影响。
+
+        ### 修复
+
+        - **RAW 打星偶尔没有生成 `.xmp`**：以前在个别情况下评星后旁边没有出现同名小文件，现在每次评星都会写入。
+        - **筛选时序号不对**：以前在筛选状态下删除当前照片，右上角的序号会错一位，现在序号和总数同步更新。
+
+        ### 升级须知
+
+        - **无需操作**：直接替换应用即可，设置和星级都会保留。
+        - **遇到问题**：欢迎到 [GitHub 问题页](https://github.com/paddychenc75/yilan/issues) 告诉我们。
+
+        ## English
+
+        ### Improved
+
+        - **Faster ratings in big folders**: with 2,000+ RAW files, ratings are now read in the background, so the first photo appears as quickly as before.
+
+        ### Fixed
+
+        - **RAW rating sometimes did not create an `.xmp`**: in rare cases no sidecar file appeared next to the photo; it is now written every time.
+        - **Wrong counter while filtering**: deleting the current photo with a filter on left the counter off by one; position and total now update together.
+
+        ### Upgrade notes
+
+        - **Nothing to do**: just replace the app; settings and ratings are kept.
+        - **Found a problem?** Tell us on the [GitHub issues page](https://github.com/paddychenc75/yilan/issues).
+
+        ## 安装 / Install
+
+        **系统要求**：macOS 26（Tahoe）或更高版本。
+        """
+        let long = short.replacingOccurrences(of: "### 改进", with: "### 新功能\n\n- **裁切**：按 C 进入裁切，拖动边框选出要保留的部分。\n- **保存旋转**：旋转后可以把方向写回文件。\n- **调整尺寸导出**：导出时可以选长边像素。\n\n### 改进\n\n- **筛选面板**：格式数量随星级实时变化。\n- **大文件夹**：切换筛选的结果在 0.3 秒内出现。\n- **信息面板**：RAW 的星级保存位置显示 `.xmp` 文件名。")
+        let release = ReleaseInfo(version: state == "long" ? "0.4.0" : "0.3.1", tag: "v0.3.1", notes: state == "long" ? long : short,
+                                  pageURL: URL(string: "https://github.com/paddychenc75/yilan/releases")!,
+                                  published: ISO8601DateFormatter().date(from: "2026-11-24T08:00:00Z"))
+        switch state {
+        case "uptodate": model.showToast(symbol: "checkmark", text: String(localized: "已是最新版本（\(updater.current.display)）", comment: "手动检查更新：%@ 是当前版本号"), duration: 60)
+        case "failed": model.showToast(symbol: "exclamationmark.triangle", text: String(localized: "无法检查更新，请检查网络"), tone: .warning, duration: 60)
+        case "long": updater.applyForShots(release: release, state: "sheet")
+        default: updater.applyForShots(release: release, state: state)
+        }
+    }
+    #endif
 
     private static func isTemporary(_ url: URL) -> Bool {
         let path = url.resolvingSymlinksInPath().path

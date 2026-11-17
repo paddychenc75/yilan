@@ -10,4 +10,5 @@ rm -rf "$M"; mkdir -p "$M"
 cp -R Fixtures/sample "$M/sample"
 if [ -d Fixtures/raw ]; then mkdir -p "$M/raw"; cp -c Fixtures/raw/* "$M/raw/" 2>/dev/null || true; fi
 mkdir -p "$M/resources"; cp Yilan/Resources/*.xcstrings "$M/resources/"
-TEST_RUNNER_YILAN_RESOURCES_DIR="$M/resources" TEST_RUNNER_YILAN_FIXTURES_DIR="$M" xcodebuild -project Yilan.xcodeproj -scheme Yilan -destination 'platform=macOS' -derivedDataPath build/test test "$@"
+mkdir -p "$M/docs/changes" "$M/docs/dist"; cp ../changes/release-notes-template.md "$M/docs/changes/"; cp ../dist/RELEASE_NOTES.md "$M/docs/dist/"
+TEST_RUNNER_YILAN_DOCS_DIR="$M/docs" TEST_RUNNER_YILAN_RESOURCES_DIR="$M/resources" TEST_RUNNER_YILAN_FIXTURES_DIR="$M" xcodebuild -project Yilan.xcodeproj -scheme Yilan -destination 'platform=macOS' -derivedDataPath build/test test "$@"

@@ -145,8 +145,44 @@ struct SettingsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    /// 通用（设计稿 05 · 设置 · 通用）：界面语言。改完后提示重新打开
+    @State private var updater = UpdateChecker.shared
+
+    /// 通用（设计稿 05 · 设置 · 通用）：界面语言、更新检查（spec U7）
+    @ViewBuilder
     private var generalPane: some View {
+        languageGroup
+        if UpdateChecker.isAvailable {
+            SettingsGroup {
+                SettingsRow("自动检查更新", note: "一览只在检查更新时联网，不会上传任何信息。") {
+                    SettingsSwitch(isOn: Binding(get: { settings.autoCheckUpdates }, set: {
+                        settings.autoCheckUpdates = $0
+                        updater.autoCheckChanged()
+                    }))
+                }
+                HStack(spacing: 12) {
+                    Text("上次检查：\(UpdateDateText.lastChecked(updater.lastCheck))", comment: "设置：上次检查更新的时间")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    // 设计稿 .btn.g：高 26，字 12 的玻璃小按钮
+                    Button { Task { await updater.checkNow() } } label: {
+                        Text("立即检查").font(.system(size: 12, weight: .medium)).foregroundStyle(.white)
+                            .padding(.horizontal, 12).frame(height: 26)
+                            .background(Capsule().fill(Color.white.opacity(0.14)))
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(updater.checking)
+                    .opacity(updater.checking ? 0.5 : 1)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .frame(minHeight: 40)
+            }
+        }
+    }
+
+    private var languageGroup: some View {
         SettingsGroup {
             SettingsRow("语言", note: "跟随系统时：系统语言是中文或英文就用它，否则用英文") {
                 SettingsMenu(selection: $language.choice,

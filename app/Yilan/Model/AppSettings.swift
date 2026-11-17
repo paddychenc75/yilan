@@ -21,6 +21,7 @@ final class AppSettings {
         static let confirmBeforeDelete = "confirmBeforeDelete"
         static let autoAdvanceAfterRating = "autoAdvanceAfterRating"
         static let flashRatingOnStage = "flashRatingOnStage"
+        static let autoCheckUpdates = "autoCheckUpdates"
         static let ratingStorage = "ratingStorage"
         static let lastLaunchedVersion = "lastLaunchedVersion"
         static let didShowSidecarHint = "didShowSidecarHint"
@@ -66,6 +67,8 @@ final class AppSettings {
 
     /// 打星后自动跳到下一张（spec R8，默认关）
     var autoAdvanceAfterRating: Bool { didSet { defaults.set(autoAdvanceAfterRating, forKey: Key.autoAdvanceAfterRating) } }
+    /// 自动检查更新（spec U7，默认开）
+    var autoCheckUpdates: Bool { didSet { defaults.set(autoCheckUpdates, forKey: Key.autoCheckUpdates) } }
     /// 评星时在画面上闪现星级（spec R3a，默认开）
     var flashRatingOnStage: Bool { didSet { defaults.set(flashRatingOnStage, forKey: Key.flashRatingOnStage) } }
     /// 星级保存到哪里（spec S-02）
@@ -93,6 +96,7 @@ final class AppSettings {
             Key.confirmBeforeDelete: true,
             Key.autoAdvanceAfterRating: false,
             Key.flashRatingOnStage: true,
+            Key.autoCheckUpdates: true,
             Key.didShowSidecarHint: false,
         ])
         loopVideo = defaults.bool(forKey: Key.loopVideo)
@@ -112,6 +116,7 @@ final class AppSettings {
         confirmBeforeDelete = defaults.bool(forKey: Key.confirmBeforeDelete)
         autoAdvanceAfterRating = defaults.bool(forKey: Key.autoAdvanceAfterRating)
         flashRatingOnStage = defaults.bool(forKey: Key.flashRatingOnStage)
+        autoCheckUpdates = defaults.bool(forKey: Key.autoCheckUpdates)
         ratingStorage = defaults.string(forKey: Key.ratingStorage).flatMap(RatingStorageMode.init(rawValue:)) ?? .embedded
         didShowSidecarHint = defaults.bool(forKey: Key.didShowSidecarHint)
     }

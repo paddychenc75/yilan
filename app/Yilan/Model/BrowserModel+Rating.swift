@@ -312,7 +312,10 @@ extension BrowserModel {
     /// 启动时：从 v0.2 升级来的用户显示快捷键变化（spec K-10）。跑测试时不显示
     func showUpgradeNoticeIfNeeded() {
         guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
-        if settings.consumeUpgradeFromV02(currentVersion: AppInfo.version) { enqueueHint(.shortcutsChanged) }
+        if settings.consumeUpgradeFromV02(currentVersion: AppInfo.version) {
+            upgradeNoticeShown = true
+            enqueueHint(.shortcutsChanged)
+        }
     }
 
     // MARK: - 退出
