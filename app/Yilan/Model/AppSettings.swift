@@ -22,7 +22,8 @@ final class AppSettings {
         static let autoAdvanceAfterRating = "autoAdvanceAfterRating"
         static let flashRatingOnStage = "flashRatingOnStage"
         static let autoCheckUpdates = "autoCheckUpdates"
-        static let ratingStorage = "ratingStorage"
+        /// 2026-11-18 默认改成小文件：换了新键名，试用版里存的旧值（当时的默认是写入文件内部）不再沿用
+        static let ratingStorage = "ratingStorageMode"
         static let lastLaunchedVersion = "lastLaunchedVersion"
         static let didShowSidecarHint = "didShowSidecarHint"
     }
@@ -117,7 +118,7 @@ final class AppSettings {
         autoAdvanceAfterRating = defaults.bool(forKey: Key.autoAdvanceAfterRating)
         flashRatingOnStage = defaults.bool(forKey: Key.flashRatingOnStage)
         autoCheckUpdates = defaults.bool(forKey: Key.autoCheckUpdates)
-        ratingStorage = defaults.string(forKey: Key.ratingStorage).flatMap(RatingStorageMode.init(rawValue:)) ?? .embedded
+        ratingStorage = defaults.string(forKey: Key.ratingStorage).flatMap(RatingStorageMode.init(rawValue:)) ?? .sidecar
         didShowSidecarHint = defaults.bool(forKey: Key.didShowSidecarHint)
     }
 

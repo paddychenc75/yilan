@@ -12,8 +12,8 @@ struct RatingFlash: Equatable {
 enum HintCard: Equatable {
     /// 从 v0.2 升级后第一次启动：快捷键变化（spec K-10）
     case shortcutsChanged
-    /// 第一次为 RAW 创建 .xmp（spec S-17），带小文件名
-    case sidecarCreated(String)
+    /// 第一次为图片创建 .xmp（spec S-17），带小文件名、是不是 RAW
+    case sidecarCreated(String, isRaw: Bool)
 }
 
 /// 评星：打星、写盘、读取、撤销、提示（spec 第 1–5、7 节）
@@ -113,9 +113,9 @@ extension BrowserModel {
                 info.embedded = value
             }
             ratingInfo[item.url] = info
-            if let created = result.createdSidecar, item.format == .raw, !settings.didShowSidecarHint {
+            if let created = result.createdSidecar, !settings.didShowSidecarHint {
                 settings.didShowSidecarHint = true
-                enqueueHint(.sidecarCreated(created.lastPathComponent))
+                enqueueHint(.sidecarCreated(created.lastPathComponent, isRaw: item.format == .raw))
             }
         case .superseded:
             break

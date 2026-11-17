@@ -355,6 +355,13 @@ PRD R2 / R3a 改为：可点的星放进缩略图栏信息行；画面胶囊只�
 
 v0.3 不做（留给以后，见调研报告）：把星级写进 MP4 / MOV 文件；`MicrosoftPhoto:Rating` 在没有时新增；读 Fujifilm 厂商标签里的机内星级（0x1431）。
 
+## 11c. 2026-11-18 默认改成小文件
+
+- `RatingStorageMode` 默认 `.sidecar`；设置的存储键改名为 `ratingStorageMode`，试用版里存的旧值不再沿用（v0.3 没发布过，没法区分用户是不是主动选的，一律按新默认）。
+- 内嵌写入（JPEGXMPWriter、PNGXMPWriter、ImageIO 合并、自检、Exif 星级同步）原样保留，供「写入图片文件内部」使用；它们的测试照旧。
+- 读取不变：文件内部已有的星级照常显示；非 RAW 图片两处都有时小文件优先，DNG 取较新的。
+- 第一次为任何图片建小文件都出提示（`HintCard.sidecarCreated(_, isRaw:)`），RAW 多一句 Lightroom 的读取方法。
+
 ## 12. 发布前待实测
 
 开发期间没有条件验证，发布 v0.3.0 前必须有人实测并把结果补到这里：

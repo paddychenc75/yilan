@@ -2,10 +2,10 @@ import Foundation
 
 /// 星级保存方式（设置 › 浏览 › 星级保存到哪里）
 enum RatingStorageMode: String, CaseIterable, Sendable {
-    /// JPEG、PNG、HEIC、TIFF 写进文件内部（默认）；其他类型仍用 .xmp 小文件
-    case embedded
-    /// 一律使用旁边的 .xmp 小文件，不改动图片本身
+    /// 旁边的 .xmp 小文件，不修改原图（默认，2026-11-18 决定）
     case sidecar
+    /// JPEG、PNG、HEIC / HEIF、TIFF 写进文件内部（只写附加信息）；其他类型仍用 .xmp 小文件
+    case embedded
 }
 
 /// 一个文件读出来的星级（spec R4）

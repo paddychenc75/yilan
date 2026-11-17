@@ -77,8 +77,8 @@
 
 | 编号 | 规则 |
 | --- | --- |
-| S-01 | 写入位置按文件类型：RAW（CR2、CR3、NEF、ARW、RAF、RW2、ORF、DNG）→ .xmp 小文件；JPEG、PNG、HEIC / HEIF、TIFF → 内嵌（默认）；GIF、WebP、SVG、BMP → .xmp 小文件。视频（MP4、MOV、M4V）v0.3 不能评星：旁边别的软件写的 .xmp 不读、不改、删除视频时不跟着进废纸篓。依据 4.3 |
-| S-02 | 设置 › 浏览 ›「星级保存到哪里」选「一律使用旁边的 .xmp 小文件」时，JPEG、PNG、HEIC / HEIF、TIFF 也改用 .xmp 小文件，一览不再改动这些图片本身。RAW 和 S-01 里本来就用小文件的类型不受这个选项影响。依据 4.3 |
+| S-01 | 写入位置（2026-11-18 改定：默认不修改任何原图）：默认所有图片都写旁边的 .xmp 小文件。设置选「写入图片文件内部」时，JPEG、PNG、HEIC / HEIF、TIFF 写进文件内部（只写附加信息）；RAW（CR2、CR3、NEF、ARW、RAF、RW2、ORF、DNG）和 GIF、WebP、SVG、BMP 不管怎么选都写小文件。视频（MP4、MOV、M4V）v0.3 不能评星：旁边别的软件写的 .xmp 不读、不改、删除视频时不跟着进废纸篓。依据 4.3 |
+| S-02 | 设置 › 浏览 ›「星级保存到哪里」两个选项，顺序：①「旁边的 .xmp 小文件（不修改原图）」T86（说明 T87），默认；②「写入图片文件内部」T84（说明 T85）。组下面小字 T88。试用版里存过的旧值（当时默认是写入文件内部）不沿用，一律按新默认（换了存储键名）。依据 4.3 |
 | S-03 | 切换「星级保存到哪里」不搬动已有的星级：已经写在文件里或小文件里的星级都还在，读取按 R4-02 的先后顺序。待定 PD-05。依据 4.3 |
 | S-04 | .xmp 小文件的名字：RAW 用「同名换扩展名」（`DSC_0812.ARW` → `DSC_0812.xmp`，和 Lightroom 一致，扩展名小写）。其他图片也优先用同名 `.xmp`；但如果文件夹里有另一个一览支持的文件和它同名（例如「一律小文件」时 RAW + JPEG 同名，或实况照片 `IMG_1.HEIC` + `IMG_1.MOV`），图片改用「完整文件名 + .xmp」（`IMG_1.HEIC.xmp`），不去碰可能属于视频或 RAW 的 `IMG_1.xmp`。视频自己不再有小文件。依据 4.3、PD-04 |
 | S-05 | 写入在后台进行，不阻塞界面；切图、继续打星都不用等。依据 4.3、流畅度验收 |
@@ -94,7 +94,7 @@
 | S-14 | 写不进去（只读磁盘、写保护存储卡、没有权限）：显示 T02，4 秒淡出；界面上的星恢复成写之前的值；这次操作不进撤销记录。同一原因 10 秒内不重复提示。依据 4.3、验收 |
 | S-15 | 磁盘已满：显示 T10，其他同 S-14。其他写入失败（例如文件被其他程序锁住）：显示 T11（带系统给出的原因），其他同 S-14。待定 PD-08。依据 4.3 |
 | S-16 | 打开文件夹时就判断位置是否可写；不可写时五星胶囊和信息面板的星显示为 40% 不透明（R2-09），不用等到写失败。依据 4.3、设计稿「文件不可写」 |
-| S-17 | 第一次为 RAW 创建 .xmp 小文件后，顶部出现提示卡片 T12 / T13 / 按钮 T14；只出现一次（之后任何文件夹都不再出现），点「知道了」或 × 关闭；不压暗、不阻止操作。依据 4.3、设计稿 1.4 |
+| S-17 | 第一次为任何图片创建 .xmp 小文件后，顶部出现提示卡片：标题 T12，正文 T13（RAW 用 T13a，多一句 Lightroom「元数据 › 从文件读取元数据」），按钮 T14；只出现一次（之后任何文件夹都不再出现），点「知道了」或 × 关闭；不压暗、不阻止操作。依据 4.3、设计稿 1.4 |
 | S-18 | 写入前重新读取文件当时的内容再改星级（不是用一览打开时读到的旧内容），所以别的软件在这期间写进去的其他信息也会保留。依据 4.3、R4 |
 | S-19 | 写入排队时文件被删除、移走或改名：放弃这次写入，不提示（文件夹同步会按原规则处理文件变化）。依据 4.3 |
 | S-20 | 退出一览时还有没写完的星级：最多等 3 秒写完再退出；超过 3 秒仍未完成的放弃（原文件不受影响，见 S-07）。依据 4.3 |
@@ -377,7 +377,8 @@
 | T10 | 提示条（待定 PD-08） | 无法保存星级：磁盘已满 | Can’t save rating: the disk is full |
 | T11 | 提示条（待定 PD-08） | 无法保存星级：%@ | Can’t save rating: %@ |
 | T12 | .xmp 提示标题 | 已在旁边创建 %@ | Created %@ next to the photo |
-| T13 | .xmp 提示正文 | RAW 文件本身不会被改动，星级记在这个同名的 .xmp 小文件里，Lightroom 等软件也能读取。Lightroom 里要用「元数据 › 从文件读取元数据」才会看到新星级。 | The RAW file itself is never changed. The rating is stored in this .xmp file with the same name, which Lightroom and other apps can read. In Lightroom, choose Metadata › Read Metadata from File to see the new rating. |
+| T13 | .xmp 提示正文 | 照片本身不会被改动，星级记在这个同名的 .xmp 小文件里。 | The photo itself isn’t changed. The rating is stored in this .xmp file with the same name. |
+| T13a | .xmp 提示正文（RAW） | 照片本身不会被改动，星级记在这个同名的 .xmp 小文件里。Lightroom 里要用「元数据 › 从文件读取元数据」才会看到新星级。 | The photo itself isn’t changed. The rating is stored in this .xmp file with the same name. In Lightroom, choose Metadata › Read Metadata from File to see the new rating. |
 | T14 | 按钮 | 知道了 | Got It |
 | T15 | 筛选面板（待定 PD-11） | 正在读取星级… | Reading ratings… |
 | T16 | 筛选按钮 / 面板标题 | 筛选 | Filter |
@@ -448,10 +449,10 @@
 | T81 | 设置 | 尚未检查 | Not checked yet |
 | T82 | 时间 | 今天 %@ | Today %@ |
 | T83 | 时间 | 昨天 %@ | Yesterday %@ |
-| T84 | 设置单选 | 写入文件内部（推荐，其他软件可读） | Inside the file (recommended, readable by other apps) |
-| T85 | 设置说明 | JPEG、PNG、HEIC 等直接写进文件的元数据，其他软件（如 Lightroom）也能读到 | JPEG, PNG, HEIC and similar files keep it in their own metadata, where other apps such as Lightroom can read it. |
-| T86 | 设置单选 | 一律使用旁边的 .xmp 小文件 | Always use a separate .xmp file |
-| T87 | 设置说明 | 不改动图片本身；换到别的软件时要连同 .xmp 一起带走。Lightroom 和 Bridge 会忽略 JPEG 旁边的 .xmp | Images aren’t changed. Keep the .xmp files with them when you move to another app. Lightroom and Bridge ignore .xmp files next to JPEGs. |
+| T84 | 设置单选 | 写入图片文件内部 | Inside the image file |
+| T85 | 设置说明 | 想在 Lightroom、Bridge、Windows 里看到 JPEG、HEIF、TIFF、PNG 的星级时选这项；只对这四种格式生效，只写附加信息，不重新压缩画面 | Choose this to see JPEG, HEIF, TIFF and PNG ratings in Lightroom, Bridge and Windows. Applies only to these four formats and writes metadata only; the image isn’t recompressed. |
+| T86 | 设置单选（默认） | 旁边的 .xmp 小文件（不修改原图） | Sidecar .xmp files (originals untouched) |
+| T87 | 设置说明 | 原图一个字节都不动；换到别的软件时要连同 .xmp 一起带走。用小文件时，Lightroom、Bridge 和 Windows 不会显示 JPEG 这类图片的星级 | Originals aren’t changed at all. Keep the .xmp files with them when you move to another app. With sidecars, Lightroom, Bridge and Windows won’t show ratings for JPEG-type images. |
 | T88 | 设置小字 | RAW（ARW、CR3、NEF 等）不能写入文件内部，始终使用旁边的 .xmp。 | RAW files (ARW, CR3, NEF and others) are never changed; their ratings always go in a .xmp file. |
 | T89 | 快捷键 | 设置星级 | Set rating |
 | T90 | 快捷键 | 清除星级 | Clear rating |
@@ -481,7 +482,7 @@
 | PD-02 | 缩放上限：设计稿写「到达 800% 上限，+ 置灰」，v0.2 实际上限是 3200%（看像素用） | 设计和现有行为不一致，改成 800% 会让老用户失去 800% 以上的放大 | 保持 3200%，「+」在 3200% 置灰 | 按推荐，产品已确认 2026-11-17 |
 | PD-03 | 顶部栏收缩阈值是按中文量的；英文「Filter · ≥4★ · 2 formats」等更宽 | 固定阈值下英文可能重叠，违反验收「不重叠」 | 顺序不变，按实测宽度决定何时收缩；中文实测结果应与设计稿阈值一致（±10） | 按推荐，产品已确认 2026-11-17 |
 | PD-04 | 非 RAW 文件的 .xmp 小文件名：PRD 说「同名」，但实况照片（`IMG_1.HEIC` + `IMG_1.MOV`）、一律用小文件时的 RAW + JPEG 同名对会抢同一个 `IMG_1.xmp` | 抢同一个文件会让两张照片的星级互相覆盖 | S-04：优先 `同名.xmp`，有同名的其他文件时用 `完整文件名.xmp`；RAW 永远用 `同名.xmp`。代价：其他软件可能读不到 `IMG_1.MOV.xmp` | 按推荐，产品已确认 2026-11-17 |
-| PD-05 | 切换「星级保存到哪里」后已有星级怎么办 | 可能出现文件内部和小文件两处星级不同 | 不搬动；读取时小文件优先（R4-02）；「写入文件内部」模式下，如果已经有带星级的小文件，写入时把小文件也改成同一个值，避免旧小文件压住新值；「一律小文件」模式绝不碰图片 | 按推荐，产品已确认 2026-11-17 |
+| PD-05 | 切换「星级保存到哪里」后已有星级怎么办 | 可能出现文件内部和小文件两处星级不同 | 不搬动；读取时小文件优先（R4-02）；「写入文件内部」模式下，如果已经有带星级的小文件，写入时把小文件也改成同一个值，避免旧小文件压住新值；「一律小文件」模式绝不碰图片 | 按推荐，产品已确认 2026-11-17；2026-11-18 默认改成小文件后仍适用：小文件优先；「写入图片文件内部」模式下已有带星级的小文件时一并改；小文件模式绝不碰原图 |
 | PD-06 | 撤销评星时，那个文件已经不在当前结果列表里（被筛掉、或已切走很久）怎么办 | 设计只说「回到那张照片」 | 仍然恢复星级；能显示就切过去（按暂留规则显示），文件已不在文件夹里才提示 T35 | 按推荐，产品已确认 2026-11-17 |
 | PD-07 | 「导出筛选结果」只设了类型（只看图片）、没有星级 / 格式条件时能不能用 | 设计稿写「没有筛选条件时置灰」，但又说「导出范围（类型 + 评星）」 | 只有类型不算筛选，置灰；有星级或格式条件时，导出范围包含类型 | 按推荐，产品已确认 2026-11-17 |
 | PD-08 | 「磁盘已满」和其他写入失败的提示文字 | 设计稿只有「此位置不可写」 | 加 T10、T11 | 按推荐，产品已确认 2026-11-17 |

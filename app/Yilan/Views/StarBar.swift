@@ -186,7 +186,7 @@ struct HintCardView: View {
     @ViewBuilder private var title: some View {
         switch card {
         case .shortcutsChanged: Text("快捷键有变化")
-        case .sidecarCreated(let name): Text("已在旁边创建 \(name)", comment: "第一次为 RAW 创建 .xmp 的提示；%@ 是小文件名")
+        case .sidecarCreated(let name, _): Text("已在旁边创建 \(name)", comment: "第一次为图片创建 .xmp 的提示；%@ 是小文件名")
         }
     }
 
@@ -196,8 +196,9 @@ struct HintCardView: View {
             // 方括号里的是键帽（设计稿 .hint .kc）
             KeycapText(String(localized: "数字键 [1]–[5] 现在用来评星，[0] 清除星级。[0] 和 [1] 不再用来缩放：按 [Z] 在适应窗口和实际大小之间切换，[⌘0] 实际大小，[⌘9] 适应窗口。",
                               comment: "快捷键变化提示；方括号里的内容显示成键帽，不要翻译方括号里的按键"))
-        case .sidecarCreated:
-            Text("RAW 文件本身不会被改动，星级记在这个同名的 .xmp 小文件里，Lightroom 等软件也能读取。Lightroom 里要用「元数据 › 从文件读取元数据」才会看到新星级。")
+        case .sidecarCreated(_, let isRaw):
+            // RAW 多一句 Lightroom 的读取方法
+            isRaw ? Text("照片本身不会被改动，星级记在这个同名的 .xmp 小文件里。Lightroom 里要用「元数据 › 从文件读取元数据」才会看到新星级。") : Text("照片本身不会被改动，星级记在这个同名的 .xmp 小文件里。")
         }
     }
 

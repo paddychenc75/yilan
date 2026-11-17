@@ -283,12 +283,12 @@ struct SettingsView: View {
                 .foregroundStyle(Theme.text3)
                 .padding(.horizontal, 4)
             SettingsGroup {
-                SettingsRadioRow(title: "写入文件内部（推荐，其他软件可读）",
-                                 note: "JPEG、PNG、HEIC 等直接写进文件的元数据，其他软件（如 Lightroom）也能读到",
-                                 selected: settings.ratingStorage == .embedded) { settings.ratingStorage = .embedded }
-                SettingsRadioRow(title: "一律使用旁边的 .xmp 小文件",
-                                 note: "不改动图片本身；换到别的软件时要连同 .xmp 一起带走。Lightroom 和 Bridge 会忽略 JPEG 旁边的 .xmp",
+                SettingsRadioRow(title: "旁边的 .xmp 小文件（不修改原图）",
+                                 note: "原图一个字节都不动；换到别的软件时要连同 .xmp 一起带走。用小文件时，Lightroom、Bridge 和 Windows 不会显示 JPEG 这类图片的星级",
                                  selected: settings.ratingStorage == .sidecar) { settings.ratingStorage = .sidecar }
+                SettingsRadioRow(title: "写入图片文件内部",
+                                 note: "想在 Lightroom、Bridge、Windows 里看到 JPEG、HEIF、TIFF、PNG 的星级时选这项；只对这四种格式生效，只写附加信息，不重新压缩画面",
+                                 selected: settings.ratingStorage == .embedded) { settings.ratingStorage = .embedded }
             }
             Text("RAW（ARW、CR3、NEF 等）不能写入文件内部，始终使用旁边的 .xmp。")
                 .font(.system(size: 11.5))

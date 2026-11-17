@@ -76,12 +76,15 @@ struct RatingKeyTests {
 @Suite("评星：浏览模型", .serialized)
 @MainActor
 struct RatingModelTests {
-    @Test("打星：界面立即变化，写进文件；⌘Z 恢复，文件同步恢复")
+    @Test("打星（默认写小文件，原图不动）：界面立即变化；⌘Z 恢复，小文件删掉；第一次建小文件有提示")
     func rateAndUndo() async throws {
         let dir = try MetaFixtures.copy(["IMG_2034.jpg", "IMG_2052.jpg"])
         defer { try? FileManager.default.removeItem(at: dir) }
         let model = try makeModel(dir)
+        #expect(model.settings.ratingStorage == .sidecar)
         let item = try #require(model.current)
+        let sha = try MetaFixtures.sha(item.url)
+        let side = dir.appendingPathComponent("IMG_2034.xmp")
         await waitFor { model.ratingsLoaded }
         #expect(model.currentRating == 0)
 
@@ -90,7 +93,11 @@ struct RatingModelTests {
         #expect(model.ratingFlash?.value == 4)
         #expect(model.undoMenuTitle == String(localized: "撤销“评星”"))
         await idle(model)
-        #expect(ImageIOMetadata.rating(at: item.url) == 4)
+        #expect(try MetaFixtures.sha(item.url) == sha)    // 原图一个字节都不变
+        #expect(try XMPPacket(data: Data(contentsOf: side)).rating == 4)
+        if case .sidecarCreated(let name, let isRaw)? = model.hint { #expect(name == "IMG_2034.xmp" && !isRaw) } else {
+            Issue.record("第一次为图片建小文件应该有提示")
+        }
 
         model.rateCurrent(4, fromKeyboard: true)          // 相同数字：不进记录
         #expect(model.undoHistory.entries.count == 1)
@@ -98,8 +105,27 @@ struct RatingModelTests {
         await model.undoLast()
         #expect(model.currentRating == 0)
         await idle(model)
-        #expect(RatingValue.display(ImageIOMetadata.rating(at: item.url)) == 0)
+        #expect(!FileManager.default.fileExists(atPath: side.path))
+        #expect(try MetaFixtures.sha(item.url) == sha)
         #expect(!model.canUndo)
+    }
+
+    @Test("选「写入图片文件内部」时写进 JPEG；撤销后文件里也恢复")
+    func embeddedMode() async throws {
+        let dir = try MetaFixtures.copy(["IMG_2034.jpg"])
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let settings = AppSettings(defaults: defaults())
+        settings.ratingStorage = .embedded
+        let model = try makeModel(dir, settings: settings)
+        let item = try #require(model.current)
+        await waitFor { model.ratingsLoaded }
+        model.rateCurrent(4, fromKeyboard: true)
+        await idle(model)
+        #expect(ImageIOMetadata.rating(at: item.url) == 4)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: dir.path) == ["IMG_2034.jpg"])
+        await model.undoLast()
+        await idle(model)
+        #expect(RatingValue.display(ImageIOMetadata.rating(at: item.url)) == 0)
     }
 
     @Test("清除星级有提示；未评星时按 0 什么都不做")
@@ -135,7 +161,7 @@ struct RatingModelTests {
         await model.undoLast()                             // 再撤销评星，并回到那张
         #expect(model.current?.url == first.url)
         await idle(model)
-        #expect(RatingValue.display(ImageIOMetadata.rating(at: first.url)) == 0)
+        #expect(RatingFileIO.read(first, sidecars: try MetaFixtures.index(dir)).value == 0)
     }
 
     @Test("删除带 .xmp 的文件：小文件一起进废纸篓，撤销后一起回来")

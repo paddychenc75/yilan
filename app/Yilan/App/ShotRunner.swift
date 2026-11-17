@@ -53,7 +53,7 @@ enum ShotRunner {
             if let state = ShotHooks.update { showUpdate(state, model: model) }
             switch ShotHooks.hint {
             case "shortcuts": model.enqueueHint(.shortcutsChanged)
-            case "xmp": model.enqueueHint(.sidecarCreated("DSC_0812.xmp"))
+            case "xmp": model.enqueueHint(.sidecarCreated("DSC_0812.xmp", isRaw: true))
             default: break
             }
             switch ShotHooks.deleteState {
