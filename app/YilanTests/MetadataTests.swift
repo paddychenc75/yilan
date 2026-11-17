@@ -241,9 +241,11 @@ struct SidecarTests {
         let index = SidecarIndex(folder: folder, sidecars: [], media: items)
         #expect(index.writeURL(for: items[0]).lastPathComponent == "A.xmp")
         #expect(index.writeURL(for: items[1]).lastPathComponent == "A.JPG.xmp")
+        // 实况照片：HEIC 不用 B.xmp（那可能是别的软件给 MOV 写的）；视频不评星，不读它的小文件
         #expect(index.writeURL(for: items[2]).lastPathComponent == "B.HEIC.xmp")
-        #expect(index.writeURL(for: items[3]).lastPathComponent == "B.MOV.xmp")
-        #expect(index.writeURL(for: items[4]).lastPathComponent == "C.xmp")
+        let withVideoSidecar = SidecarIndex(folder: folder, sidecars: [.init(url: folder.appendingPathComponent("C.xmp"), modificationDate: .distantPast, size: 1)], media: items)
+        #expect(withVideoSidecar.readURL(for: items[4]) == nil)
+        #expect(withVideoSidecar.sidecarToMoveWith(items[4]) == nil)
         // 已有的 A.xmp 属于 RAW，不算 JPEG 的
         let withA = SidecarIndex(folder: folder, sidecars: [.init(url: folder.appendingPathComponent("A.xmp"), modificationDate: .distantPast, size: 1)], media: items)
         #expect(withA.readURL(for: items[0]) != nil)
@@ -406,12 +408,158 @@ struct RatingReadTests {
 
     @Test("写入后读回；2000 个文件内的读取在 RatingFileIO 层不出错")
     func roundTrip() throws {
-        let dir = try MetaFixtures.copy(["IMG_2034.jpg", "IMG_2031.heic", "harbor_night.png", "scan_003.tif", "trail.mp4"])
+        let dir = try MetaFixtures.copy(["IMG_2034.jpg", "IMG_2031.heic", "harbor_night.png", "scan_003.tif", "gears.gif"])
         defer { try? FileManager.default.removeItem(at: dir) }
-        for (i, name) in ["IMG_2034.jpg", "IMG_2031.heic", "harbor_night.png", "scan_003.tif", "trail.mp4"].enumerated() {
+        for (i, name) in ["IMG_2034.jpg", "IMG_2031.heic", "harbor_night.png", "scan_003.tif", "gears.gif"].enumerated() {
             let item = try MetaFixtures.item(dir.appendingPathComponent(name))
             _ = try RatingFileIO.write(i + 1, for: item, mode: .embedded, sidecars: MetaFixtures.index(dir))
             #expect(RatingFileIO.read(item, sidecars: try MetaFixtures.index(dir)).value == i + 1, "\(name)")
         }
+    }
+}
+
+
+@Suite("互通（调研报告的产品决定）")
+struct InteropTests {
+    @Test("一览新建的小文件带 photoshop:SidecarForExtension（大写扩展名）；别人的小文件不加")
+    func sidecarForExtension() throws {
+        let dir = try MetaFixtures.copy(["gears.gif"])
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let item = try MetaFixtures.item(dir.appendingPathComponent("gears.gif"))
+        _ = try RatingFileIO.write(3, for: item, mode: .embedded, sidecars: MetaFixtures.index(dir))
+        let side = dir.appendingPathComponent("gears.xmp")
+        let text = try String(contentsOf: side, encoding: .utf8)
+        #expect(text.contains("photoshop:SidecarForExtension=\"GIF\""))
+        #expect(text.contains(XMPPacket.photoshopNS))
+        // 清除后照样删掉（扩展名不算别的信息）
+        let c = try RatingFileIO.write(0, for: item, mode: .embedded, sidecars: MetaFixtures.index(dir))
+        #expect(c.removedSidecar != nil)
+        // 别人的小文件：不加
+        try Data(lightroomStyleXMP.utf8).write(to: side)
+        _ = try RatingFileIO.write(4, for: item, mode: .embedded, sidecars: MetaFixtures.index(dir))
+        #expect(!(try String(contentsOf: side, encoding: .utf8)).contains("SidecarForExtension"))
+    }
+
+    @Test("DNG：内嵌和小文件都有星级时取较新的，同一时间算小文件")
+    func dngNewer() {
+        let old = Date(timeIntervalSince1970: 1000), new = Date(timeIntervalSince1970: 2000)
+        #expect(RatingFileIO.dngWinner(sidecar: 2, sidecarDate: new, embedded: 5, embeddedDate: old) == 2)
+        #expect(RatingFileIO.dngWinner(sidecar: 2, sidecarDate: old, embedded: 5, embeddedDate: new) == 5)
+        #expect(RatingFileIO.dngWinner(sidecar: 2, sidecarDate: old, embedded: 5, embeddedDate: old) == 2)
+        #expect(RatingFileIO.dngWinner(sidecar: nil, sidecarDate: nil, embedded: 5, embeddedDate: old) == 5)
+        #expect(RatingFileIO.dngWinner(sidecar: 1, sidecarDate: new, embedded: nil, embeddedDate: nil) == 1)
+    }
+
+    @Test("DNG 样张：写小文件，DNG 一个字节都不变，读回小文件的星级")
+    func dngSample() throws {
+        guard MetaFixtures.rawSamples.contains("IMG_1361.DNG") else { return }
+        let dir = try MetaFixtures.copy(["IMG_1361.DNG"], from: MetaFixtures.raw)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let url = dir.appendingPathComponent("IMG_1361.DNG")
+        let sha = try MetaFixtures.sha(url)
+        let item = try MetaFixtures.item(url)
+        _ = try RatingFileIO.write(4, for: item, mode: .embedded, sidecars: MetaFixtures.index(dir))
+        #expect(try MetaFixtures.sha(url) == sha)
+        #expect(RatingFileIO.read(item, sidecars: try MetaFixtures.index(dir)).value == 4)
+        #expect((try String(contentsOf: dir.appendingPathComponent("IMG_1361.xmp"), encoding: .utf8)).contains("SidecarForExtension=\"DNG\""))
+    }
+
+    @Test("XMP 里已有 MicrosoftPhoto:Rating 时改成同一个值；没有时不加")
+    func microsoftRating() throws {
+        let text = """
+        <x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/" xmlns:MicrosoftPhoto="http://ns.microsoft.com/photo/1.0/" xmp:Rating="3" MicrosoftPhoto:Rating="50"/></rdf:RDF></x:xmpmeta>
+        """
+        let p = try XMPPacket(data: Data(text.utf8))
+        p.setRating(4)
+        #expect(p.flattened().contains("/\(XMPPacket.microsoftPhotoNS)|Rating=75"))
+        p.setRating(nil)
+        #expect(p.flattened().contains("/\(XMPPacket.microsoftPhotoNS)|Rating=0"))
+        let q = XMPPacket.makeNew()
+        q.setRating(5)
+        #expect(!q.flattened().contains { $0.contains(XMPPacket.microsoftPhotoNS) })
+        #expect([1, 2, 3, 4, 5].map(XMPPacket.percent(for:)) == [1, 25, 50, 75, 99])
+    }
+
+    /// 造一个带 Exif Rating / RatingPercent 的 JPEG：把样例原来的 Exif 段换成自己拼的（只用于测试）
+    private func jpegWithExifRating(little: Bool, rating: Int, percent: Int) throws -> URL {
+        let dir = try MetaFixtures.copy(["IMG_2034.jpg"])
+        let url = dir.appendingPathComponent("IMG_2034.jpg")
+        var b = [UInt8](try Data(contentsOf: url))
+        func u16(_ v: Int) -> [UInt8] { little ? [UInt8(v & 0xFF), UInt8(v >> 8)] : [UInt8(v >> 8), UInt8(v & 0xFF)] }
+        func u32(_ v: Int) -> [UInt8] { little ? [UInt8(v & 0xFF), UInt8(v >> 8 & 0xFF), UInt8(v >> 16 & 0xFF), UInt8(v >> 24)] : [UInt8(v >> 24), UInt8(v >> 16 & 0xFF), UInt8(v >> 8 & 0xFF), UInt8(v & 0xFF)] }
+        var tiff: [UInt8] = little ? [0x49, 0x49] : [0x4D, 0x4D]
+        tiff += u16(42) + u32(8) + u16(2)
+        tiff += u16(0x4746) + u16(3) + u32(1) + u16(rating) + [0, 0]
+        tiff += u16(0x4749) + u16(3) + u32(1) + u16(percent) + [0, 0]
+        tiff += u32(0)
+        let body: [UInt8] = Array("Exif\0\0".utf8) + tiff
+        let seg: [UInt8] = [0xFF, 0xE1, UInt8((body.count + 2) >> 8), UInt8((body.count + 2) & 0xFF)] + body
+        // 原来的第一个段就是 Exif APP1：整段换掉
+        let oldLen = Int(b[4]) << 8 | Int(b[5])
+        b.replaceSubrange(2..<(4 + oldLen), with: seg)
+        try Data(b).write(to: url)
+        return url
+    }
+
+    @Test("JPEG 里已有的 Exif Rating / RatingPercent 原地改成同一个值，其他字节不变（小端和大端）", arguments: [true, false])
+    func exifRating(little: Bool) throws {
+        let url = try jpegWithExifRating(little: little, rating: 2, percent: 25)
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let before = [UInt8](try Data(contentsOf: url))
+        let t = try #require(ExifRatingPatcher.tiffHeaders(in: before, kind: .jpeg).first)
+        #expect(ExifRatingPatcher.values(in: before, tiffStart: t) == [0x4746: 2, 0x4749: 25])
+        try RatingFileIO.writeEmbedded(4, to: url, kind: .jpeg)
+        let after = [UInt8](try Data(contentsOf: url))
+        let t2 = try #require(ExifRatingPatcher.tiffHeaders(in: after, kind: .jpeg).first)
+        #expect(ExifRatingPatcher.values(in: after, tiffStart: t2) == [0x4746: 4, 0x4749: 75])
+        #expect(RatingValue.display(ImageIOMetadata.rating(at: url)) == 4)
+        // 去掉 XMP 段后，和原文件相比只有那 4 个值字节不同
+        let a = [UInt8](try JPEGXMPWriter.bytesOutsideXMP(Data(before)))
+        let b = [UInt8](try JPEGXMPWriter.bytesOutsideXMP(Data(after)))
+        #expect(a.count == b.count)
+        let diff = zip(a, b).enumerated().filter { $0.element.0 != $0.element.1 }.map(\.offset)
+        #expect(diff.count <= 4 && !diff.isEmpty)
+        // 清除：两个值都变 0
+        try RatingFileIO.writeEmbedded(0, to: url, kind: .jpeg)
+        let cleared = [UInt8](try Data(contentsOf: url))
+        let t3 = try #require(ExifRatingPatcher.tiffHeaders(in: cleared, kind: .jpeg).first)
+        #expect(ExifRatingPatcher.values(in: cleared, tiffStart: t3) == [0x4746: 0, 0x4749: 0])
+    }
+
+    @Test("没有 Exif 星级标签的 JPEG：不新增（样例逐字节比较见 EmbeddedWriteTests）")
+    func noExifRatingAdded() throws {
+        let dir = try MetaFixtures.copy(["IMG_2052.jpg"])
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let url = dir.appendingPathComponent("IMG_2052.jpg")
+        try RatingFileIO.writeEmbedded(3, to: url, kind: .jpeg)
+        let b = [UInt8](try Data(contentsOf: url))
+        let t = try #require(ExifRatingPatcher.tiffHeaders(in: b, kind: .jpeg).first)
+        #expect(ExifRatingPatcher.values(in: b, tiffStart: t).isEmpty)
+    }
+
+    @Test("星级 -1（别的软件的“排除”）：显示未评星，筛选算未评星")
+    func rejected() throws {
+        let dir = try MetaFixtures.copy(["gears.gif"])
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let side = dir.appendingPathComponent("gears.xmp")
+        try Data(lightroomStyleXMP.replacingOccurrences(of: "xmp:Rating=\"2\"", with: "xmp:Rating=\"-1\"").utf8).write(to: side)
+        let item = try MetaFixtures.item(dir.appendingPathComponent("gears.gif"))
+        let info = RatingFileIO.read(item, sidecars: try MetaFixtures.index(dir))
+        #expect(info.value == 0 && info.sidecar == -1)
+        #expect(RatingCriterion(mode: .unrated).matches(ItemFacts(item: item, rating: info.value)))
+    }
+
+    @Test("视频不评星：不读、不写它的小文件")
+    func video() throws {
+        let dir = try MetaFixtures.copy(["trail.mp4"])
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let side = dir.appendingPathComponent("trail.xmp")
+        try Data(lightroomStyleXMP.utf8).write(to: side)
+        let item = try MetaFixtures.item(dir.appendingPathComponent("trail.mp4"))
+        #expect(RatingFileIO.read(item, sidecars: try MetaFixtures.index(dir)).value == 0)
+        #expect(throws: RatingWriteError.self) {
+            try RatingFileIO.write(3, for: item, mode: .embedded, sidecars: try MetaFixtures.index(dir))
+        }
+        #expect(try String(contentsOf: side, encoding: .utf8) == lightroomStyleXMP)
     }
 }

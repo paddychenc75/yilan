@@ -6,6 +6,8 @@ final class XMPPacket {
     static let xmpNS = "http://ns.adobe.com/xap/1.0/"
     static let rdfNS = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
     static let metaNS = "adobe:ns:meta/"
+    static let photoshopNS = "http://ns.adobe.com/photoshop/1.0/"
+    static let microsoftPhotoNS = "http://ns.microsoft.com/photo/1.0/"
     /// 一览新建时写在 x:xmptk 里的标记（spec S-11）
     static let toolkitPrefix = "Yilan"
 
@@ -28,10 +30,15 @@ final class XMPPacket {
         hadPacketWrapper = false
     }
 
-    /// 新建一份只有空 Description 的 XMP，带“由一览创建”的标记
-    static func makeNew(version: String = AppInfo.version) -> XMPPacket {
+    /// 新建一份只有空 Description 的 XMP，带“由一览创建”的标记。
+    /// sidecarFor：新建 .xmp 小文件时写上照片的扩展名（photoshop:SidecarForExtension，Adobe 的写法是大写、不带点）
+    static func makeNew(version: String = AppInfo.version, sidecarFor ext: String? = nil) -> XMPPacket {
+        let extAttr = ext.map { e -> String in
+            let clean = e.uppercased().filter { $0.isLetter || $0.isNumber }
+            return " xmlns:photoshop=\"\(photoshopNS)\" photoshop:SidecarForExtension=\"\(clean)\""
+        } ?? ""
         let text = """
-        <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="\(toolkitPrefix) \(version)"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about=""/></rdf:RDF></x:xmpmeta>
+        <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="\(toolkitPrefix) \(version)"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about=""\(extAttr)/></rdf:RDF></x:xmpmeta>
         """
         // 固定文本，一定能解析
         return XMPPacket(document: try! XMLDocument(xmlString: text, options: [.nodePreserveAll]))
@@ -63,8 +70,30 @@ final class XMPPacket {
 
     var rating: Int? { RatingValue.parse(ratingText) }
 
-    /// 设置星级（原始值，可以是 0）；nil = 删掉这一项
+    /// 星级对应的百分制（MicrosoftPhoto:Rating、Exif RatingPercent 用）：1/25/50/75/99，0 = 0
+    static func percent(for rating: Int) -> Int {
+        switch rating {
+        case 1: 1
+        case 2: 25
+        case 3: 50
+        case 4: 75
+        case 5: 99
+        default: 0
+        }
+    }
+
+    /// 文件里已有的 MicrosoftPhoto:Rating 改成和星级一致（spec：只改已有的，不新增）
+    func syncMicrosoftRating(_ value: Int?) {
+        let percent = String(Self.percent(for: value ?? 0))
+        for d in descriptions {
+            if let a = d.attribute(forLocalName: "Rating", uri: Self.microsoftPhotoNS) { a.stringValue = percent }
+            for e in d.elements(forLocalName: "Rating", uri: Self.microsoftPhotoNS) { e.stringValue = percent }
+        }
+    }
+
+    /// 设置星级（原始值，可以是 0）；nil = 删掉这一项。已有的 MicrosoftPhoto:Rating 一并改成同一个值
     func setRating(_ value: Int?) {
+        syncMicrosoftRating(value)
         var found = false
         for d in descriptions {
             if let a = d.attribute(forLocalName: "Rating", uri: Self.xmpNS), let name = a.name {
@@ -123,9 +152,12 @@ final class XMPPacket {
         return tk?.hasPrefix(Self.toolkitPrefix) ?? false
     }
 
-    /// 除了星级还有没有任何别的属性
+    /// 除了星级（以及一览新建时写的 SidecarForExtension、和星级同步的 MicrosoftPhoto:Rating）还有没有别的属性
     var hasPropertiesOtherThanRating: Bool {
-        !flattened().filter { !$0.hasPrefix("/\(Self.xmpNS)|Rating") }.isEmpty
+        !flattened().filter {
+            !$0.hasPrefix("/\(Self.xmpNS)|Rating") && !$0.hasPrefix("/\(Self.photoshopNS)|SidecarForExtension")
+                && !$0.hasPrefix("/\(Self.microsoftPhotoNS)|Rating")
+        }.isEmpty
     }
 
     /// 拍平成“命名空间|名字[路径] = 值”的集合，用来比较改写前后有没有丢东西（属性写法和元素写法等价）

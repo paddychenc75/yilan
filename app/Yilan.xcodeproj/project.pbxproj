@@ -57,6 +57,7 @@
 		9D9A1D9F459594160BB56469 /* ReleaseNotes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20A6EB2DC7F8CEA921A1CEE /* ReleaseNotes.swift */; };
 		9E309A692AF0D1C656B60028 /* DeleteConfirm.swift in Sources */ = {isa = PBXBuildFile; fileRef = C454C315DDB2FF70893B8C4B /* DeleteConfirm.swift */; };
 		9EFE1DA73917B5D1222682DE /* DecodedImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B7197F000771B32387AE711 /* DecodedImage.swift */; };
+		A3BC480E3690F3EE7A4EB027 /* ExifRatingPatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9F252A382F68C1DC56879DA /* ExifRatingPatcher.swift */; };
 		AA0DEC365DD1E9210CF2A223 /* ShotRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08A77D990E7760687D952BCE /* ShotRunner.swift */; };
 		AC16258A4F6479FF9428C6B2 /* BrowserModel+FullScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1E94594ED6A83D8246571CF /* BrowserModel+FullScreen.swift */; };
 		AE3EC156665C34FDDB9981A3 /* RatingFileIO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5591299D9E958439F29D6D9D /* RatingFileIO.swift */; };
@@ -161,6 +162,7 @@
 		C744F34C9CF7F3E38F943401 /* Yilan.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Yilan.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C75F235187D3959CC6B52E3E /* FolderScannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolderScannerTests.swift; sourceTree = "<group>"; };
 		C8482B12229A8B8D837793EC /* LoadingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingTests.swift; sourceTree = "<group>"; };
+		C9F252A382F68C1DC56879DA /* ExifRatingPatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExifRatingPatcher.swift; sourceTree = "<group>"; };
 		CDF05B72DF3F9AA79A7C9FA7 /* ZoomControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoomControl.swift; sourceTree = "<group>"; };
 		CEDEA31B18FCE2058F8B9E02 /* Phase2Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Phase2Tests.swift; sourceTree = "<group>"; };
 		D0CD49A8130EEA2B42E7C1CD /* BrowserModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserModel.swift; sourceTree = "<group>"; };
@@ -246,6 +248,7 @@
 		3F54AD0C0D3D36D9C4D5B316 /* Metadata */ = {
 			isa = PBXGroup;
 			children = (
+				C9F252A382F68C1DC56879DA /* ExifRatingPatcher.swift */,
 				7DC6654E54EB0AF01574A05C /* ImageIOMetadata.swift */,
 				7EB136DF71BFB61F6E2D0E97 /* JPEGXMPWriter.swift */,
 				AD1E9DB7DEB9007B416669CC /* PNGXMPWriter.swift */,
@@ -470,6 +473,7 @@
 				9EFE1DA73917B5D1222682DE /* DecodedImage.swift in Sources */,
 				9E309A692AF0D1C656B60028 /* DeleteConfirm.swift in Sources */,
 				D1DFBD49CD02F0B25E3E809A /* DropSummary.swift in Sources */,
+				A3BC480E3690F3EE7A4EB027 /* ExifRatingPatcher.swift in Sources */,
 				55280BF682268EDFA51F3796 /* FilterViews.swift in Sources */,
 				27C41F8193F6FFC72D5FD860 /* FolderScanner.swift in Sources */,
 				160358BAE89AFEA9FB5A5675 /* FolderSync.swift in Sources */,

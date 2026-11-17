@@ -287,7 +287,7 @@ struct SettingsView: View {
                                  note: "JPEG、PNG、HEIC 等直接写进文件的元数据，其他软件（如 Lightroom）也能读到",
                                  selected: settings.ratingStorage == .embedded) { settings.ratingStorage = .embedded }
                 SettingsRadioRow(title: "一律使用旁边的 .xmp 小文件",
-                                 note: "不改动图片本身；换到别的软件时要连同 .xmp 一起带走",
+                                 note: "不改动图片本身；换到别的软件时要连同 .xmp 一起带走。Lightroom 和 Bridge 会忽略 JPEG 旁边的 .xmp",
                                  selected: settings.ratingStorage == .sidecar) { settings.ratingStorage = .sidecar }
             }
             Text("RAW（ARW、CR3、NEF 等）不能写入文件内部，始终使用旁边的 .xmp。")

@@ -77,6 +77,8 @@ struct RatingCriterion: FilterCriterion {
     var isActive: Bool { mode != .any }
 
     func matches(_ facts: ItemFacts) -> Bool {
+        // 视频没有星级：任何星级条件（包括“未评星”）都不包含视频
+        if mode != .any, facts.item.kind == .video { return false }
         let r = facts.rating ?? 0
         switch mode {
         case .any: return true
@@ -153,7 +155,7 @@ struct FilterFacets: Equatable {
             guard type.includes(item) else { continue }
             let facts = ItemFacts(item: item, rating: ratings[item.url])
             if filter.matches(facts) { facets.resultCount += 1 }
-            if unratedOnly.matches(facts) { facets.unratedCount += 1 }
+            if unratedOnly.matches(facts) { facets.unratedCount += 1 }   // 只算图片（视频没有星级）
             if let group, noFormat.matches(facts) { facets.formatCounts[group, default: 0] += 1 }
         }
         facets.presentFormats = FormatGroup.allCases.filter(present.contains)

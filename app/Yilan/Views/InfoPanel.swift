@@ -18,6 +18,8 @@ struct InfoPanel: View {
     let onCopyCoordinates: () -> Void
     /// 评星组（spec R3-06、R3-07）：星级（还没读出来时 nil）、保存位置、能不能评
     var rating: Int? = nil
+    /// 视频没有评星组
+    var showsRating = true
     var ratingLocation = ""
     var canRate = true
     var onRate: (Int) -> Void = { _ in }
@@ -106,8 +108,10 @@ struct InfoPanel: View {
     private var sections: some View {
         if let content {
             VStack(alignment: .leading, spacing: 14) {
-                InfoSectionView(title: "评星") { ratingRows }
-                Divider14()
+                if showsRating {
+                    InfoSectionView(title: "评星") { ratingRows }
+                    Divider14()
+                }
                 InfoSectionView(title: "文件") { InfoRows(rows: content.file) }
                 if let video = content.video {
                     Divider14()

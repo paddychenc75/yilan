@@ -12,7 +12,8 @@ struct SidecarIndex: Sendable, Equatable {
     let folder: URL
     /// 小写文件名 → 小文件
     private(set) var entries: [String: Entry]
-    /// 小写的“去掉扩展名的文件名” → 一览支持的文件有几个
+    /// 小写的“去掉扩展名的文件名” → 一览支持的文件有几个（视频也算：实况照片 IMG_1.HEIC 旁边的 IMG_1.xmp
+    /// 可能是别的软件给 IMG_1.MOV 写的，图片这时改用 IMG_1.HEIC.xmp，不碰它）
     private(set) var mediaPerBase: [String: Int]
     /// 小写的“去掉扩展名的文件名” → 其中 RAW 有几个
     private(set) var rawPerBase: [String: Int]
@@ -53,6 +54,8 @@ struct SidecarIndex: Sendable, Equatable {
 
     /// 读星级时用哪个小文件（不存在时 nil）
     func readURL(for item: MediaItem) -> URL? {
+        // 视频不评星：它旁边的小文件不读、不改、不跟着进废纸篓
+        guard item.kind == .image else { return nil }
         let base = Self.base(of: item.url)
         if item.format == .raw { return existing(base + ".xmp") }
         if let full = existing(item.name + ".xmp") { return full }
@@ -74,6 +77,7 @@ struct SidecarIndex: Sendable, Equatable {
 
     /// 删除这个文件时要一起进废纸篓的小文件（spec S-23）：两个 RAW 共用同名小文件时不动
     func sidecarToMoveWith(_ item: MediaItem) -> URL? {
+        guard item.kind == .image else { return nil }
         guard let url = readURL(for: item) else { return nil }
         if item.format == .raw, rawPerBase[Self.base(of: item.url), default: 0] > 1 { return nil }
         return url

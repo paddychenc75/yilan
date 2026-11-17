@@ -391,8 +391,7 @@ struct RootView: View {
         let visible = model.ratingFlash != nil && model.pendingDelete == nil
         StarBar(rating: model.ratingFlash?.value ?? model.currentRating ?? 0, enabled: true, flash: model.ratingFlash)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-            .padding(.bottom, StarBar.bottomOffset(isVideo: isVideo, stripVisible: model.stripVisible,
-                                                   fullScreen: layout.fullScreen))
+            .padding(.bottom, StarBar.bottomOffset(stripVisible: model.stripVisible, fullScreen: layout.fullScreen))
             .opacity(visible ? 1 : 0)
             .allowsHitTesting(false)
             .animation(.easeOut(duration: 0.2), value: visible)
@@ -414,8 +413,9 @@ struct RootView: View {
             if model.stripVisible {
                 ThumbnailDock(
                     rating: model.currentRating,
-                    canRate: model.canRateCurrent && model.current != nil,
-                    onRate: { model.rateCurrent($0, fromKeyboard: false) },
+                    canRate: model.canRateCurrent,
+                    // 视频：信息行中间不放星
+                    onRate: model.currentIsRatable ? { model.rateCurrent($0, fromKeyboard: false) } : nil,
                     items: model.items,
                     current: model.current,
                     meta: dockMeta,
@@ -477,6 +477,7 @@ struct RootView: View {
                     onCopy: model.copyInfo,
                     onCopyCoordinates: model.copyCoordinates,
                     rating: model.currentRating,
+                    showsRating: model.currentIsRatable,
                     ratingLocation: model.current.map { model.ratingLocationDescription(for: $0) } ?? "",
                     canRate: model.canRateCurrent,
                     onRate: { model.rateCurrent($0, fromKeyboard: false) }

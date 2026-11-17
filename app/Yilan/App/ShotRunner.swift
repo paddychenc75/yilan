@@ -31,7 +31,7 @@ enum ShotRunner {
             if ShotHooks.seedRatings, let first = model.current, isTemporary(first.url) {
                 for _ in 0..<50 where !model.ratingsLoaded { try? await Task.sleep(for: .milliseconds(100)) }
                 let pattern = [5, 4, 0, 3, 4, 2, 0, 5, 4, 3]
-                for (i, item) in model.allItems.enumerated() {
+                for (i, item) in model.allItems.enumerated() where item.kind == .image {
                     model.setRating(pattern[i % pattern.count], for: item, old: model.ratings[item.url] ?? 0, recordUndo: false)
                 }
                 await model.ratingWriter.waitUntilIdle()

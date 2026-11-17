@@ -20,11 +20,14 @@ enum HintCard: Equatable {
 extension BrowserModel {
     // MARK: - 状态
 
-    /// 当前文件的星级（还没读出来时 nil）
-    var currentRating: Int? { current.flatMap { ratings[$0.url] } }
+    /// 当前文件的星级（还没读出来时 nil；视频永远 nil）
+    var currentRating: Int? { current.flatMap { $0.kind == .image ? ratings[$0.url] : nil } }
 
-    /// 当前文件能不能评星：显示错误卡片时不能（spec R1-09），位置不可写时不能（spec R1-10）
-    var canRateCurrent: Bool { current != nil && failure == nil && folderWritable }
+    /// 当前文件是图片（v0.3 只给图片评星）
+    var currentIsRatable: Bool { current.map(RatingFileIO.isRatable) ?? false }
+
+    /// 当前文件能不能评星：视频不能；显示错误卡片时不能（spec R1-09），位置不可写时不能（spec R1-10）
+    var canRateCurrent: Bool { currentIsRatable && failure == nil && folderWritable }
 
     /// 信息面板“保存位置”：内嵌写“文件内部”，小文件写文件名（spec R3-07）
     func ratingLocationDescription(for item: MediaItem) -> String {
@@ -39,6 +42,11 @@ extension BrowserModel {
     /// 给当前文件打星（键盘 1–5 / 0、点五星、菜单）
     func rateCurrent(_ value: Int, fromKeyboard: Bool) {
         guard let item = current, pendingDelete == nil else { return }
+        // 视频：1–5 给一句提示，0 什么都不做；不写、不进撤销记录
+        guard RatingFileIO.isRatable(item) else {
+            if value > 0 { showToast(symbol: "video", text: String(localized: "视频暂不支持评星"), duration: 1.6) }
+            return
+        }
         dismissHint(.shortcutsChanged)
         guard failure == nil else {
             showRatingProblem(String(localized: "无法评星：文件无法读取"))
@@ -189,7 +197,7 @@ extension BrowserModel {
         let all = allItems
         let index = sidecars
         let center = current.flatMap { all.firstIndex(of: $0) } ?? 0
-        let missing = all.filter { ratings[$0.url] == nil }
+        let missing = all.filter { $0.kind == .image && ratings[$0.url] == nil }
         guard !missing.isEmpty else { ratingsLoaded = true; return }
         ratingsLoaded = false
         ratingLoadTask = Task {

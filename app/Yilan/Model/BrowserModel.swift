@@ -354,6 +354,8 @@ final class BrowserModel {
             let keep: MediaKind = newFilter == .videos ? .video : .image
             browseFilter.format.selected = browseFilter.format.selected.filter { $0.kind == keep }
         }
+        // 视频没有星级：切到“视频”时星级条件一并清掉
+        if newFilter == .videos { browseFilter.rating = RatingCriterion() }
         stickyURL = nil
         items = resultList()
         let index = browseFilter.isActive

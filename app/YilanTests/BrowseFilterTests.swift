@@ -64,7 +64,8 @@ struct BrowseFilterModelTests {
         #expect(facets.unratedCount == 6)                // 图片里未评星的（8 张图片，2 张有星）
         #expect(facets.total == 10)
         let types = FilterFacets.typeCounts(items: items, ratings: ratings, filter: f)
-        #expect(types[.all] == 3 && types[.images] == 2 && types[.videos] == 1)
+        // 有星级条件时视频都不算（视频没有星级）
+        #expect(types[.all] == 2 && types[.images] == 2 && types[.videos] == 0)
     }
 
     @Test("改条件后当前文件不在结果里：后面第一个，否则前面最近的")
@@ -137,15 +138,29 @@ struct BrowseFilterBrowserTests {
         #expect(m.currentIndex == 1)
     }
 
-    @Test("切换类型时另一类的已选格式自动取消（R5b-07）；结果为空时显示空状态")
+    @Test("切换类型时另一类的已选格式、以及星级条件自动取消（R5b-07）；任何星级条件都不含视频；结果为空时显示空状态")
     func typeSwitchAndEmpty() {
-        let m = model(["a.jpg", "b.mov", "c.mp4"], ratings: [5, 0, 0])
+        let m = model(["a.jpg", "b.mov", "c.mp4", "d.jpg"], ratings: [5, 0, 0, 0])
+        m.setRatingCriterion(.unrated)
+        #expect(m.items.map(\.name) == ["d.jpg"])                     // 未评星也不含视频
         var f = BrowseFilter()
         f.format.selected = [.jpeg, .mov]
+        f.rating.mode = .atLeast(1)
+        m.setBrowseFilter(f)
+        m.setFilter(.images)
+        m.setFilter(.all)
+        m.setBrowseFilter(f)
+        m.clearBrowseFilter()
+        f.rating.mode = .any
         m.setBrowseFilter(f)
         m.setFilter(.videos)
         #expect(m.browseFilter.format.selected == [.mov])
+        #expect(!m.browseFilter.rating.isActive)
+        m.setFilter(.images)
         m.setRatingCriterion(.atLeast(5))
+        f = m.browseFilter
+        f.format.selected = [.png]
+        m.setBrowseFilter(f)
         #expect(m.items.isEmpty)
         #expect(m.showsEmptyFilterResult)
         #expect(m.current == nil)

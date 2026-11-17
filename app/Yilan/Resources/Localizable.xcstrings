@@ -207,12 +207,12 @@
         }
       }
     },
-    "RAW 文件本身不会被改动，星级记在这个同名的 .xmp 小文件里，Lightroom 等软件也能读取。" : {
+    "RAW 文件本身不会被改动，星级记在这个同名的 .xmp 小文件里，Lightroom 等软件也能读取。Lightroom 里要用「元数据 › 从文件读取元数据」才会看到新星级。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The RAW file itself is never changed. The rating is stored in this .xmp file with the same name, which Lightroom and other apps can read."
+            "value" : "The RAW file itself is never changed. The rating is stored in this .xmp file with the same name, which Lightroom and other apps can read. In Lightroom, choose Metadata › Read Metadata from File to see the new rating."
           }
         }
       }
@@ -438,12 +438,12 @@
         }
       }
     },
-    "不改动图片本身；换到别的软件时要连同 .xmp 一起带走" : {
+    "不改动图片本身；换到别的软件时要连同 .xmp 一起带走。Lightroom 和 Bridge 会忽略 JPEG 旁边的 .xmp" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Images aren’t changed. Keep the .xmp files with them when you move to another app."
+            "value" : "Images aren’t changed. Keep the .xmp files with them when you move to another app. Lightroom and Bridge ignore .xmp files next to JPEGs."
           }
         }
       }
@@ -3123,6 +3123,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Video · %@"
+          }
+        }
+      }
+    },
+    "视频不支持星级" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Videos don’t have ratings"
+          }
+        }
+      }
+    },
+    "视频暂不支持评星" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Videos can’t be rated yet"
           }
         }
       }

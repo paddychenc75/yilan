@@ -111,15 +111,9 @@ struct StarBar: View {
             .accessibilityHidden(true)
     }
 
-    /// 胶囊底边离窗口底边（spec R2-02）
-    static func bottomOffset(isVideo: Bool, stripVisible: Bool, fullScreen: Bool) -> CGFloat {
-        if fullScreen { return 140 }
-        switch (isVideo, stripVisible) {
-        case (false, true): return 140
-        case (false, false): return 32
-        case (true, true): return 182
-        case (true, false): return 70
-        }
+    /// 胶囊底边离窗口底边（spec R3a-02）：缩略图栏显示 140，隐藏 32，全屏 140（只有图片能评星，不再有视频的位置）
+    static func bottomOffset(stripVisible: Bool, fullScreen: Bool) -> CGFloat {
+        fullScreen || stripVisible ? 140 : 32
     }
 }
 
@@ -203,7 +197,7 @@ struct HintCardView: View {
             KeycapText(String(localized: "数字键 [1]–[5] 现在用来评星，[0] 清除星级。[0] 和 [1] 不再用来缩放：按 [Z] 在适应窗口和实际大小之间切换，[⌘0] 实际大小，[⌘9] 适应窗口。",
                               comment: "快捷键变化提示；方括号里的内容显示成键帽，不要翻译方括号里的按键"))
         case .sidecarCreated:
-            Text("RAW 文件本身不会被改动，星级记在这个同名的 .xmp 小文件里，Lightroom 等软件也能读取。")
+            Text("RAW 文件本身不会被改动，星级记在这个同名的 .xmp 小文件里，Lightroom 等软件也能读取。Lightroom 里要用「元数据 › 从文件读取元数据」才会看到新星级。")
         }
     }
 

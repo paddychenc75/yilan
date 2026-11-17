@@ -13,6 +13,9 @@ enum RatingFileIO {
         case imageIO
     }
 
+    /// v0.3 只给图片评星，视频不能评（产品 2026-11-18 改定）
+    static func isRatable(_ item: MediaItem) -> Bool { item.kind == .image }
+
     static func kind(for item: MediaItem) -> Kind {
         guard item.format == .standard else { return .sidecarOnly }
         switch item.url.pathExtension.lowercased() {
@@ -33,16 +36,38 @@ enum RatingFileIO {
     /// 读一个文件的星级（spec R4-01 ~ R4-03）
     static func read(_ item: MediaItem, sidecars: SidecarIndex) -> RatingInfo {
         var info = RatingInfo.unrated
+        // 视频旁边别的软件写的小文件：不读、不改
+        guard isRatable(item) else { return info }
         if let url = sidecars.readURL(for: item), let data = try? Data(contentsOf: url),
            let packet = try? XMPPacket(data: data) {
             info.sidecarURL = url
             info.sidecar = packet.rating
         }
-        // RAW 有带星级的小文件时不读内部（省下读 RAW 头的时间）
-        let needEmbedded = !(item.format == .raw && info.sidecar != nil)
+        let isDNG = item.url.pathExtension.lowercased() == "dng"
+        // RAW 有带星级的小文件时不读内部（省下读 RAW 头的时间）；DNG 例外：两处都读，取较新的
+        let needEmbedded = !(item.format == .raw && info.sidecar != nil) || isDNG
         if needEmbedded, hasEmbeddedMetadata(item) { info.embedded = ImageIOMetadata.rating(at: item.url) }
-        info.value = RatingValue.display(info.sidecar ?? info.embedded)
+        if isDNG, let side = info.sidecarURL, info.sidecar != nil, info.embedded != nil {
+            let dngDate = modificationDate(item.url)
+            let sideDate = modificationDate(side)
+            info.value = RatingValue.display(dngWinner(sidecar: info.sidecar, sidecarDate: sideDate,
+                                                       embedded: info.embedded, embeddedDate: dngDate))
+        } else {
+            info.value = RatingValue.display(info.sidecar ?? info.embedded)
+        }
         return info
+    }
+
+    /// DNG：内嵌和小文件都有星级时取较新的那个（产品决定 1）；修改时间相同算小文件赢（一览写的就是小文件）
+    static func dngWinner(sidecar: Int?, sidecarDate: Date?, embedded: Int?, embeddedDate: Date?) -> Int? {
+        guard let sidecar else { return embedded }
+        guard let embedded else { return sidecar }
+        if let e = embeddedDate, let s = sidecarDate, e > s { return embedded }
+        return sidecar
+    }
+
+    private static func modificationDate(_ url: URL) -> Date? {
+        (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
     }
 
     // MARK: - 写
@@ -64,6 +89,7 @@ enum RatingFileIO {
     /// 把星级写进文件（value 0 = 清除）。失败抛 RatingWriteError
     static func write(_ value: Int, for item: MediaItem, mode: RatingStorageMode, sidecars: SidecarIndex) throws -> WriteResult {
         precondition((0...5).contains(value))
+        guard isRatable(item) else { throw RatingWriteError.unsupported("视频不能评星") }
         guard FileManager.default.fileExists(atPath: item.url.path) else { throw RatingWriteError.vanished }
         let kind = kind(for: item)
         let existingSidecar = sidecars.readURL(for: item).flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
@@ -88,19 +114,30 @@ enum RatingFileIO {
     }
 
     /// 写进文件内部：临时文件 + 自检 + 原子替换 + 恢复修改时间
+    /// 写入后是否恢复原修改时间。调研报告指出这可能让 Lightroom / Bridge 发现不了外部修改（推断，待实测），
+    /// 实测后需要改时只改这一处
+    static let keepsModificationDate = true
+
     static func writeEmbedded(_ value: Int, to url: URL, kind: Kind) throws {
         let originalFacts = ImageIOMetadata.facts(at: url)
         let originalXMP = ImageIOMetadata.xmpPaths(at: url)
-        try SafeReplace.replace(url, keepModificationDate: true) { temp in
+        let microsoft = ImageIOMetadata.hasMicrosoftRating(at: url)
+        try SafeReplace.replace(url, keepModificationDate: keepsModificationDate) { temp in
             switch kind {
             case .jpeg, .png:
                 let data = try Data(contentsOf: url, options: .alwaysMapped)
                 let edit: (XMPPacket) -> Void = { $0.setRating(value == 0 ? nil : value) }
                 let out = kind == .jpeg ? try JPEGXMPWriter.rewrite(data, edit: edit) : try PNGXMPWriter.rewrite(data, edit: edit)
-                try out.write(to: temp)
+                // 已有的 Exif Rating / RatingPercent 原地改成同一个值（不新增）
+                var bytes = [UInt8](out)
+                try ExifRatingPatcher.patch(&bytes, kind: kind, rating: value)
+                try Data(bytes).write(to: temp)
             case .imageIO:
-                // HEIC / TIFF 删不掉这一项，清除写 0（spec S-13）
-                try ImageIOMetadata.write(rating: value, from: url, to: temp)
+                // HEIC / TIFF 删不掉这一项，清除写 0（spec S-13）；已有的 MicrosoftPhoto:Rating 一起改
+                try ImageIOMetadata.write(rating: value, from: url, to: temp,
+                                          microsoftPercent: microsoft ? XMPPacket.percent(for: value) : nil)
+                var bytes = [UInt8](try Data(contentsOf: temp))
+                if try ExifRatingPatcher.patch(&bytes, kind: kind, rating: value) { try Data(bytes).write(to: temp) }
             case .sidecarOnly:
                 throw RatingWriteError.unsupported("只能用小文件")
             }
@@ -120,12 +157,16 @@ enum RatingFileIO {
             throw RatingWriteError.unsupported("图片尺寸、数量或辅助图变了")
         }
         // 不比较星级本身和 ImageIO 自己加的标记（iio:hasXMP 等）
-        let ignored: (String) -> Bool = { $0.hasPrefix("xmp:Rating=") || $0.hasPrefix("iio:") }
+        // 不比较星级本身（xmp:Rating、MicrosoftPhoto:Rating、Exif 映射出的 Rating）和 ImageIO 自己加的标记
+        let ignored: (String) -> Bool = { $0.contains(":Rating=") || $0.contains(":RatingPercent=") || $0.hasPrefix("iio:") }
         guard originalXMP.filter({ !ignored($0) }).isSubset(of: ImageIOMetadata.xmpPaths(at: temp)) else {
             throw RatingWriteError.unsupported("原有的 XMP 信息少了")
         }
         if kind == .jpeg || kind == .png {
-            let a = try Data(contentsOf: original, options: .alwaysMapped)
+            // 预期：原文件只有 Exif 里那几个星级字节变了
+            var expected = [UInt8](try Data(contentsOf: original, options: .alwaysMapped))
+            try ExifRatingPatcher.patch(&expected, kind: kind, rating: value)
+            let a = Data(expected)
             let b = try Data(contentsOf: temp, options: .alwaysMapped)
             let same = kind == .jpeg
                 ? try JPEGXMPWriter.bytesOutsideXMP(a) == JPEGXMPWriter.bytesOutsideXMP(b)
@@ -148,7 +189,8 @@ enum RatingFileIO {
                 throw SafeReplace.map(error)
             }
         } else {
-            packet = XMPPacket.makeNew()
+            // 新建的小文件写上照片的扩展名（photoshop:SidecarForExtension，产品决定 2）
+            packet = XMPPacket.makeNew(sidecarFor: item.url.pathExtension)
         }
         let before = exists ? packet.flattened() : []
         if value > 0 {

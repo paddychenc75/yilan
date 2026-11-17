@@ -130,8 +130,9 @@ struct FilterPanel: View {
     }
 
     private var ratingSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            sectionTitle(Text("星级"), value: {
+        let videoOnly = type == .videos
+        return VStack(alignment: .leading, spacing: 8) {
+            sectionTitle(Text("星级"), value: videoOnly ? Text("视频不支持星级") : {
                 switch filter.rating.mode {
                 case .any: Text("不限")
                 case .unrated: Text("未评星")
@@ -151,6 +152,9 @@ struct FilterPanel: View {
                     onRating(filter.rating.mode == .unrated ? .any : .unrated)
                 }
             }
+            // 类型是“视频”时整个星级分区不可用（视频不评星）
+            .disabled(videoOnly)
+            .opacity(videoOnly ? 0.35 : 1)
         }
     }
 

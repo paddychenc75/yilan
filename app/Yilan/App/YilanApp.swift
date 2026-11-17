@@ -140,7 +140,7 @@ struct AppCommands: Commands {
                 Button("清除星级") { model.rateCurrent(0, fromKeyboard: false) }
                     .keyboardShortcut("0", modifiers: [])
             }
-            .disabled(model.current == nil || !model.mainWindowIsKey || model.pendingDelete != nil)
+            .disabled(!model.currentIsRatable || !model.mainWindowIsKey || model.pendingDelete != nil)
         }
         CommandGroup(after: .newItem) {
             Divider()

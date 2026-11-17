@@ -14,7 +14,7 @@ enum ImageIOMetadata {
 
     /// HEIC / TIFF：CGImageDestinationCopyImageSource 合并写入（画面数据不重新压缩）。
     /// value 为 0 时写 0：这两种格式实测删不掉这一项（设 kCFNull 无效）
-    static func write(rating value: Int, from source: URL, to temp: URL) throws {
+    static func write(rating value: Int, from source: URL, to temp: URL, microsoftPercent: Int? = nil) throws {
         guard let src = CGImageSourceCreateWithURL(source as CFURL, nil), let type = CGImageSourceGetType(src) else {
             throw RatingWriteError.unsupported("无法读取原图")
         }
@@ -23,12 +23,29 @@ enum ImageIOMetadata {
         }
         let meta = CGImageMetadataCreateMutable()
         CGImageMetadataSetValueWithPath(meta, nil, "xmp:Rating" as CFString, String(value) as CFString)
+        if let microsoftPercent {
+            CGImageMetadataRegisterNamespaceForPrefix(meta, XMPPacket.microsoftPhotoNS as CFString, "MicrosoftPhoto" as CFString, nil)
+            CGImageMetadataSetValueWithPath(meta, nil, "MicrosoftPhoto:Rating" as CFString, String(microsoftPercent) as CFString)
+        }
         let options: [CFString: Any] = [kCGImageDestinationMetadata: meta, kCGImageDestinationMergeMetadata: true]
         var error: Unmanaged<CFError>?
         guard CGImageDestinationCopyImageSource(dest, src, options as CFDictionary, &error) else {
             let message = error.map { String(describing: $0.takeRetainedValue()) } ?? "unknown"
             throw RatingWriteError.unsupported(message)
         }
+    }
+
+    /// 文件的 XMP 里已经有 MicrosoftPhoto:Rating（只改已有的，不新增）
+    static func hasMicrosoftRating(at url: URL) -> Bool {
+        guard let src = CGImageSourceCreateWithURL(url as CFURL, noCache),
+              let md = CGImageSourceCopyMetadataAtIndex(src, 0, nil) else { return false }
+        var found = false
+        CGImageMetadataEnumerateTagsUsingBlock(md, nil, [kCGImageMetadataEnumerateRecursively: true] as CFDictionary) { _, tag in
+            if (CGImageMetadataTagCopyNamespace(tag) as String?) == XMPPacket.microsoftPhotoNS,
+               (CGImageMetadataTagCopyName(tag) as String?) == "Rating" { found = true }
+            return !found
+        }
+        return found
     }
 
     /// 写入前后要保持不变的“画面事实”

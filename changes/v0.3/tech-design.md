@@ -342,6 +342,19 @@ R8、R9 是「尽量做」，按负责人「先发布、余下放到下个补丁
 
 PRD R2 / R3a 改为：可点的星放进缩略图栏信息行；画面胶囊只在按 0–5 时闪现（`AppSettings.flashRatingOnStage`，默认开），不可点。实现上删掉了鼠标移动时显示胶囊的计时逻辑（原 PD-01），`BrowserModel.flash(_:)` 只在键盘评星时调用，设置关掉或鼠标停在视频控制条上时直接返回。截图钩子：`--shot-row-hover=N`（信息行悬停样子）、`--shot-hold-flash`（胶囊一直显示）。
 
+## 11b. 2026-11-18 调研报告带来的修改、只给图片评星
+
+依据 `changes/v0.3/research/rating-compat.md`「回答 A–E」「建议对方案做的修改」和产品决定：
+
+- **DNG**：`RatingFileIO.read` 对 DNG 同时读内嵌和小文件，`dngWinner` 取修改时间较新的，一样新时小文件赢；写入仍只写小文件，DNG 不改。
+- **photoshop:SidecarForExtension**：一览新建小文件时写在 `rdf:Description` 上，命名空间 `http://ns.adobe.com/photoshop/1.0/`，值是大写扩展名、不带点和空格（Adobe Camera Raw 写的样子是 `photoshop:SidecarForExtension="ARW"`；Adobe 社区里有人因为值里多了空格导致 Photoshop 不读，见调研报告和 exiftool / exiv2 标签表）。别人的小文件不加。判断「一览建的、只剩星级」时不把这一项算作别的信息。
+- **-1**：读出来显示未评星；按 0 时界面星级本来就是 0，不写盘、不进撤销记录；按 1–5 照常覆盖。
+- **字段一致**：`XMPPacket.setRating` 顺带改已有的 `MicrosoftPhoto:Rating`；HEIC / TIFF 的 ImageIO 合并写入时，原文件有这一项就一起写百分制值。`ExifRatingPatcher` 找到 Exif 的 TIFF 头（JPEG 的 Exif APP1、PNG 的 eXIf、TIFF 文件开头、HEIC 里「Exif\0\0」之后），在 IFD0 里找 0x4746 / 0x4749，类型 SHORT / LONG、个数 1 时按原字节序覆盖那 2 / 4 个字节；写法不同就抛 unsupported，整次写入改用小文件。JPEG / PNG 的自检改成「原文件做同样的覆盖后，XMP 段以外逐字节相同」，测试里证明只有那几个字节变了。都是只改已有的，不新增。
+- **修改时间开关**：`RatingFileIO.keepsModificationDate` 一处常量，实测后需要时只改这里。
+- **只给图片评星**：`RatingFileIO.isRatable`（视频返回 false）；视频的读写、小文件、废纸篓都跳过；`RatingCriterion` 生效时不含视频；切到「视频」时清掉星级条件；画面胶囊不再有视频的位置。小文件同名冲突的判断仍把视频算进去：实况照片的 HEIC 用 `IMG_1.HEIC.xmp`，不碰可能是别的软件给 MOV 写的 `IMG_1.xmp`。
+
+v0.3 不做（留给以后，见调研报告）：把星级写进 MP4 / MOV 文件；`MicrosoftPhoto:Rating` 在没有时新增；读 Fujifilm 厂商标签里的机内星级（0x1431）。
+
 ## 12. 发布前待实测
 
 开发期间没有条件验证，发布 v0.3.0 前必须有人实测并把结果补到这里：
@@ -353,3 +366,16 @@ PRD R2 / R3a 改为：可点的星放进缩略图栏信息行；画面胶囊只�
 - 「预览」App：检查器里是否显示星级（只影响说明文字，不影响功能）。
 - macOS 26 上跑一遍全部自动测试（实验和开发在 macOS 27.2.1 上做）。
 - 存储卡上 2000 个 RAW 的冷读取速度。
+- 调研报告「仍需实测」的 12 项（开发完成后请负责人协助一起做，结果补到这里）：
+  1. Lightroom Classic 读一览写的最小小文件：一览给 ARW 评 4 星 → Lightroom 导入新目录库，看星级、开发参数是否默认；一览改成 2 星，看 Lightroom 是否出现「元数据已被外部更改」，「从文件读取元数据」后是否变 2 星。
+  2. 保留修改时间会不会让 Lightroom / Bridge 看不到变化：已导入的 JPEG 用一览改星级（保留修改时间），看 Lightroom 是否提示外部更改；把 `RatingFileIO.keepsModificationDate` 改成 false 再测一次对比；Bridge 同样。
+  3. DNG 的小文件和内嵌谁赢：（a）内嵌 3、小文件 5、小文件较新；（b）反过来；（c）小文件带 `photoshop:SidecarForExtension`。在 Lightroom Classic、Bridge / Camera Raw、Capture One、FastRawViewer 里看。
+  4. Capture One 读 HEIC、PNG、TIFF 的内嵌 `xmp:Rating`（视频 v0.3 不评星，不测）。
+  5. Windows 11 资源管理器「评分」列读 JPEG、TIFF、HEIC、PNG；在 Windows 里改星级后用 `exiftool -a -G1 -Rating* -XMP:Rating* 文件` 看写了哪些标签。
+  6. 「照片」app 导入带星级的 JPEG、HEIC、RAW + .xmp，看有没有星级、是否被当作已编辑。
+  7. Finder / 预览 / 快速查看 / Spotlight：`mdls -name kMDItemStarRating 文件`，预览检查器里是否显示。
+  8. Premiere 对视频的实际行为（v0.3 不评视频，只作记录）。
+  9. DaVinci Resolve、Final Cut Pro 是否读视频 XMP（同上，只作记录）。
+  10. 机内评星：Canon、Nikon、Sony、Fujifilm 机身评星的 RAW / JPEG，用 `exiftool -a -G1 -s -*rating*` 看标签，再看一览、Lightroom、Capture One 是否显示。
+  11. 视频写进 MP4 / MOV 的安全性（v0.3 不做，留作以后）。
+  12. -1（拒绝）的往返：Lightroom 标「拒绝」并存到 XMP，看小文件里的写法；一览按 0，Lightroom 读回是否仍是拒绝。
