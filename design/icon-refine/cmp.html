@@ -1,6 +1,0 @@
-<html><body style="margin:0;background:#1c1d21;color:#ddd;font:14px -apple-system,'PingFang SC';padding:24px">
-<style>.r{display:flex;gap:28px;align-items:flex-end;padding:18px;border-radius:14px;margin-bottom:12px}.r div{text-align:center;font-size:12px}.d{background:#0d0e10}.w{background:linear-gradient(135deg,#3b6fb6,#c0739a 60%,#e8b07a)}</style>
-<script>
-const set=[['cur.svg','现在的'],['o1.svg','O1 轻度精修'],['o2.svg','O2 精修 + 层次']];
-document.write(set.map(([f,n])=>`<h3>${n}</h3>${['d','w'].map(c=>`<div class="r ${c}">${[260,128,64,32,16].map(s=>`<div><img src="${s<=32&&f!=='cur.svg'?'o2s.svg':f}" width="${s}"><br>${s}</div>`).join('')}</div>`).join('')}`).join(''));
-</script></body></html>

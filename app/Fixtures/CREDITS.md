@@ -39,7 +39,3 @@
 | `DSC_0750.NEF` | Nikon Z 6 | https://raw.pixls.us/data/Nikon/Z%206/ | CC0 | `b4cdb8ecf8a971ec` |
 | `IMG_1361.DNG` | Apple iPhone 12 Pro | https://raw.pixls.us/data/Apple/iPhone%2012%20Pro/ | CC0 | `e91e77a4533ed7cc` |
 | `IMG_6310.CR3` | Canon EOS R10 | https://raw.pixls.us/data/Canon/Canon%20EOS%20R10/ | CC0 | `2dc0bbdf04c93ca6` |
-
-## 不是测试数据的图片
-
-`design/photos/` 是设计稿里的示意图，不是测试样例，这份清单不包括它们。

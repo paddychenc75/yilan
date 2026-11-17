@@ -2,7 +2,7 @@
 
 **简体中文** | [English](README.md)
 
-<p align="center"><img src="design/yilan-icon.svg" width="128" alt="一览 Yilan 图标"></p>
+<p align="center"><img src="docs/yilan-icon.svg" width="128" alt="一览 Yilan 图标"></p>
 
 **一览（Yilan）** 是一款 macOS 看图和看视频的小工具：打开一张图或一个视频，就能在底部缩略图栏里翻看整个文件夹，方向键秒切，RAW 也能秒开。
 
@@ -73,7 +73,6 @@ scripts/release.sh
 ## 测试素材和图片来源
 
 - `app/Fixtures/` 里的测试样例全部是 CC0 或公共领域的素材，来源见 [app/Fixtures/CREDITS.md](app/Fixtures/CREDITS.md)。其中的相机 RAW 样张太大，没有放进仓库，下载地址也在这份清单里。
-- `design/photos/` 里设计稿用的示意图来自 Unsplash（通过 Lorem Picsum），见 [design/photos/CREDITS.md](design/photos/CREDITS.md)。
 
 ## 许可证
 

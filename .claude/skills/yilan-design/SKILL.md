@@ -16,7 +16,7 @@ description: PRD 确认后，制作某个版本的设计稿 changes/<版本号>/
 
 ## 照片
 
-- 引用仓库里 `design/photos/` 的素材（Unsplash License，来源见 `design/photos/CREDITS.md`），页面里用相对路径，例如 `../../../design/photos/p1043.jpg`。
+- 引用本机 `design/photos/` 的素材（`design/` 和 `changes/` 都不进 git）（Unsplash License，来源见 `design/photos/CREDITS.md`），页面里用相对路径，例如 `../../../design/photos/p1043.jpg`。
 - 不复制照片到版本目录，不使用任何个人照片。
 
 ## 风格硬规则

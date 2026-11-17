@@ -5,8 +5,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION="${1:?用法：scripts/check-release-notes.sh <版本号，例如 0.3.0>}"
-MINOR="$(echo "$VERSION" | sed -E 's/^([0-9]+\.[0-9]+).*/\1/')"
-FILE="$ROOT/changes/v$MINOR/release-notes-$VERSION.md"
+FILE="$ROOT/docs/release-notes/$VERSION.md"
 fail=0
 err() { echo "不符合格式：$1" >&2; fail=1; }
 

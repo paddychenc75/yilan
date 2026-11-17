@@ -9,7 +9,7 @@ description: 一个版本开发并验收完成后，写更新说明、打发布�
 
 ## 更新说明的固定格式（应用依赖它）
 
-文件是 `changes/v<主.次>/release-notes-<完整版本号>.md`（0.3.1 也放在 `changes/v0.3/`），从 `changes/release-notes-template.md` 复制开始。它的全文就是 GitHub Release 的正文，不要在网页上另写一份。
+文件是 `docs/release-notes/<完整版本号>.md`（例如 `docs/release-notes/0.3.0.md`，进仓库），从 `docs/release-notes-template.md` 复制开始。它的全文就是 GitHub Release 的正文，不要在网页上另写一份。
 
 - 三个段落，名字和顺序不能改：`## 中文`、`## English`、`## 安装 / Install`。应用按界面语言只显示中文段或英文段，安装段只在 GitHub 页面显示。
 - 中文段和英文段用小标题分组，没有内容的小标题整个删掉：新功能 / New、改进 / Improved、修复 / Fixed、升级须知 / Upgrade notes。两种语言的小标题数量、条目数量、顺序一一对应。
@@ -40,7 +40,7 @@ description: 一个版本开发并验收完成后，写更新说明、打发布�
 
    ```sh
    gh release create v0.3.0 dist/Yilan-0.3.0.zip --verify-tag \
-     --title "一览 Yilan v0.3.0" --notes-file changes/v0.3/release-notes-0.3.0.md
+     --title "一览 Yilan v0.3.0" --notes-file docs/release-notes/0.3.0.md
    ```
 
 ## 发布后检查（每项都要实际看到结果）

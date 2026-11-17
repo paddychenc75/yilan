@@ -2,7 +2,7 @@
 
 [简体中文](README.zh-CN.md) | **English**
 
-<p align="center"><img src="design/yilan-icon.svg" width="128" alt="Yilan app icon"></p>
+<p align="center"><img src="docs/yilan-icon.svg" width="128" alt="Yilan app icon"></p>
 
 **Yilan (一览)** is a small image and video viewer for macOS. Open one file and browse the whole folder from a thumbnail strip at the bottom. Arrow keys switch instantly, and camera RAW files open fast.
 
@@ -73,7 +73,6 @@ scripts/release.sh
 ## Test media and image credits
 
 - The test samples in `app/Fixtures/` are all CC0 or public domain; sources are listed in [app/Fixtures/CREDITS.md](app/Fixtures/CREDITS.md). The camera RAW samples are too large for the repo; their download links are in the same file.
-- The placeholder photos used in the design boards (`design/photos/`) come from Unsplash via Lorem Picsum; see [design/photos/CREDITS.md](design/photos/CREDITS.md).
 
 ## License
 

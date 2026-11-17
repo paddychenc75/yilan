@@ -21,6 +21,9 @@ build/
 .claude/*
 !.claude/skills/
 
-# 介绍视频、封面和配套素材：只在本机用，不放进仓库
-design/intro-video*
+# 需求、设计稿、规格、技术方案、调研：只保存在本机，不放进仓库
+/changes/
+/design/
+/design.html
+/prd.html
 
