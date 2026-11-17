@@ -28,6 +28,14 @@ struct RootView: View {
                 topBar(layout)
                 cards(size)
                 overlays(layout)
+                // 筛选面板画在提示卡片、提示条上面（spec R5-06）
+                if model.filterPanelOpen && model.hasOpenedFolder && topVisible {
+                    let widths = effectiveBarWidths
+                    let tier = TopBarTier.choose(width: size.width, widths: widths,
+                                                 hasZoom: showsZoomControl && model.zoomState != nil)
+                    filterPanel(size: size, tier: tier, widths: widths)
+                        .offset(y: layout.fullScreen ? menuBarHeight : 0)
+                }
                 if let drop {
                     DropOverlay(summary: drop)
                 }
@@ -205,7 +213,7 @@ struct RootView: View {
             .frame(height: Theme.titleBarHeight)
 
             if model.hasOpenedFolder {
-                centerGroup(slim: tier.segSlim)
+                centerGroup(tier: tier)
                     .padding(.top, 10)
                     .frame(maxWidth: .infinity, alignment: tier.leftAligned ? .leading : .center)
                     .padding(.leading, tier.leftAligned ? TopBarTier.leftEdge : 0)
@@ -248,11 +256,48 @@ struct RootView: View {
         )
     }
 
-    /// 中间一组：全部 / 图片 / 视频
-    private func centerGroup(slim: Bool) -> some View {
+    /// 中间一组：全部 / 图片 / 视频 + 筛选按钮（spec R5-01）
+    private func centerGroup(tier: TopBarTier) -> some View {
         HStack(spacing: TopBarTier.groupSpacing) {
-            FilterControl(selection: model.filter, counts: model.counts, compact: slim) { model.setFilter($0) }
+            FilterControl(selection: model.filter, counts: model.filteredCounts, compact: tier.segSlim) { model.setFilter($0) }
+            FilterButton(filter: model.browseFilter, mode: tier.filter, open: model.filterPanelOpen) { model.toggleFilterPanel() }
+                .disabled(model.allItems.isEmpty)
+                .opacity(model.allItems.isEmpty ? 0.35 : 1)
         }
+    }
+
+    /// 筛选面板：从按钮下方 8 展开，左缘对齐按钮；窗口窄时往左挪，不出窗口（spec R5-06、E1-13）。
+    /// 下面铺一层透明的点击区：点面板外关闭（spec R5-07）
+    @ViewBuilder
+    private func filterPanel(size: CGSize, tier: TopBarTier, widths: TopBarWidths) -> some View {
+        let center = tier.centerWidth(widths)
+        let groupLeft = tier.leftAligned ? TopBarTier.leftEdge : size.width / 2 - center / 2
+        let buttonLeft = groupLeft + (tier.segSlim ? widths.segSlim : widths.segFull) + TopBarTier.groupSpacing
+        let left = max(8, min(buttonLeft, size.width - FilterPanel.width - 8))
+        Color.black.opacity(0.001)
+            .frame(width: size.width, height: size.height)
+            .onTapGesture { model.closeFilterPanel() }
+        FilterPanel(filter: model.browseFilter, type: model.filter, facets: model.filterFacets,
+                    loadingRatings: !model.ratingsLoaded && model.browseFilter.rating.isActive,
+                    onRating: { model.setRatingCriterion($0) },
+                    onToggleFormat: { model.toggleFormat($0) },
+                    onClear: { model.clearBrowseFilter() })
+            .padding(.top, 10 + 36 + 8)
+            .padding(.leading, left)
+            .frame(width: size.width, height: size.height, alignment: .topLeading)
+            .onHover { model.setHovering("filterPanel", $0) }
+            .transition(.opacity.combined(with: .offset(y: -6)))
+    }
+
+    /// 空结果卡片里的条件：类型（不是全部时）+ 摘要，例如“视频 · ≥5 星”
+    private var filterConditionText: String {
+        var parts: [String] = []
+        switch model.filter {
+        case .images: parts.append(String(localized: "图片"))
+        case .videos: parts.append(String(localized: "视频"))
+        case .all: break
+        }
+        return (parts + model.browseFilter.summaryParts).joined(separator: " · ")
     }
 
     /// 隐藏的测量视图：量出各控件每种样子的宽度（文字随语言变化），供 TopBarTier 选档
@@ -260,10 +305,16 @@ struct RootView: View {
         let sample = model.zoomState ?? ZoomState(percent: 100, isFit: true, canZoomIn: true, canZoomOut: false)
         let total = max(model.items.count, 1)
         return ZStack {
-            FilterControl(selection: model.filter, counts: model.counts, compact: false) { _ in }
+            FilterControl(selection: model.filter, counts: model.filteredCounts, compact: false) { _ in }
                 .fixedSize().measure { barWidths.segFull = $0 }
-            FilterControl(selection: model.filter, counts: model.counts, compact: true) { _ in }
+            FilterControl(selection: model.filter, counts: model.filteredCounts, compact: true) { _ in }
                 .fixedSize().measure { barWidths.segSlim = $0 }
+            FilterButton(filter: model.browseFilter, mode: .full, open: false) {}
+                .measure { barWidths.filterFull = $0 }
+            FilterButton(filter: model.browseFilter, mode: .count, open: false) {}
+                .measure { barWidths.filterCount = $0 }
+            FilterButton(filter: model.browseFilter, mode: .icon, open: false) {}
+                .measure { barWidths.filterIcon = $0 }
             ZoomControl(state: sample, percentOnly: false) { _ in }
                 .fixedSize().measure { barWidths.zoomFull = $0 }
             ZoomControl(state: sample, percentOnly: true) { _ in }
@@ -496,6 +547,9 @@ struct RootView: View {
                 .onHover { model.setHovering("card", $0) }
         } else if model.hasOpenedFolder && model.allItems.isEmpty {
             EmptyFolderCard(onOpen: model.showOpenPanel)
+        } else if model.showsEmptyFilterResult {
+            EmptyFilterResultCard(condition: filterConditionText, onClear: model.clearBrowseFilter)
+                .onHover { model.setHovering("card", $0) }
         } else if !model.hasOpenedFolder {
             WelcomeCard(
                 recents: model.recents.existing(limit: 3),

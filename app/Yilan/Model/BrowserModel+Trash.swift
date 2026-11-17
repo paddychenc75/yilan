@@ -75,7 +75,7 @@ extension BrowserModel {
         var target = current
         if current?.url == item.url {
             let oldIndex = items.firstIndex { $0.url == item.url } ?? currentIndex ?? 0
-            let newList = filter.apply(newAll)
+            let newList = newAll.filter { filter.includes($0) && matchesBrowseFilter($0) }
             target = DeleteSelection.index(afterRemoving: oldIndex, newCount: newList.count).map { newList[$0] }
         }
         forgetMetadata(for: [item.url])

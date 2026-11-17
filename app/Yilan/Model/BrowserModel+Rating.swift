@@ -66,6 +66,7 @@ extension BrowserModel {
     /// 改星级：界面立即变化，写盘在后台（spec R1-02、S-05）
     func setRating(_ value: Int, for item: MediaItem, old: Int, recordUndo: Bool) {
         ratings[item.url] = value
+        ratingsDidChange()
         if recordUndo {
             undoHistory.push(.rating(RatingChange(item: item, old: old, new: value)))
             unconfirmedRatingEntries[item.url, default: 0] += 1
@@ -112,6 +113,7 @@ extension BrowserModel {
         case .failed(let error):
             // 界面恢复成磁盘上的值；这些没写成的操作不进撤销记录（spec S-14）
             ratings[item.url] = persistedRatings[item.url] ?? 0
+            ratingsDidChange()
             for _ in 0..<(unconfirmedRatingEntries[item.url] ?? 0) { undoHistory.removeLastRating(for: item.url) }
             unconfirmedRatingEntries[item.url] = 0
             reportWriteFailure(error)
@@ -263,6 +265,7 @@ extension BrowserModel {
             ratingInfo[url] = info
         }
         ratings = changed
+        ratingsDidChange()
     }
 
     /// 文件夹同步发现这些文件的星级可能被其他软件改了：重新读（spec R4-06）

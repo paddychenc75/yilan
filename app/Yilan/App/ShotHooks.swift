@@ -12,7 +12,9 @@ import Foundation
 /// `--shot-menus` 启动后把菜单栏的内容打印到标准输出（检查菜单项和快捷键）；
 /// `--shot-window=1000x760` 启动后把窗口内容区改成这个大小（截窄窗口、中等宽度）；
 /// `--shot-rating=4` 启动后给当前文件评 4 星（会写进 /tmp 下的测试副本）；`--shot-stars` 一直显示画面五星；
-/// `--shot-hint=shortcuts|xmp` 显示提示卡片；`--shot-strip=hidden` 隐藏缩略图栏。
+/// `--shot-hint=shortcuts|xmp` 显示提示卡片；`--shot-strip=hidden` 隐藏缩略图栏；
+/// `--shot-seed-ratings` 给 /tmp 下的副本按固定规律评星；`--shot-filter=t:videos,r4,ru,f:jpeg+heic` 设筛选
+/// （t: 类型，r4 不低于 4 星，ru 未评星，f: 格式）；`--shot-filter-panel` 打开筛选面板。
 enum ShotHooks {
     #if DEBUG
     private static func value(_ name: String) -> String? {
@@ -31,6 +33,9 @@ enum ShotHooks {
     static let showStars = CommandLine.arguments.contains("--shot-stars")
     static let hint: String? = value("shot-hint")
     static let stripHidden = value("shot-strip") == "hidden"
+    static let seedRatings = CommandLine.arguments.contains("--shot-seed-ratings")
+    static let filterSpec: String? = value("shot-filter")
+    static let filterPanel = CommandLine.arguments.contains("--shot-filter-panel")
     static let windowSize: CGSize? = value("shot-window").flatMap { text in
         let parts = text.split(separator: "x").compactMap { Double($0) }
         return parts.count == 2 ? CGSize(width: parts[0], height: parts[1]) : nil
@@ -49,6 +54,9 @@ enum ShotHooks {
     static let showStars = false
     static let hint: String? = nil
     static let stripHidden = false
+    static let seedRatings = false
+    static let filterSpec: String? = nil
+    static let filterPanel = false
     #endif
 
     /// 调试顶部栏收缩：环境变量 YILAN_LOG_TOPBAR=1 时把宽度和选中的档位打到标准输出
@@ -61,5 +69,7 @@ enum ShotHooks {
 
     /// 截图时不让控件自动隐藏
     static var keepsChrome: Bool { hoverFraction != nil || openInfo || deleteState != nil || showStars }
-    static var anyRatingShot: Bool { rating != nil || showStars || hint != nil || stripHidden }
+    static var anyRatingShot: Bool {
+        rating != nil || showStars || hint != nil || stripHidden || seedRatings || filterSpec != nil || filterPanel
+    }
 }

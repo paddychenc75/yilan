@@ -76,7 +76,7 @@ extension BrowserModel {
                 target = renamed                   // 改名：视为同一个文件，不提示
             } else {
                 currentGone = true
-                replacement = SyncSelection.replacement(for: cur, oldList: items, newList: filter.apply(scanned))
+                replacement = SyncSelection.replacement(for: cur, oldList: items, newList: scanned.filter { filter.includes($0) && matchesBrowseFilter($0) })
                 target = replacement?.item
             }
         }

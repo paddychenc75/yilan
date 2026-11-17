@@ -111,6 +111,28 @@
         }
       }
     },
+    "%lld 种格式" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld format"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld formats"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld 秒" : {
       "comment" : "隐藏延迟的秒数",
       "localizations" : {
@@ -211,6 +233,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "SVG rendering failed"
+          }
+        }
+      }
+    },
+    "≥%lld 星" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "≥%lld★"
           }
         }
       }
@@ -346,6 +378,16 @@
         }
       }
     },
+    "不低于 %lld 星" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "At least %lld stars"
+          }
+        }
+      }
+    },
     "不再询问" : {
       "localizations" : {
         "en" : {
@@ -362,6 +404,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Images aren’t changed. Keep the .xmp files with them when you move to another app."
+          }
+        }
+      }
+    },
+    "不限" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Any"
           }
         }
       }
@@ -527,6 +579,16 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "共 %lld 个" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "of %lld"
           }
         }
       }
@@ -843,6 +905,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mono"
+          }
+        }
+      }
+    },
+    "即时生效 · ⌘F 开关 · Esc 关闭" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Applies instantly · ⌘F toggles · Esc closes"
           }
         }
       }
@@ -1194,6 +1266,16 @@
         }
       }
     },
+    "已选 %lld 种" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld selected"
+          }
+        }
+      }
+    },
     "帧率" : {
       "localizations" : {
         "en" : {
@@ -1230,6 +1312,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The current file was deleted or moved"
+          }
+        }
+      }
+    },
+    "当前筛选：%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current filter: %@"
           }
         }
       }
@@ -1527,6 +1619,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Open"
+          }
+        }
+      }
+    },
+    "打开 / 关闭筛选面板" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open / close the Filter panel"
           }
         }
       }
@@ -1829,6 +1931,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zoom In (⌘+)"
+          }
+        }
+      }
+    },
+    "放宽条件，或清除筛选后查看全部文件。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loosen the filter, or clear it to see all files."
           }
         }
       }
@@ -2146,6 +2258,16 @@
         }
       }
     },
+    "星级" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rating"
+          }
+        }
+      }
+    },
     "星级保存到哪里" : {
       "localizations" : {
         "en" : {
@@ -2348,6 +2470,16 @@
         }
       }
     },
+    "正在读取星级…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reading ratings…"
+          }
+        }
+      }
+    },
     "没有拍摄信息" : {
       "localizations" : {
         "en" : {
@@ -2365,6 +2497,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "No permission to read the folder “%@”, so only this file is shown. Allow access in System Settings › Privacy & Security › Files & Folders."
+          }
+        }
+      }
+    },
+    "没有符合条件的文件" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Matching Files"
           }
         }
       }
@@ -2406,6 +2548,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Clear Rating"
+          }
+        }
+      }
+    },
+    "清除筛选" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear Filters"
           }
         }
       }
@@ -2531,6 +2683,16 @@
         }
       }
     },
+    "符合 %@ 个" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ match"
+          }
+        }
+      }
+    },
     "第 %lld 个，共 %lld 个" : {
       "localizations" : {
         "en" : {
@@ -2557,6 +2719,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "First / last"
+          }
+        }
+      }
+    },
+    "筛选" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filter"
+          }
+        }
+      }
+    },
+    "筛选…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filter…"
+          }
+        }
+      }
+    },
+    "筛选（⌘F）" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filter (⌘F)"
           }
         }
       }

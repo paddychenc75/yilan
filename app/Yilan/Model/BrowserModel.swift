@@ -54,9 +54,9 @@ final class BrowserModel {
     private(set) var folderURL: URL?
     private(set) var allItems: [MediaItem] = []
     /// 当前类型下的列表；缩略图栏、序号、上下切换都只针对它
-    private(set) var items: [MediaItem] = []
+    internal(set) var items: [MediaItem] = []
     private(set) var filter: MediaFilter
-    private(set) var currentIndex: Int?
+    internal(set) var currentIndex: Int?
     private(set) var counts: [MediaFilter: Int] = [.all: 0, .images: 0, .videos: 0]
     private(set) var hasOpenedFolder = false
     private(set) var openError: String?
@@ -146,6 +146,14 @@ final class BrowserModel {
     @ObservationIgnored var watcher: FolderWatcher?
     @ObservationIgnored var syncTask: Task<Void, Never>?
     @ObservationIgnored var freshTask: Task<Void, Never>?
+
+    // MARK: 筛选（BrowserModel+Filter）
+
+    /// 星级、格式筛选（只对当前窗口，换文件夹清空，spec F-06）
+    var browseFilter = BrowseFilter()
+    var filterPanelOpen = false
+    /// 暂留：当前文件已经不符合条件，但留在结果里直到切走（spec F-01）
+    @ObservationIgnored var stickyURL: URL?
 
     // MARK: 评星（BrowserModel+Rating）
 
@@ -274,7 +282,10 @@ final class BrowserModel {
     /// 显示扫描结果（测试里直接调用，绕过文件扫描）
     func apply(_ result: FolderScanner.Result) {
         Perf.mark("folder scanned")
-        if result.folder.standardizedFileURL.path != folderURL?.standardizedFileURL.path { resetRatings() }
+        if result.folder.standardizedFileURL.path != folderURL?.standardizedFileURL.path {
+            resetRatings()
+            resetBrowseFilter()
+        }
         folderURL = result.folder
         allItems = result.items
         sidecars = result.sidecars
@@ -286,7 +297,7 @@ final class BrowserModel {
         if counts[filter] == 0 || (opened.map { !filter.includes($0) } ?? false) {
             filter = .all
         }
-        items = filter.apply(allItems)
+        items = resultList()
         displayed = nil
         displayedItem = nil
         let index = FilterSelection.index(keeping: opened, in: allItems, newList: items)
@@ -311,7 +322,9 @@ final class BrowserModel {
         recount()
         if let target, !filter.includes(target) { filter = .all }
         if counts[filter] == 0 { filter = .all }
-        items = filter.apply(allItems)
+        // 筛选中放回来的文件不符合条件：暂留显示（spec F-09）
+        if let target, browseFilter.isActive, !matchesBrowseFilter(target) { stickyURL = target.url }
+        items = resultList()
         let index = target.flatMap { t in items.firstIndex(of: t) }
         if let index, items[index] == previous {
             currentIndex = index   // 同一个文件，只是位置变了：不重新加载
@@ -334,12 +347,20 @@ final class BrowserModel {
     // MARK: - 类型切换
 
     func setFilter(_ newFilter: MediaFilter) {
-        guard newFilter != filter, (counts[newFilter] ?? 0) > 0, pendingDelete == nil else { return }
+        guard newFilter != filter, (filteredCounts[newFilter] ?? 0) > 0, pendingDelete == nil else { return }
         let previous = current
         filter = newFilter
         settings.saveFilter(newFilter)
-        items = newFilter.apply(allItems)
-        let index = FilterSelection.index(keeping: previous, in: allItems, newList: items)
+        // 切换类型时，属于另一类的已选格式自动取消（spec R5b-07）
+        if newFilter != .all {
+            let keep: MediaKind = newFilter == .videos ? .video : .image
+            browseFilter.format.selected = browseFilter.format.selected.filter { $0.kind == keep }
+        }
+        stickyURL = nil
+        items = resultList()
+        let index = browseFilter.isActive
+            ? FilterSelection.indexAfterFilterChange(keeping: previous, in: allItems, newList: items)
+            : FilterSelection.index(keeping: previous, in: allItems, newList: items)
         showToast(symbol: newFilter.symbol, text: newFilter.toastText(count: items.count))
         if items[safe: index] == previous {
             currentIndex = index   // 当前文件还在，原地不动，不需要重新加载
@@ -351,6 +372,17 @@ final class BrowserModel {
     // MARK: - 切换
 
     func select(_ index: Int?) {
+        var index = index
+        // 从暂留的文件切走：它这时才从结果里消失，序号和总数随之更新（spec F-01）
+        if let sticky = stickyURL, let i = index, items.indices.contains(i), items[i].url != sticky {
+            let target = items[i]
+            stickyURL = nil
+            items = resultList()
+            index = items.firstIndex(of: target)
+            if let previous = current, items.firstIndex(of: previous) == nil, index != nil, displayedItem == previous {
+                currentIndex = nil   // 原来的当前文件已不在列表里，下面按新位置加载
+            }
+        }
         guard let index, items.indices.contains(index) else {
             currentIndex = nil
             loadCurrent()
@@ -428,6 +460,8 @@ final class BrowserModel {
         // 切到视频才开始加载；切走时暂停并释放（PRD：视频不预加载整段）
         if let item = current, item.kind == .video { video.prepare(item) } else { video.stop() }
         guard let item = current else {
+            // 没有当前文件（空文件夹、筛选结果为空）：正在算的环境光也作废，不然会晚到并盖住空状态
+            ambientTask?.cancel()
             displayed = nil
             displayedItem = nil
             placeholder = nil
@@ -486,7 +520,8 @@ final class BrowserModel {
     }
 
     private func show(_ image: DecodedImage, for item: MediaItem) {
-        guard item != unplayable else { return }
+        // 已经切走（或筛选结果变空）的文件晚到的解码结果不显示
+        guard item != unplayable, item == current else { return }
         Perf.shown(item.url, isPreview: image.isPreview)
         displayed = image
         displayedItem = item
@@ -728,8 +763,9 @@ final class BrowserModel {
             requestDelete()
             return true
         }
-        // Esc：先关信息面板，再退出全屏
+        // Esc：先关筛选面板，再关信息面板，再退出全屏（spec R5-07）
         if event.keyCode == 53, mods.isEmpty {
+            if filterPanelOpen { closeFilterPanel(); return true }
             if infoVisible { setInfoVisible(false); return true }
             if isFullScreen { toggleFullScreen(); return true }
             return false
@@ -745,6 +781,7 @@ final class BrowserModel {
             case "-", "−": zoom(.zoomOut); return true
             case "0": zoom(.actualSize); return true   // ⌘0 实际大小（spec K-02）
             case "9": zoom(.fit); return true          // ⌘9 适应窗口
+            case "f": toggleFilterPanel(); return true // ⌘F 筛选面板（spec K-06）
             case "1": setFilter(.all); return true
             case "2": setFilter(.images); return true
             case "3": setFilter(.videos); return true

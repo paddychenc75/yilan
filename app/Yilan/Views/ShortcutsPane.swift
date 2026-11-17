@@ -35,6 +35,7 @@ struct ShortcutsPane: View {
             ]]),
             Shortcut(action: "第一个 / 最后一个", keys: [[.text("Home")], [.text("End")]]),
             Shortcut(action: "全部 / 只看图片 / 只看视频", keys: [[.text("⌘1"), .text("⌘2"), .text("⌘3")]]),
+            Shortcut(action: "打开 / 关闭筛选面板", keys: [[.text("⌘F")]]),
             Shortcut(action: "显示或隐藏缩略图栏", keys: [[.text("T")]]),
         ]),
         Section(title: "查看", rows: [

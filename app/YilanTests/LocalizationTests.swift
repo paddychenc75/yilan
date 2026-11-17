@@ -4,9 +4,11 @@ import Testing
 
 /// 字符串目录的源文件（和测试同一个仓库）
 private func catalog(_ name: String) throws -> [String: Any] {
-    let url = URL(fileURLWithPath: #filePath)
-        .deletingLastPathComponent().deletingLastPathComponent()
-        .appendingPathComponent("Yilan/Resources/\(name).xcstrings")
+    // scripts/run-tests.sh 把字符串目录也镜像到 /tmp（避开读桌面时等系统授权）
+    let dir = ProcessInfo.processInfo.environment["YILAN_RESOURCES_DIR"].map(URL.init(fileURLWithPath:))
+        ?? URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Yilan/Resources")
+    let url = dir.appendingPathComponent("\(name).xcstrings")
     let json = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any]
     return try #require(json)
 }

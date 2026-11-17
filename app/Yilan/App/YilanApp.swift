@@ -148,6 +148,13 @@ struct AppCommands: Commands {
             filterToggle("只看图片", .images, key: "2")
             filterToggle("只看视频", .videos, key: "3")
             Divider()
+            // 筛选（spec F-10）
+            Button("筛选…") { model.toggleFilterPanel() }
+                .keyboardShortcut("f")
+                .disabled(!model.hasOpenedFolder || model.allItems.isEmpty)
+            Button("清除筛选") { model.clearBrowseFilter() }
+                .disabled(!model.browseFilter.isActive)
+            Divider()
             // 数字键让给评星：⌘9 适应窗口、⌘0 实际大小、Z 切换（spec 4.2）
             Button("适应窗口") { model.zoom(.fit) }.keyboardShortcut("9")
             Button("实际大小") { model.zoom(.actualSize) }.keyboardShortcut("0")
@@ -187,6 +194,6 @@ struct AppCommands: Commands {
             set: { _ in model.setFilter(filter) }
         ))
         .keyboardShortcut(key)
-        .disabled((model.counts[filter] ?? 0) == 0)
+        .disabled((model.filteredCounts[filter] ?? 0) == 0)
     }
 }

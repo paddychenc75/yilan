@@ -28,6 +28,27 @@ enum ShotRunner {
                 for _ in 0..<50 where !model.ratingsLoaded { try? await Task.sleep(for: .milliseconds(100)) }
                 model.rateCurrent(n, fromKeyboard: true)
             }
+            if ShotHooks.seedRatings, let first = model.current, isTemporary(first.url) {
+                for _ in 0..<50 where !model.ratingsLoaded { try? await Task.sleep(for: .milliseconds(100)) }
+                let pattern = [5, 4, 0, 3, 4, 2, 0, 5, 4, 3]
+                for (i, item) in model.allItems.enumerated() {
+                    model.setRating(pattern[i % pattern.count], for: item, old: model.ratings[item.url] ?? 0, recordUndo: false)
+                }
+                await model.ratingWriter.waitUntilIdle()
+            }
+            if let spec = ShotHooks.filterSpec {
+                var f = BrowseFilter()
+                for token in spec.split(separator: ",") {
+                    if token.hasPrefix("t:"), let t = MediaFilter(rawValue: String(token.dropFirst(2))) { model.setFilter(t) }
+                    if token == "ru" { f.rating.mode = .unrated }
+                    if token.hasPrefix("r"), let n = Int(token.dropFirst()) { f.rating.mode = .atLeast(n) }
+                    if token.hasPrefix("f:") {
+                        f.format.selected = Set(token.dropFirst(2).split(separator: "+").compactMap { FormatGroup(rawValue: String($0)) })
+                    }
+                }
+                model.setBrowseFilter(f)
+            }
+            if ShotHooks.filterPanel { model.filterPanelOpen = true }
             if ShotHooks.showStars {
                 model.setHoveringStarBar(true)
                 model.starBarMouseVisible = true

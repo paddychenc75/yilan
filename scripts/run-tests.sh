@@ -9,4 +9,5 @@ M=/tmp/yilan-fixtures-mirror
 rm -rf "$M"; mkdir -p "$M"
 cp -R Fixtures/sample "$M/sample"
 if [ -d Fixtures/raw ]; then mkdir -p "$M/raw"; cp -c Fixtures/raw/* "$M/raw/" 2>/dev/null || true; fi
-TEST_RUNNER_YILAN_FIXTURES_DIR="$M" xcodebuild -project Yilan.xcodeproj -scheme Yilan -destination 'platform=macOS' -derivedDataPath build/test test "$@"
+mkdir -p "$M/resources"; cp Yilan/Resources/*.xcstrings "$M/resources/"
+TEST_RUNNER_YILAN_RESOURCES_DIR="$M/resources" TEST_RUNNER_YILAN_FIXTURES_DIR="$M" xcodebuild -project Yilan.xcodeproj -scheme Yilan -destination 'platform=macOS' -derivedDataPath build/test test "$@"
