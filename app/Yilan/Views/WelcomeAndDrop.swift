@@ -10,7 +10,6 @@ struct WelcomeCard: View {
     let onRemoveRecent: (RecentFolder) -> Void
 
     @State private var showsShortcuts = false
-    @State private var isDefaultViewer = DefaultViewer.isDefault
 
     var body: some View {
         VStack(spacing: 10) {
@@ -55,15 +54,15 @@ struct WelcomeCard: View {
                 .padding(.top, 8)
             }
 
-            // 设计稿底部一行：已经是默认时按钮变成灰色的“已是默认”
+            // 设计稿底部一行：去设置 › 文件格式按格式选（一览不自己改，spec DF-10）
             Rectangle().fill(Color.white.opacity(0.1)).frame(height: 1)
                 .padding(.top, 10).padding(.bottom, 4)
             HStack(spacing: 10) {
-                Text(isDefaultViewer ? "一览已是图片和视频的默认打开方式" : "把一览设为图片和视频的默认打开方式？")
+                Text("想双击图片和视频时用一览打开？")
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.text2)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                DefaultViewerButton(isDefault: $isDefaultViewer)
+                DefaultViewerLink()
             }
         }
         .padding(EdgeInsets(top: 34, leading: 34, bottom: 22, trailing: 34))
@@ -268,42 +267,11 @@ struct FileDropDelegate: DropDelegate {
     }
 }
 
-/// 设为默认打开方式（设计稿欢迎界面底部、设置里的“设为默认”）
-@MainActor
-enum DefaultViewer {
-    static let types: [UTType] = [.jpeg, .png, .heic, .heif, .webP, .gif, .tiff, .bmp, .svg, .rawImage,
-                                  .mpeg4Movie, .quickTimeMovie]
-
-    static var isDefault: Bool {
-        guard let app = NSWorkspace.shared.urlForApplication(toOpen: .jpeg) else { return false }
-        return app.standardizedFileURL == Bundle.main.bundleURL.standardizedFileURL
-    }
-
-    static func makeDefault() async {
-        let app = Bundle.main.bundleURL
-        for type in types {
-            do {
-                try await NSWorkspace.shared.setDefaultApplication(at: app, toOpen: type)
-            } catch {
-                Log.app.error("设为默认失败 \(type.identifier, privacy: .public): \(error.localizedDescription, privacy: .public)")
-            }
-        }
-    }
-}
-
-/// “设为默认”按钮：已经是默认时显示灰色的“已是默认”，不能点
-struct DefaultViewerButton: View {
-    @Binding var isDefault: Bool
-
+/// 打开设置 › 文件格式（PD-18：v0.2 的「设为默认」按钮换成这个入口）
+struct DefaultViewerLink: View {
     var body: some View {
-        Button(isDefault ? "已是默认" : "设为默认") {
-            Task {
-                await DefaultViewer.makeDefault()
-                isDefault = DefaultViewer.isDefault
-            }
-        }
-        .buttonStyle(AccentButtonStyle(height: 26, fontSize: 12, enabled: !isDefault))
-        .disabled(isDefault)
+        Button("在设置里选择…") { SettingsWindow.shared.show(pane: .formats) }
+            .buttonStyle(AccentButtonStyle(height: 26, fontSize: 12))
     }
 }
 

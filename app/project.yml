@@ -75,7 +75,7 @@ targets:
               - com.sony.arw-raw-image
               - com.fuji.raw-image
               - com.panasonic.rw2-raw-image
-              - com.olympus.or-raw-image
+              - com.olympus.raw-image
               - com.adobe.raw-image
           - CFBundleTypeName: 视频
             CFBundleTypeRole: Viewer

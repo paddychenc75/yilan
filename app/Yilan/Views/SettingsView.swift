@@ -52,12 +52,22 @@ struct SettingsView: View {
         nonmutating set { nav.pane = newValue }
     }
     @State private var search = ""
+    /// 文件格式页的状态；只在设置窗口里创建，创建时只读系统、不改任何东西（DF-10）
+    @State private var handlers = ShotHooks.formatsModel() ?? DefaultHandlers.live()
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             content
                 .padding(.leading, 236)
             sidebar
+            if let plan = handlers.pendingPlan {
+                Color.black.opacity(0.38).ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture {}
+                FormatsPlanSheet(plan: plan, model: handlers)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.leading, 236)
+            }
         }
         .frame(width: Self.size.width, height: Self.size.height)
         .background(Color(hex: 0x1E1E21))
@@ -298,18 +308,13 @@ struct SettingsView: View {
     }
 
     private var defaultViewerGroup: some View {
-        VStack(spacing: 0) {
-            SettingsRow("默认打开方式", note: "让一览打开下列格式的文件") {
-                DefaultViewerButton(isDefault: $isDefaultViewer)
+        SettingsGroup {
+            SettingsRow("默认打开方式", note: "按格式选择哪些文件双击后用一览打开") {
+                Button("在「文件格式」里设置") { pane = .formats }
+                    .buttonStyle(GrayButtonStyle())
             }
-            FormatChips()
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
         }
-        .settingsGroupBackground()
     }
-
-    @State private var isDefaultViewer = DefaultViewer.isDefault
 
     private var videoPane: some View {
         SettingsGroup {
@@ -323,37 +328,13 @@ struct SettingsView: View {
     }
 
     private var formatsPane: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            SettingsRow("一览能打开的格式", note: "RAW 使用系统自带的解码，支持的相机型号以 macOS 为准") { EmptyView() }
-            FormatChips().padding(.horizontal, 14).padding(.vertical, 10)
-        }
-        .settingsGroupBackground()
+        FormatsPane(model: handlers)
     }
 
     private var placeholder: some View {
         Text("这一页的选项会在后续版本加入。")
             .font(.system(size: 13))
             .foregroundStyle(Theme.text3)
-    }
-}
-
-/// 设计稿 .fmts：格式小标签
-struct FormatChips: View {
-    static let formats = ["JPEG", "PNG", "HEIF", "HEIC", "WebP", "GIF", "SVG", "TIFF", "BMP",
-                          "ARW", "CR3", "NEF", "RAF", "DNG", "MP4", "MOV"]
-
-    var body: some View {
-        FlowLayout(spacing: 6) {
-            ForEach(Self.formats, id: \.self) { name in
-                Text(name)
-                    .font(Theme.mono(11))
-                    .foregroundStyle(Theme.text2)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.white.opacity(0.08)))
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

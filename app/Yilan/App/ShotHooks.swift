@@ -39,6 +39,9 @@ enum ShotHooks {
     static let holdFlash = CommandLine.arguments.contains("--shot-hold-flash")
     /// `--shot-update=notice|dot|sheet|long|checking|uptodate|failed` 用内置的假数据摆出更新提醒的样子（不联网）
     static let update: String? = value("shot-update")
+    /// `--shot-formats=fresh|some|group|mixed|justset|restored|declined|confirm|progress|restoreall`
+    /// 文件格式页用假的系统接口摆出各个状态（绝不改真实的默认打开方式）
+    static let formats: String? = value("shot-formats")
     static let filterSpec: String? = value("shot-filter")
     static let filterPanel = CommandLine.arguments.contains("--shot-filter-panel")
     static let windowSize: CGSize? = value("shot-window").flatMap { text in
@@ -63,6 +66,7 @@ enum ShotHooks {
     static let rowHover: Int? = nil
     static let holdFlash = false
     static let update: String? = nil
+    static let formats: String? = nil
     static let filterSpec: String? = nil
     static let filterPanel = false
     #endif
@@ -81,3 +85,91 @@ enum ShotHooks {
         rating != nil || showStars || hint != nil || stripHidden || seedRatings || filterSpec != nil || filterPanel || update != nil
     }
 }
+
+extension ShotHooks {
+    /// 截图时换成假的系统接口；平时返回 nil
+    @MainActor
+    static func formatsModel() -> DefaultHandlers? {
+        #if DEBUG
+        guard let state = formats else { return nil }
+        return FormatsShot.make(state)
+        #else
+        return nil
+        #endif
+    }
+}
+
+#if DEBUG
+/// 文件格式页截图用的假数据
+@MainActor
+enum FormatsShot {
+    static func app(_ id: String, _ path: String) -> AppRef {
+        AppRef(bundleID: id, path: path, name: FileManager.default.displayName(atPath: path).replacingOccurrences(of: ".app", with: ""))
+    }
+    static let preview = app("com.apple.Preview", "/System/Applications/Preview.app")
+    static let quickTime = app("com.apple.QuickTimePlayerX", "/System/Applications/QuickTime Player.app")
+    static let safari = app("com.apple.Safari", "/Applications/Safari.app")
+    static let captureOne = app("com.captureone.captureone16", "/Applications/Capture One.app")
+    static let iina = app("com.colliderli.iina", "/Applications/IINA.app")
+
+    static func make(_ state: String) -> DefaultHandlers {
+        let me = WorkspaceHandlerSystem.ref(for: Bundle.main.bundleURL)
+            ?? AppRef(bundleID: "com.yilan.viewer", path: Bundle.main.bundlePath, name: "Yilan")
+        // 全新安装的样子：图片和 RAW 由预览打开，WebP、SVG 由 Safari，视频由 QuickTime
+        var base: [HandlerFormat: AppRef] = [:]
+        for f in HandlerFormat.allCases {
+            base[f] = f.group == .videos ? quickTime : (f == .webp || f == .svg ? safari : preview)
+        }
+        if state != "fresh" {
+            base[.png] = captureOne; base[.cr3] = captureOne; base[.dng] = captureOne; base[.mp4] = iina
+        }
+        var on: Set<HandlerFormat> = []
+        switch state {
+        case "fresh": break
+        case "group": on = Set(HandlerFormat.Group.images.formats)
+        case "mixed": on = [.jpeg, .heic, .heif, .arw, .mov]
+        case "restored": on = [.jpeg, .heic, .mov, .png]
+        case "restoreall": on = Set(HandlerFormat.allCases)
+        default: on = [.jpeg, .heic, .mov]
+        }
+        var handlers: [String: AppRef] = [:]
+        for f in HandlerFormat.allCases { handlers[f.typeIdentifier] = on.contains(f) ? me : base[f] }
+        let system = FakeHandlerSystem(handlers: handlers, installed: [preview, quickTime, safari, captureOne, iina, me])
+        let store = UserDefaults(suiteName: "yilan-shot-formats")!
+        store.removePersistentDomain(forName: "yilan-shot-formats")
+        // 之前记下的应用：PNG 原来是 Capture One；全部还原时有几种不知道原来是谁
+        var previous: [String: AppRef] = [HandlerFormat.png.typeIdentifier: captureOne]
+        if state == "restoreall" {
+            for f in HandlerFormat.allCases where ![.heif, .bmp, .rw2, .m4v].contains(f) { previous[f.typeIdentifier] = base[f] }
+        }
+        store.set(try? JSONEncoder().encode(previous), forKey: DefaultHandlers.previousKey)
+        let model = DefaultHandlers(system: system, store: store, selfApp: me)
+        model.noteSeconds = 3600
+        model.bannerSeconds = 3600
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(300))
+            switch state {
+            case "justset": await model.setSwitch(.png, on: true)
+            case "restored": await model.setSwitch(.png, on: false)
+            case "declined":
+                system.declines = [HandlerFormat.png.typeIdentifier]
+                await model.setSwitch(.png, on: true)
+            case "confirm": model.requestAll(on: true)
+            case "restoreall":
+                model.requestAll(on: false)
+                await model.runPlan()
+            case "progress":
+                let plan: [HandlerFormat] = HandlerFormat.allCases.filter { !model.isYilan($0) }
+                var notes: [HandlerFormat: DefaultHandlers.Note] = [:]
+                for (i, f) in plan.enumerated() { notes[f] = i < 3 ? nil : (i == 3 ? .busy : .waiting) }
+                for f in plan.prefix(3) { system.handlers[f.typeIdentifier] = me }
+                model.refresh()
+                model.shotSet(banner: .init(kind: .progress, text: String(localized: "正在设置 \(4) / \(plan.count)（\(plan[3].name)）· 请在 macOS 弹出的对话框里选择")),
+                              notes: notes, busy: true)
+            default: break
+            }
+        }
+        return model
+    }
+}
+#endif
