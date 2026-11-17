@@ -337,6 +337,64 @@ html,body{margin:0;background:var(--canvas);color:var(--t1);font-family:var(--sf
 .legend p{margin:0;font-size:12.5px;color:var(--label);line-height:1.6}
 .sub{margin:8px 0 -16px;display:flex;align-items:baseline;gap:12px;font:600 20px var(--sfd);color:var(--label-2)}
 .sub span{font:500 13px var(--mono);color:var(--label)}
+
+/* ---------- v0.3 评星与筛选 ---------- */
+/* 星星：亮的用品牌 sun #FFE2A0 实心，未亮的是 62% 白描边。星星一律放在深色玻璃或深色底上，不直接压在照片上 */
+.st{flex:none;fill:none;stroke:rgba(255,255,255,.62);stroke-width:1.7;stroke-linejoin:round}
+.st.on{fill:var(--brand-sun);stroke:var(--brand-sun);filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
+.st.hv{fill:rgba(255,226,160,.42);stroke:var(--brand-sun)}
+.st.big{transform:scale(1.3);filter:drop-shadow(0 0 6px rgba(255,226,160,.7))}
+/* 画面上的五星控件：深色玻璃胶囊，高 38 */
+.rate{position:absolute;left:50%;transform:translateX(-50%);height:38px;border-radius:19px;padding:0 14px;display:flex;align-items:center;gap:4px}
+.rate.rel{position:relative;left:auto;transform:none}
+.rate .st{width:22px;height:22px}
+.rate.flash{border-color:rgba(255,226,160,.6);box-shadow:0 0 26px rgba(255,226,160,.26),0 8px 28px rgba(0,0,0,.3)}
+.rtip{position:absolute;transform:translateX(-50%);height:26px;border-radius:13px;padding:0 11px;display:flex;align-items:center;gap:7px;font:500 12px var(--sf);white-space:nowrap}
+.rtip .kc{min-width:18px;height:18px;font-size:11px;border-radius:5px}
+/* 缩略图上的星：左上角，深色小角标（右下角留给 RAW / 时长，左下角留给“新”） */
+.bdg.s{left:4px;right:auto;top:4px;bottom:auto;gap:3px;padding:0 5px 0 4px}
+.bdg.s .st{width:9px;height:9px;fill:var(--brand-sun);stroke:none;filter:none}
+.bdg.s2{gap:1px;padding:0 4px;height:14px}
+.bdg.s2 .st{width:8px;height:8px;fill:var(--brand-sun);stroke:none;filter:none}
+/* 评星筛选按钮（挨着 全部/图片/视频） */
+.rb{height:36px;border-radius:18px;padding:0 12px 0 11px;display:flex;align-items:center;gap:7px;font:500 12.5px var(--sf);color:rgba(255,255,255,.86);white-space:nowrap}
+.rb .st{width:14px;height:14px}
+.rb svg.cv{width:11px;height:11px;opacity:.7}
+.rb em{font-style:normal;font:500 11px var(--mono);color:var(--t3)}
+.rb.on{background:rgba(255,255,255,.24);color:#fff}
+.rb.on em{color:rgba(255,255,255,.78)}
+.rb.act{background:linear-gradient(180deg,rgba(255,255,255,.26),rgba(255,255,255,.16));color:#fff}
+.rb.act em{color:rgba(255,255,255,.8)}
+/* 缩放控件：− 百分比 +，高 30 */
+.zoomc{position:absolute;left:32px;height:30px;border-radius:15px;padding:0 3px;display:flex;align-items:center;color:#fff}
+.zoomc.rel{position:relative;left:auto}
+.zoomc .zb{width:26px;height:24px;border-radius:12px;display:grid;place-items:center}
+.zoomc .zb svg{width:13px;height:13px}
+.zoomc .zp{height:24px;min-width:64px;padding:0 7px 0 9px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:4px;font:500 12px var(--mono)}
+.zoomc .zp svg{width:9px;height:9px;opacity:.6}
+.zoomc .hov{background:rgba(255,255,255,.16)}
+.zoomc .prs{background:rgba(255,255,255,.28);transform:scale(.94)}
+.zoomc .dis{opacity:.3}
+.zoomc .sep{width:1px;height:14px;background:rgba(255,255,255,.14);margin:0 1px}
+/* 提示卡（比一行提示条多一句说明） */
+.hint{position:absolute;left:50%;transform:translateX(-50%);width:430px;border-radius:22px;padding:14px 16px 14px 14px;display:flex;gap:12px;align-items:flex-start}
+.hint .hi{width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.12);display:grid;place-items:center;flex:none}
+.hint .hi svg{width:18px;height:18px}
+.hint b{display:block;font:600 13px/18px var(--sf)}
+.hint p{margin:3px 0 0;font:400 12px/1.55 var(--sf);color:var(--t2)}
+.hint code{font:500 11.5px var(--mono);color:#fff;background:rgba(0,0,0,.28);border-radius:5px;padding:1px 5px}
+.hint .btns{margin-top:10px;justify-content:flex-start}
+.hint .btn{height:26px;font-size:12px;padding:0 12px}
+/* 画布上的“推荐 / 备选”标签（只在设计稿里出现） */
+.tag{font:600 11px var(--sf);padding:2px 8px;border-radius:6px;flex:none}
+.tag.rec{background:rgba(48,209,88,.16);color:#5ee07f}
+.tag.alt{background:rgba(255,255,255,.09);color:var(--label-2)}
+.cmp{display:flex;gap:40px;align-items:flex-start}
+.cmp>div{display:flex;flex-direction:column;gap:12px}
+.rd{width:16px;height:16px;border-radius:8px;border:1.5px solid rgba(255,255,255,.4);flex:none;position:relative}
+.rd.on{background:var(--accent);border-color:var(--accent)}
+.rd.on::after{content:'';position:absolute;inset:4px;border-radius:50%;background:#fff}
+.mrow{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--t2);padding:0 4px}
 </style>
 </head>
 <body>
@@ -416,7 +474,8 @@ function thumb(it,cls=''){
   if(cls.includes('load'))return`<div class="th load ${cls}"></div>`;
   if(it.err)return`<div class="th err ${cls}">${ic('warn')}</div>`;
   const nb=cls.includes('new')?'<span class="bdg l"><i class="dot"></i>新</span>':'';
-  const b=nb+(it.vid?`<span class="bdg">${ic('play')}${mmss(it.dur)}</span>`:it.raw?'<span class="bdg">RAW</span>':it.gif?'<span class="bdg">GIF</span>':'');
+  const rb=it.r&&!it.err?ratingBadge(it.r):'';
+  const b=rb+nb+(it.vid?`<span class="bdg">${ic('play')}${mmss(it.dur)}</span>`:it.raw?'<span class="bdg">RAW</span>':it.gif?'<span class="bdg">GIF</span>':'');
   return`<div class="th ${cls}"><img src="${th(it)}" alt="">${b}</div>`}
 function seg(f,o={}){const SL=o.list||L;const c=o.empty?{all:0,img:0,vid:0}:{all:SL.length,img:SL.filter(x=>!x.vid).length,vid:SL.filter(x=>x.vid).length};const t=o.en?['All','Photos','Videos']:['全部','图片','视频'];
   const it=(k,icon,label)=>`<div class="${f===k?'on':''} ${!c[k]?'off':''}">${ic(icon)}${o.icons?'':label}<em>${c[k]}</em></div>`;
@@ -424,7 +483,7 @@ function seg(f,o={}){const SL=o.list||L;const c=o.empty?{all:0,img:0,vid:0}:{all
 function dock(list,idx,W,o={}){const dw=Math.min(W-64,o.dw||900),inner=dw-24,tw=o.tw||76,gap=6,tot=list.length*(tw+gap)-gap,off=tot<inner?Math.round((inner-tot)/2):Math.max(inner-tot-6,Math.min(6,Math.round(inner/2-(idx*(tw+gap)+tw/2))));const fl=off<0,fr2=off+tot>inner;
   const it=list[idx];
   const meta=it.err?`<span><b>${it.n}</b>${o.en?'Unreadable':'无法读取'}</span><span class="num">${it.fmt}</span>`:
-    `<span><b>${it.n}</b><span class="num">${it.w} × ${it.h}</span></span><span class="num">${it.vid?mmss(it.dur)+' · ':''}${it.s} · ${it.fmt}</span>`;
+    `<span><b>${it.n}</b><span class="num">${it.w} × ${it.h}</span></span>${o.metaMid||''}<span class="num">${it.vid?mmss(it.dur)+' · ':''}${it.s} · ${it.fmt}</span>`;
   return`<div class="dock g" style="width:${dw}px;${o.style||''}"><div class="meta">${meta}</div><div class="strip ${fl?'fl':''} ${fr2?'fr':''}"><div class="rail" style="transform:translateX(${off}px)">${list.map((x,i)=>thumb(x,(i===idx?'on ':'')+(o.hov===i?'hov ':'')+((o.cls&&o.cls[i])||''))).join('')}</div></div></div>`}
 function fit(W,H,w,h){const k=Math.min(W/w,H/h);return[Math.round(w*k),Math.round(h*k)]}
 function hist(){const pts=(c,s,a)=>{let d='M0 60';for(let x=0;x<=236;x+=4){const u=x/236;let y=0;c.forEach(([m,w,h])=>y+=h*Math.exp(-((u-m)**2)/(2*w*w)));y+=.04*Math.sin(x*.7+s)*.5+.05;d+=` L${x} ${(60-Math.min(56,y*56)).toFixed(1)}`}return`<path d="${d} L236 60Z" fill="${a}"/>`};
@@ -463,12 +522,12 @@ function win(o){
       <div class="lights ${o.inactive?'dim':''}"><i></i><i></i><i></i></div>
       ${o.compact?'':`<div class="ttl"><b>${o.title||(it?it.n:(o.en?'Yilan':'一览'))}</b><span>${o.sub||FOLDER}</span></div>`}
       <div class="sp"></div>
-      ${o.empty||!it?'':`<div class="pill g">${idx+1} / ${list.length}</div>`}
+      ${o.empty||!it?'':`<div class="pill g">${o.cur||idx+1} / ${o.total||list.length}</div>`}
       ${o.notools?'':`<div class="tools g"><div class="ib ${o.empty?'dis':''}">${ic('rotate')}</div><div class="ib ${o.info||o.panel?'on':''} ${o.empty?'dis':''}">${ic('info')}</div><div class="ib">${ic('more')}</div></div>`}
     </div>`}
    ${o.noseg?'':seg(o.filter||'all',{empty:o.empty,icons:o.compact,en:o.en,list:o.segList,style:o.fs?'top:16px':''})}
    ${it&&!o.empty&&!o.nonav?`<div class="nav g" style="left:${o.fs?24:20}px;top:${top+sh/2-22}px;${idx===0?'opacity:.35':''}">${ic('chevL')}</div><div class="nav g" style="right:${o.fs?24:20}px;top:${top+sh/2-22}px;${o.info||pnl?'display:none;':''}">${ic('chevR')}</div>`:''}
-   ${it&&!o.nodock?dock(list,idx,W,{dw:o.dw,tw:o.tw,hov:o.hov,en:o.en,cls:o.cls}):''}
+   ${it&&!o.nodock?dock(list,idx,W,{dw:o.dw,tw:o.tw,hov:o.hov,en:o.en,cls:o.cls,metaMid:o.metaMid}):''}
   `;
   const fsChrome=o.fs&&o.fsdock?dock(list,idx,W,{dw:960}):'';
   return`<div class="win ${o.fs?'fs':''}" style="width:${W}px;height:${H}px">${amb}${stage}${o.fs&&!o.fsdock?'':''}${o.fs?(o.fsdock?fsChrome+seg(o.filter||'all',{style:'top:18px'}):''):chrome}${o.extra||''}</div>`}
@@ -820,6 +879,238 @@ ${legend([
  ['新增快捷键','I 信息面板 · F 全屏（Esc 退出）· ⌫ 移到废纸篓（⌘⌫ 也可以）· ⌘Z 撤销删除。'],
  ['亮色图片上的提示','提示条用常规玻璃；落在亮色图片上时玻璃自动加深（系统液态玻璃的自适应行为），保证白字可读，见 8.2、8.4。'],
  ['同步修改','05 章“菜单 · 文件”和 04 章“右键菜单”里的“移到废纸篓”快捷键由 ⌘⌫ 改为 ⌫；“菜单 · 显示”里已有 I 和 F。'],
+])}
+`);
+
+/* ============ 09 v0.3 评星与筛选 ============ */
+const STAR_D='M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.8l-5.1 2.7 1-5.7-4.1-4 5.7-.8z';
+const star=(s,on,cls='')=>`<svg viewBox="0 0 24 24" width="${s}" height="${s}" class="st ${on?'on':''} ${cls}"><path d="${STAR_D}"/></svg>`;
+const stars5=(n,s,o={})=>[1,2,3,4,5].map(i=>star(s,i<=n,(o.hv&&i<=o.hv&&i>n?'hv ':'')+(o.pop===i?'big':''))).join('');
+/* 缩略图角标：THUMB_STAR 取 'num'（推荐：星 + 数字）或 'row'（备选：只画亮着的星） */
+let THUMB_STAR='num';
+function ratingBadge(r){return THUMB_STAR==='num'?`<span class="bdg s">${star(9,1)}${r}</span>`:`<span class="bdg s s2">${Array.from({length:r},()=>star(8,1)).join('')}</span>`}
+/* 示例评星：已评星的文件才带 r，没评星的缩略图保持干净 */
+const RATE={'aurora.jpg':5,'DSC_0812.ARW':4,'DSC_0821.ARW':2,'IMG_2031.HEIC':3,'IMG_2032.MOV':4,'IMG_2034.HEIC':4,'IMG_2040.HEIC':3,'IMG_2050.JPG':4,'IMG_2052.JPG':5,'trail.mp4':4};
+const RL=L.map(x=>RATE[x.n]?{...x,r:RATE[x.n]}:x);
+const rby=n=>RL.find(x=>x.n===n);
+const FL=RL.filter(x=>x.r>=4);               /* ≥4 星：7 个 */
+const atLeast=n=>RL.filter(x=>x.r>=n).length, unrated=RL.filter(x=>!x.r).length;
+
+/* 画面上的五星控件：贴在照片底边内侧，居中，距照片底边 14 */
+function stageStars(it,n,o={}){const W=o.W||1280,H=o.H||800,sh=H-64-132,sw=W-64,[,ph]=fit(sw,sh,it.w,it.h),bottomY=64+(sh+ph)/2;
+  const bt=o.fixed?146:H-bottomY+14;
+  return`<div class="rate g adapt ${o.flash?'flash':''}" style="bottom:${bt}px">${stars5(n,22,{hv:o.hv,pop:o.pop})}</div>`+
+   (o.tip?`<div class="rtip gt" style="left:50%;bottom:${bt+46}px"><span class="kc">${o.tip[0]}</span>${o.tip[1]}</div>`:'')}
+/* 缩放控件：− 百分比 + */
+function zoomCtl(pct,o={}){const st=(k)=>o.hov===k?'hov':o.prs===k?'prs':'';
+  return`<div class="zoomc g adapt ${o.rel?'rel':''}" style="${o.style||''}"><div class="zb ${st('m')} ${o.dmin?'dis':''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg></div><div class="zp ${st('p')}">${pct}%<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5L6 1.8l3 2.7M3 7.5l3 2.7 3-2.7"/></svg></div><div class="zb ${st('a')} ${o.dmax?'dis':''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5v14"/></svg></div></div>`}
+function zoomMenu(cur,hi,style=''){const it=(l,k,key,i)=>`<div class="mi ${hi===i?'on':''}"><span class="ck">${cur===i?'✓':''}</span>${l}<kbd>${k||''}</kbd></div>`;
+  return`<div class="menu gt" style="${style};min-width:176px">${it('适应窗口','⌘0',0,0)}${it('实际大小','⌘1',0,1)}${it('200%','',0,2)}</div>`}
+/* 顶部筛选组：全部/图片/视频 + 评星筛选按钮，整组居中 */
+function filterGroup(type,counts,rate,o={}){
+  const t=(k,icon,label)=>`<div class="${type===k?'on':''} ${!counts[k]&&type!==k?'off':''}">${ic(icon)}${label}<em>${counts[k]}</em></div>`;
+  const sg=`<div class="seg g" style="position:relative;left:auto;top:auto;transform:none">${t('all','all','全部')}${t('img','photo','图片')}${t('vid','video','视频')}</div>`;
+  const label=rate===0?'评星':rate===-1?'未评星':`≥${rate} 星`;
+  const active=rate!==0;
+  const btn=`<div class="rb g ${o.open?'on':active?'act':''}">${star(14,active&&rate>0)}${active?label:'评星'}${o.count?`<em>${o.count}</em>`:''}<svg class="cv" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"/></svg></div>`;
+  return`<div style="position:absolute;left:50%;top:10px;transform:translateX(-50%);display:flex;gap:10px;z-index:6">${sg}<div style="position:relative">${btn}${o.menu||''}</div></div>`}
+function rateMenu(sel,hi){const row=(k,label,n,s,cnt)=>`<div class="mi ${hi===k?'on':''}" style="height:26px"><span class="ck">${sel===k?'✓':''}</span>${s}<span style="${s?'margin-left:2px':''}">${label}</span><kbd style="font-family:var(--mono);font-size:11.5px;letter-spacing:0">${cnt}</kbd></div>`;
+  const ss=n=>`<span style="display:flex;gap:1px">${stars5(n,10)}</span>`;
+  return`<div class="menu gt" style="left:0;top:44px;min-width:218px;z-index:8">${row(0,'不限','',' ',RL.length)}<div class="msep"></div>${[1,2,3,4,5].map(n=>row(n,`≥${n} 星`,n,ss(n),atLeast(n))).join('')}<div class="msep"></div>${row(-1,'未评星','','',unrated)}</div>`}
+/* 信息面板：在 infoV2 的最上面加一个“评星”组 */
+function infoV3(it,kind,note){const h=infoV2(it,kind);
+  const sec3=`<section><h5>评星</h5><div class="kv"><div style="align-items:center"><span style="display:flex;gap:3px;align-items:center">${stars5(it.r||0,16)}</span><b>${it.r?it.r+' 星':'未评星'}</b></div>${note?`<div><span>保存位置</span><b class="m">${note}</b></div>`:''}</div></section><div class="hr"></div>`;
+  return h.replace('<div class="ipb">','<div class="ipb">'+sec3)}
+/* “推荐 / 备选”画板标题 */
+const frO=(tag,name,size,html,reason)=>`<div class="frame"><div class="cap"><span class="tag ${tag==='推荐'?'rec':'alt'}">${tag}</span><b>${name}</b><span>${size}</span><i>${reason}</i></div>${html}</div>`;
+const crop=(html,x,y,w,h)=>`<div style="width:${w}px;height:${h}px;overflow:hidden;border-radius:16px;position:relative;flex:none;box-shadow:0 0 0 1px rgba(255,255,255,.12)"><div style="position:absolute;left:${-x}px;top:${-y}px">${html}</div></div>`;
+const fgOpts=(rate,type)=>({});
+
+const I34=rby('IMG_2034.HEIC'), I31=rby('IMG_2031.HEIC');
+const zc=(pct,o={})=>zoomCtl(pct,{style:`bottom:${o.b??140}px`,...o});
+/* 主窗口 · 已评星：画面上的星 + 缩略图角标 + 常驻缩放控件 */
+const mainV3=(it,o={})=>win({item:it,list:RL,extra:filterGroup('all',{all:20,img:16,vid:4},0)+stageStars(it,it.r||0,o.stars||{})+zc(o.pct||38,o.zc||{})+(o.more||''),segList:RL,noseg:1,...(o.win||{})});
+
+/* ---- 9.1 评星 ---- */
+const frameMain=mainV3(I34);
+/* 评星瞬间：用 4 点亮，第 4 颗放大并发光，上方出现 “4 · 4 星” 提示；缩略图角标同时更新 */
+const frameRateMoment=win({item:I34,list:RL,noseg:1,extra:filterGroup('all',{all:20,img:16,vid:4},0)+stageStars(I34,4,{flash:1,pop:4,tip:['4','4 星']})+zc(38),segList:RL});
+
+/* 选择 A：五星控件放哪里 */
+const altStage=win({item:I34,list:RL,noseg:1,metaMid:`<span style="display:flex;gap:3px;align-items:center">${stars5(4,13)}</span>`,extra:filterGroup('all',{all:20,img:16,vid:4},0)+zc(38)});
+const recStage=frameMain;
+/* 选择 B：缩略图上的星 */
+THUMB_STAR='row';const altThumbs=win({item:I34,list:RL,noseg:1,extra:filterGroup('all',{all:20,img:16,vid:4},0)+stageStars(I34,4)+zc(38)});THUMB_STAR='num';
+
+/* 组件：评星控件状态 */
+const rateStates=`<div class="board" style="width:1440px;height:330px;padding:36px"><img class="bg" src="photos/p1043.jpg" alt="">
+ <div class="crow" style="gap:48px;align-items:flex-start">
+  <div class="var"><div class="rate g adapt rel">${stars5(0,22)}</div>未评星<br>五颗都是描边</div>
+  <div class="var"><div class="rate g adapt rel">${stars5(3,22,{hv:4})}</div>评了 3 星，鼠标移到第 4 颗<br>预览：第 4 颗半透明填充</div>
+  <div class="var"><div class="rate g adapt rel flash">${stars5(4,22,{pop:4})}</div>刚评 4 星<br>最后一颗放大 130% 并发光，0.6 秒后恢复</div>
+  <div class="var"><div class="rate g adapt rel">${stars5(5,22)}</div>5 星</div>
+  <div class="var"><div class="rate g adapt rel" style="opacity:.4">${stars5(0,22)}</div>文件不可写 / 无法评星<br>整条 40% 不透明，点击弹出提示</div>
+ </div>
+ <div class="crow" style="gap:48px;align-items:flex-start;margin-top:6px">
+  <div class="var"><div class="rate g adapt rel">${stars5(3,22)}</div>点击当前的第 3 颗 → 清除星级<br>（和按 0 一样）</div>
+  <div class="var"><div class="rtip gt" style="position:relative;transform:none"><span class="kc">0</span>已清除星级</div>清除时的短提示，1.2 秒后淡出</div>
+  <div class="var"><div class="rtip gt" style="position:relative;transform:none"><span class="kc">4</span>4 星</div>设置星级时的短提示</div>
+ </div></div>`;
+/* 对比度：同一个控件放在亮、中、暗三张照片上 */
+const contrast=`<div class="cmp" style="gap:24px">${[['p49','亮色画面（白色建筑）'],['p1016','中间调（岩石）'],['p1019','暗色画面']].map(([f,n])=>`<div style="gap:8px"><div style="position:relative;width:464px;height:200px;border-radius:14px;overflow:hidden"><img src="photos/${f}.jpg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"><div class="rate g adapt" style="bottom:14px">${stars5(3,22)}</div><div style="position:absolute;left:12px;top:12px;display:flex;gap:6px"><div class="th" style="width:76px;height:52px;opacity:1">${'<img src="photos/t/'+f+'.jpg">'}${ratingBadge(4)}</div></div></div><span style="font-size:12px;color:var(--label)">${n}</span></div>`).join('')}</div>`;
+
+/* ---- 9.2 缩放控件 ---- */
+const zoomFit=mainV3(I34,{pct:38,zc:{hov:'a'}});
+const zoomMenuFrame=win({item:I34,list:RL,noseg:1,extra:filterGroup('all',{all:20,img:16,vid:4},0)+stageStars(I34,4)+zc(38,{hov:'p'})+zoomMenu(0,2,'left:32px;bottom:176px')+cursorSVG(104,684)});
+const zoom200=win({item:rby('IMG_2040.HEIC'),list:RL,zoom:{pos:'38% 42%',size:'260%'},nonav:1,noseg:1,extra:filterGroup('all',{all:20,img:16,vid:4},0)+`<div class="nav-map gt"><div class="m"><img src="${th(by('IMG_2040.HEIC'))}" alt=""><div class="vp" style="left:42px;top:30px;width:62px;height:40px"></div></div></div>`+stageStars(rby('IMG_2040.HEIC'),3,{fixed:1})+zc(200)});
+const zoomStates=`<div class="board" style="width:1440px;height:250px;padding:36px"><img class="bg" src="photos/p1043.jpg" alt="">
+ <div class="crow" style="gap:44px;align-items:flex-start">
+  <div class="var">${zoomCtl(38,{rel:1})}适应窗口时（显示实际比例）</div>
+  <div class="var">${zoomCtl(38,{rel:1,hov:'m'})}悬停 −</div>
+  <div class="var">${zoomCtl(38,{rel:1,hov:'p'})}悬停百分比</div>
+  <div class="var">${zoomCtl(100,{rel:1,prs:'a'})}按下 +</div>
+  <div class="var">${zoomCtl(200,{rel:1})}200%</div>
+  <div class="var">${zoomCtl(800,{rel:1,dmax:1})}到达 800% 上限，+ 置灰</div>
+ </div></div>`;
+
+/* ---- 9.3 评星筛选 ---- */
+const filterMenuFrame=win({item:I34,list:RL,noseg:1,extra:filterGroup('all',{all:20,img:16,vid:4},0,{open:1,menu:rateMenu(0,4)})+stageStars(I34,4)+zc(38)+cursorSVG(868,212)});
+const filtered=win({item:I34,list:FL,noseg:1,cur:3,total:7,extra:filterGroup('all',{all:7,img:5,vid:2},4,{count:'7 / 20'})+stageStars(I34,4)+zc(38),segList:FL});
+const emptyF=win({item:null,empty:1,list:RL,title:FOLDER,sub:'~/Pictures',nodock:1,noseg:1,extra:filterGroup('vid',{all:2,img:2,vid:0},5,{count:'0 / 20'})+`<div class="card gt" style="width:420px"><div class="badge-ic" style="background:rgba(255,255,255,.1);margin-bottom:2px">${star(26,0)}</div><h3>没有符合条件的文件</h3><p>当前筛选：视频 · ≥5 星<br>放宽条件，或清除筛选后查看全部文件。</p><div class="btns"><div class="btn pri">清除筛选</div></div></div>`});
+
+/* ---- 9.4 提示 ---- */
+const toastFail=win({item:rby('DSC_0812.ARW'),list:RL,noseg:1,extra:filterGroup('all',{all:20,img:16,vid:4},0)+stageStars(rby('DSC_0812.ARW'),4,{})+zc(38)+`<div class="toast g adapt" style="top:66px;z-index:7">${ic('warn').replace('<svg','<svg style="color:var(--yellow)"')}无法保存星级：此位置不可写</div>`});
+const toastXmp=win({item:rby('DSC_0812.ARW'),list:RL,noseg:1,extra:filterGroup('all',{all:20,img:16,vid:4},0)+stageStars(rby('DSC_0812.ARW'),4,{})+zc(38)+`<div class="hint gt" style="top:66px;z-index:7"><div class="hi">${ic('doc')}</div><div><b>已在旁边创建 DSC_0812.xmp</b><p>RAW 文件本身不会被改动，星级记在这个同名的 <code>.xmp</code> 小文件里，Lightroom 等软件也能读取。</p><div class="btns"><div class="btn pri" style="box-shadow:none">知道了</div></div></div></div>`});
+const kRow=(a,b,c)=>`<div style="display:flex;align-items:center;gap:10px;height:30px"><span style="flex:1;text-align:left;font-size:12.5px">${a}</span><span class="kcs" style="color:var(--t3)"><span class="kc" style="opacity:.6;text-decoration:line-through">${b}</span><span>→</span><span class="kc">${c}</span></span></div>`;
+const noticeKeys=win({item:I34,list:RL,noseg:1,extra:filterGroup('all',{all:20,img:16,vid:4},0)+stageStars(I34,4)+zc(38)+`<div class="dim"></div><div class="alert gt" style="width:420px;padding:24px 24px 20px">${appIcon(56)}<h3 style="font-size:15px">快捷键有变化</h3><p>数字键 1–5 现在用来评星，0 用来清除星级。<br>下面几个快捷键换了位置：</p><div style="width:100%;margin-top:6px;border-radius:12px;background:rgba(255,255,255,.06);padding:4px 14px;display:flex;flex-direction:column">${kRow('适应窗口','0','⌘0')}<div class="hr"></div>${kRow('实际大小','1','⌘1')}<div class="hr"></div>${kRow('全部','⌘1','⌥⌘1')}<div class="hr"></div>${kRow('只看图片','⌘2','⌥⌘2')}<div class="hr"></div>${kRow('只看视频','⌘3','⌥⌘3')}</div><p style="font-size:11.5px;color:var(--t3);margin-top:2px">这条说明只显示一次。以后在“设置 › 快捷键”里查看。</p><div class="btns"><div class="btn g">查看快捷键设置</div><div class="btn pri">知道了</div></div></div>`});
+
+/* ---- 9.5 设置 ---- */
+function settingsBrowse3(){let h=settings('browse');
+  const row=(l,c,s='')=>`<div class="row"><div class="lb">${l}${s?`<small>${s}</small>`:''}</div>${c}</div>`;
+  const rad=(on,l,s)=>`<div class="row" style="padding:10px 14px"><div class="rd ${on?'on':''}"></div><div class="lb">${l}<small>${s}</small></div></div>`;
+  const add=`<div class="grp">${row('打星后自动跳到下一张','<div class="tg"><i></i></div>','默认关闭。打开后，按 1–5 或 0 评星会立刻显示下一张<span class="new-tag">v0.3</span>')}</div>
+  <div style="display:flex;flex-direction:column;gap:6px"><div class="mhead" style="padding:0 4px">星级保存到哪里<span class="new-tag">v0.3</span></div><div class="grp">${rad(1,'写入文件内部（推荐，其他软件可读）','JPEG、PNG、HEIC 等直接写进文件的元数据，预览、Lightroom 等都能读到')}${rad(0,'一律使用旁边的 .xmp 小文件','不改动图片本身；换到别的软件时要连同 .xmp 一起带走')}</div><div class="mrow">RAW（ARW、CR3、NEF 等）不能写入文件内部，始终使用旁边的 .xmp。</div></div>`;
+  const key='<div class="grp"><div class="row"><div class="lb">自动隐藏控件';
+  h=h.replace(key,add+key).replace('height:700px','height:950px');return h}
+function settingsKeys3(){let h=settings('keys');
+  h=h.replace('<span class="kc">0</span><span>/</span><span class="kc">1</span>','<span class="kc">⌘0</span><span>/</span><span class="kc">⌘1</span>')
+     .replace('适应窗口 / 实际大小</div>','适应窗口 / 实际大小<span class="new-tag">v0.3 改</span></div>')
+     .replace('<span class="kc">⌘1</span><span class="kc">⌘2</span><span class="kc">⌘3</span>','<span class="kc">⌥⌘1</span><span class="kc">⌥⌘2</span><span class="kc">⌥⌘3</span>')
+     .replace('全部 / 只看图片 / 只看视频</div>','全部 / 只看图片 / 只看视频<span class="new-tag">v0.3 改</span></div>');
+  const grp=`<div style="display:flex;flex-direction:column;gap:6px"><div class="mhead" style="padding:0 4px">评星</div><div class="grp">${[['<span class="kc">1</span><span>–</span><span class="kc">5</span>','设置星级'],['<span class="kc">0</span>','清除星级']].map(([k,a])=>`<div class="row" style="min-height:31px;padding:4px 14px"><div class="lb">${a}<span class="new-tag">v0.3</span></div><div class="kcs">${k}</div></div>`).join('')}</div></div>`;
+  const anchor='<div style="display:flex;flex-direction:column;gap:6px"><div class="mhead" style="padding:0 4px">浏览</div>';
+  return h.replace(anchor,grp+anchor).replace('height:700px','height:820px')}
+/* ---- 9.6 导出 ---- */
+function menubar3(open){const menus={
+ '文件':[['打开…','⌘O'],['打开最近使用','▸'],'-',['评星','▸',0,1],['导出筛选结果…','',0,0,1],'-',['在访达中显示','⇧⌘R'],['拷贝文件路径','⌥⌘C'],['共享…',''],'-',['向右旋转','R'],['设为桌面图片',''],'-',['移到废纸篓','⌫',0,0,0,1],'-',['关闭窗口','⌘W']],
+ '显示':[['全部','⌥⌘1',1],['只看图片','⌥⌘2'],['只看视频','⌥⌘3'],'-',['评星筛选','▸'],'-',['适应窗口','⌘0'],['实际大小','⌘1'],['放大','⌘+'],['缩小','⌘−'],'-',['缩略图栏','T',1],['信息面板','I'],['环境光背景','',1],'-',['进入全屏幕','F']]};
+ const names=['一览','文件','编辑','显示','前往','窗口','帮助'];const x={文件:72,显示:162}[open];
+ const sub=open==='文件'?`<div class="menu gt" style="left:${x+250}px;top:${34+25*3+5}px;min-width:170px">${[['1 星','1'],['2 星','2'],['3 星','3'],['4 星','4'],['5 星','5'],'-',['清除星级','0']].map(m=>m==='-'?'<div class="msep"></div>':`<div class="mi ${m[1]==='4'?'on':''}"><span class="ck"></span>${m[0]}<kbd>${m[1]}</kbd></div>`).join('')}</div>`:'';
+ return`<div class="win" style="width:760px;height:500px;border-radius:14px"><img src="photos/p1015.jpg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.7)">
+  <div style="position:absolute;left:0;right:0;top:0;height:30px;display:flex;align-items:center;gap:4px;padding:0 14px;background:rgba(20,20,24,.35);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px);font-size:13px"><svg viewBox="0 0 16 20" style="width:13px;height:16px;margin-right:10px" fill="#fff"><path d="M13.3 10.6c0-2.4 2-3.5 2-3.6-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.2-2.8.8-3.5.8-.7 0-1.8-.8-3-.8C3.8 5.3 2.3 6.2 1.5 7.6-.2 10.5 1 14.9 2.7 17.2c.8 1.2 1.7 2.4 3 2.4 1.2 0 1.6-.8 3-.8s1.8.8 3 .8c1.3 0 2.1-1.2 2.9-2.3.9-1.3 1.3-2.6 1.3-2.7 0 0-2.6-1-2.6-4zM11 3.5c.6-.8 1.1-1.9 1-3-.9 0-2.1.6-2.7 1.4-.6.7-1.1 1.8-1 2.9 1 .1 2.1-.5 2.7-1.3z"/></svg>${names.map((n,i)=>`<span style="padding:3px 8px;border-radius:5px;${i==0?'font-weight:700;':''}${n===open?'background:rgba(255,255,255,.22)':''}">${n}</span>`).join('')}</div>
+  <div class="menu gt" style="left:${x}px;top:34px">${menus[open].map(m=>m==='-'?'<div class="msep"></div>':`<div class="mi ${m[3]&&open==='文件'?'on':''} ${m[5]?'dis':''}"><span class="ck">${m[2]?'✓':''}</span>${m[0]}<kbd>${m[1]}</kbd></div>`).join('')}</div>${sub}</div>`}
+const exportSheet=win({item:I34,list:FL,noseg:1,cur:3,total:7,segList:FL,extra:filterGroup('all',{all:7,img:5,vid:2},4,{count:'7 / 20'})+stageStars(I34,4)+zc(38)+`<div class="dim"></div><div class="alert gt" style="top:60px;transform:translateX(-50%);width:440px;padding:22px 22px 18px;align-items:stretch;text-align:left"><h3 style="font-size:15px;margin:0">导出 7 个筛选结果</h3><p style="margin:0">筛选条件：≥4 星 · 全部类型。</p>
+ <div class="grp" style="margin-top:6px"><div class="row"><div class="lb">目标文件夹</div><div class="pop">${ic('folder').replace('<svg','<svg style="width:13px;height:13px;color:var(--t2)"')}~/Pictures/精选</div><div class="btn g" style="height:26px;font-size:12px;padding:0 12px">选择…</div></div>
+ <div class="row"><div class="lb">方式<small>拷贝会保留原文件</small></div><div class="sseg"><span class="on">拷贝</span><span>移动</span></div></div></div>
+ <div class="mrow" style="margin-top:2px">共 7 个文件，约 1.2 GB；RAW 旁边的 .xmp 会一起处理。</div>
+ <div class="btns" style="justify-content:flex-end;width:auto"><div class="btn g" style="flex:none">取消</div><div class="btn pri" style="flex:none;box-shadow:0 0 0 3px rgba(255,255,255,.2)">拷贝 7 个文件</div></div></div>`});
+const exportMoveNote=`<div class="board" style="width:640px;height:150px;padding:28px 36px"><img class="bg" src="photos/p1043.jpg" alt=""><div class="crow" style="gap:20px;align-items:flex-start"><div class="var"><div class="sseg"><span>拷贝</span><span class="on">移动</span></div>选“移动”时</div><div class="alert gt" style="position:relative;left:auto;top:auto;transform:none;width:330px;padding:12px 14px;align-items:flex-start;text-align:left;border-radius:14px"><p style="margin:0;font-size:12px;color:var(--t2)">移动后，这 7 个文件会离开当前文件夹（不会进废纸篓）。确认按钮改为“移动 7 个文件”。</p></div></div></div>`;
+const exportDone=win({item:rby('aurora.jpg'),list:FL,noseg:1,cur:1,total:7,segList:FL,extra:filterGroup('all',{all:7,img:5,vid:2},4,{count:'7 / 20'})+stageStars(rby('aurora.jpg'),5)+zc(38)+`<div class="toast g adapt" style="top:66px;z-index:7">${ic('check')}已拷贝 7 个文件到“精选”<span style="color:var(--t3)">·</span><a style="margin-left:0">在访达中显示</a></div>`});
+
+/* ---- 章节 ---- */
+ch('09','v0.3 评星与筛选','评星（键盘 1–5 / 0，或点画面上的五星）、评星筛选、常驻缩放控件、快捷键调整、写入失败和 .xmp 提示、导出筛选结果。组件、颜色、材质沿用 01–02 章；亮星用品牌 sun #FFE2A0。',`
+<h3 class="sub"><span>9.1</span>评星：画面、缩略图、信息面板</h3>
+<div class="frames">
+ ${fr('主界面 · 已评星（推荐方案）','1280 × 800',frameMain,'画面底部的五星、缩略图左上角的星角标、左下角常驻的缩放控件；没评星的缩略图保持干净')}
+ ${fr('评星的瞬间 · 按下 4','1280 × 800',frameRateMoment,'第 4 颗放大发光，上方出现“4 · 4 星”；左下角的角标和信息面板同时更新')}
+</div>
+<h3 class="sub" style="font-size:16px;margin-top:0"><span>选择 A</span>五星控件放在哪里</h3>
+<div class="cmp">
+ <div><div class="cap"><span class="tag rec">推荐</span><b>照片底边内侧的玻璃胶囊</b><span>局部 1:1</span></div>${crop(recStage,185,380,700,420)}<p class="note">理由：离照片最近，22 点的星好点；评星时视线不用离开照片。和 ←→ 箭头、缩放控件一起随控件淡出。会盖住照片底边约 38 点（下方 14 点留白），照片只有这一块被盖住。</p></div>
+ <div><div class="cap"><span class="tag alt">备选</span><b>缩略图栏信息行中间</b><span>局部 1:1</span></div>${crop(altStage,185,380,700,420)}<p class="note">理由：完全不盖住照片，和文件名、尺寸同一行。代价：星只有 13 点，点起来费劲；离照片远，缩略图栏隐藏时（沉浸、全屏）也没处点。</p></div>
+</div>
+<h3 class="sub" style="font-size:16px;margin-top:16px"><span>选择 B</span>缩略图上的星长什么样</h3>
+<div class="cmp">
+ <div><div class="cap"><span class="tag rec">推荐</span><b>星 + 数字的深色小角标</b><span>局部 1:1</span></div>${crop(frameMain,190,668,700,132)}<p class="note">理由：宽度固定（约 24 点），在 76 点宽的缩略图里不挤；9.5 号数字一眼读出几星；位置在左上角，不和右下角的 RAW / 时长、左下角的“新”撞车。</p></div>
+ <div><div class="cap"><span class="tag alt">备选</span><b>只画亮着的几颗星</b><span>局部 1:1</span></div>${crop(altThumbs,190,668,700,132)}<p class="note">理由：不用读数字，星多星少一看便知。代价：5 星要 45 点宽，占缩略图近三分之二；8 点的星偏小，要凑近才分得清几颗。</p></div>
+</div>
+<div class="frames" style="margin-top:8px">
+ ${fr('评星控件 · 状态','1440 × 330',rateStates,'悬停预览、刚评分、清除、不可写')}
+ ${fr('星的可读性 · 亮、中、暗三种照片','1440 × 260',contrast,'星一律在深色玻璃 / 深色角标上，亮星用 sun #FFE2A0；三种照片上对比度都够')}
+ ${fr('信息面板 · 评星行（JPEG / HEIC）','1280 × 800',win({item:I31,list:RL,panel:300,noseg:1,extra:filterGroup('all',{all:20,img:16,vid:4},0)+infoV3(I31,'photo','文件内部').replace('class="ip gt"','class="ip gt" style="bottom:132px"')+stageStars(I31,3)+zc(38)}),'“评星”在面板最上面，星可以直接点；写在文件内部')}
+ ${fr('信息面板 · 评星行（RAW）','1280 × 800',win({item:rby('DSC_0812.ARW'),list:RL,panel:300,noseg:1,extra:filterGroup('all',{all:20,img:16,vid:4},0)+infoV3(rby('DSC_0812.ARW'),'photo','DSC_0812.xmp').replace('class="ip gt"','class="ip gt" style="bottom:132px"')+stageStars(rby('DSC_0812.ARW'),4)+zc(38)}),'RAW 的星级存在旁边的 .xmp 里，“保存位置”写出文件名')}
+</div>
+${legend([
+ ['打星','键盘 1–5 设置星级，0 清除；点画面上的第 N 颗设置 N 星，点当前已亮的最后一颗清除。视频和图片都能评。信息面板里的星同样可以点。'],
+ ['反馈','评分后第 N 颗放大 130% 并发光（0.15 秒弹出、0.6 秒回落），上方提示条显示按键和星数，1.2 秒后淡出；缩略图角标同步变化。按 0 或点当前星清除时提示“已清除星级”。'],
+ ['画面上的星（规则）','属于控件：和 ←→ 箭头一起，鼠标静止后淡出，鼠标一动就回来；全屏和沉浸模式里同样。已评星的文件，淡出后角标仍在缩略图栏里。未评星时显示五颗描边星。'],
+ ['缩略图角标（规则）','只有评了星的缩略图才有角标，未评星的文件夹和现在一样干净。选中放大的缩略图角标跟着放大；加载失败的缩略图不显示。'],
+ ['颜色','亮星固定 sun #FFE2A0（品牌色），描边星白色 62%。星星只放在深色玻璃或深色角标上，不直接压在照片上；控件按钮仍跟随系统强调色。'],
+ ['打星后自动下一张','设置里可开（默认关）。开启后评星立刻显示下一张，但反馈提示仍显示在新照片上，让人知道上一张已记录。'],
+])}
+
+<h3 class="sub"><span>9.2</span>缩放控件</h3>
+<div class="frames">
+ ${fr('缩放控件 · 适应窗口（常驻）','1280 × 800',zoomFit,'左下角：− 38% +；适应窗口时也显示，显示的是实际缩放比例')}
+ ${fr('缩放控件 · 百分比菜单','1280 × 800',zoomMenuFrame,'点百分比弹出菜单：适应窗口 ⌘0 / 实际大小 ⌘1 / 200%；当前状态前面打勾')}
+ ${fr('缩放控件 · 放大 200%','1280 × 800',zoom200,'原来只读的缩放胶囊变成可点的控件，位置不变；右上角导航图沿用')}
+ ${fr('缩放控件 · 状态','1440 × 250',zoomStates,'')}
+</div>
+${legend([
+ ['位置与显示','位置和原来的缩放胶囊一样：距左 32、距缩略图栏上沿 8（全屏时距底 24）。始终可见，不再只在放大后出现；和其他控件一起在鼠标静止后淡出、鼠标一动回来。'],
+ ['操作','点 − 或 + 按 ⌘− / ⌘+ 同样的步长缩放；点百分比弹出菜单，菜单向上展开。到达上限 800% 时 + 置灰，到达下限时 − 置灰。'],
+ ['菜单','适应窗口 ⌘0、实际大小 ⌘1、200%。适应窗口时前面打勾；其他比例不打勾。快捷键由 0、1 改为 ⌘0、⌘1，把数字键留给评星。'],
+ ['和照片的关系','控件是深色玻璃，压在窗口环境光或照片边缘上都清楚。竖图、宽图时它都在窗口左下，不进入画面中间。'],
+])}
+
+<h3 class="sub"><span>9.3</span>评星筛选</h3>
+<div class="frames">
+ ${fr('筛选 · 菜单展开','1280 × 800',filterMenuFrame,'挨着 全部/图片/视频：“评星”按钮，点开选条件；每项后面是符合的文件数')}
+ ${fr('筛选 · ≥4 星','1280 × 800',filtered,'按钮变亮并显示“≥4 星 · 7 / 20”；缩略图栏和序号只含符合条件的文件，类型数量同步')}
+ ${fr('筛选 · 没有符合条件的文件','1280 × 800',emptyF,'筛选组合（视频 · ≥5 星）没有结果；按钮上显示 0 / 20，卡片里给出“清除筛选”')}
+</div>
+${legend([
+ ['条件','不限、≥1 星 … ≥5 星、未评星；单选。和 全部/图片/视频 同时生效：先选类型，再选评星，结果取交集。'],
+ ['数量','按钮上显示“符合 / 总数”。设计稿示例文件夹只有 20 个文件，所以是“7 / 20”；800 个文件的文件夹里会显示“60 / 800”。顶部右边的序号只统计符合条件的文件（3 / 7）。菜单里每项后面是当前文件夹里的文件数。'],
+ ['切换筛选时','留在当前文件；当前文件不符合时，跳到之后第一个符合的文件，之后没有则跳到之前最近的一个。重新打开文件夹时恢复为不限。'],
+ ['清除筛选','点卡片里的“清除筛选”，或菜单里选“不限”。清除后回到清除前正在看的文件。'],
+ ['快捷键冲突','⌘1 要给“实际大小”，原来“全部 / 只看图片 / 只看视频”的 ⌘1 / ⌘2 / ⌘3 改成 ⌥⌘1 / ⌥⌘2 / ⌥⌘3（待你确认，见 9.4 的说明）。评星筛选先不设快捷键，只在菜单和按钮里。'],
+])}
+
+<h3 class="sub"><span>9.4</span>提示和首次说明</h3>
+<div class="frames">
+ ${fr('提示 · 无法保存星级','1280 × 800',toastFail,'写入失败时，星级不记录；提示 4 秒后淡出')}
+ ${fr('提示 · 第一次创建 .xmp','1280 × 800',toastXmp,'给 RAW 评星时第一次出现；只出现一次，点“知道了”关闭')}
+ ${fr('首次启动 · 快捷键变化说明','1280 × 800',noticeKeys,'更新后第一次启动出现；只显示一次')}
+</div>
+${legend([
+ ['无法保存星级','文件夹只读、U 盘写保护、权限不够时出现，写的是“此位置不可写”；画面上的星保持原样，不假装成功。相同原因 10 秒内不重复提示。'],
+ ['.xmp 首次提示','第一次为 RAW 创建 .xmp 时显示，一句话说明它是什么；之后不再提示。设置里不放开关，避免多一项选项。'],
+ ['快捷键说明','只在从 v0.2 更新后的第一次启动出现，一次性。两个按钮：“查看快捷键设置”跳到设置里的快捷键页，“知道了”关闭；新安装的用户不显示。'],
+])}
+
+<h3 class="sub"><span>9.5</span>设置：浏览、快捷键</h3>
+<div class="frames">
+ ${fr('设置 · 浏览（评星）','820 × 950',settingsBrowse3(),'新增“打星后自动跳到下一张”（默认关）和“星级保存到哪里”')}
+ ${fr('设置 · 快捷键','820 × 820',settingsKeys3(),'新增评星；适应窗口 / 实际大小改为 ⌘0 / ⌘1；类型切换改为 ⌥⌘1–3（待确认）')}
+</div>
+${legend([
+ ['保存方式','默认“写入文件内部”：JPEG 等直接写进图片的元数据，别的软件读得到；选“一律使用旁边的 .xmp”则不改图片本身。RAW 不管选哪个都用 .xmp。'],
+ ['快捷键页','带“v0.3”标记的是新增或改动的，仅设计稿里显示。数字键 0 单独按 = 清除星级；⌘0 = 适应窗口。'],
+])}
+
+<h3 class="sub"><span>9.6</span>导出筛选结果</h3>
+<div class="frames">
+ ${fr('菜单 · 文件','760 × 500',menubar3('文件'),'评星子菜单（1–5、清除星级）；“导出筛选结果…”只在有筛选时可用')}
+ ${fr('菜单 · 显示','760 × 500',menubar3('显示'),'评星筛选子菜单；适应窗口、实际大小改为 ⌘0 / ⌘1')}
+ ${fr('导出 · 确认','1280 × 800',exportSheet,'窗口顶部落下的表单：选文件夹、选拷贝或移动')}
+ ${fr('导出 · 选“移动”时','640 × 150',exportMoveNote,'')}
+ ${fr('导出 · 完成','1280 × 800',exportDone,'完成后显示结果提示，可直接在访达中显示')}
+</div>
+${legend([
+ ['入口','菜单“文件 › 导出筛选结果…”。没有筛选条件时置灰。导出范围是当前筛选出的全部文件（类型 + 评星）。'],
+ ['拷贝和移动','默认拷贝（保留原文件）。选移动时按钮改为“移动 N 个文件”，并提示“文件会离开当前文件夹”（不进废纸篓）。同名文件自动加序号，不覆盖。'],
+ ['完成','导出完成后显示提示“已拷贝 N 个文件到‘文件夹名’ · 在访达中显示”，4 秒后淡出。导出过程较长时顶部显示进度条（沿用加载进度样式）。'],
 ])}
 `);
 
