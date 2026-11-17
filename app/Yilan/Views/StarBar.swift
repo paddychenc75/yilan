@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// 设计稿的星形（24 网格：M12 3.8 l2.5 5.2 5.7.8 -4.1 4 1 5.7 L12 16.8 l-5.1 2.7 1-5.7 -4.1-4 5.7-.8z）
@@ -204,7 +205,9 @@ struct HintCardView: View {
     @ViewBuilder private var message: some View {
         switch card {
         case .shortcutsChanged:
-            Text("数字键 1–5 现在用来评星，0 清除星级。0 和 1 不再用来缩放：按 Z 在适应窗口和实际大小之间切换，⌘0 实际大小，⌘9 适应窗口。")
+            // 方括号里的是键帽（设计稿 .hint .kc）
+            KeycapText(String(localized: "数字键 [1]–[5] 现在用来评星，[0] 清除星级。[0] 和 [1] 不再用来缩放：按 [Z] 在适应窗口和实际大小之间切换，[⌘0] 实际大小，[⌘9] 适应窗口。",
+                              comment: "快捷键变化提示；方括号里的内容显示成键帽，不要翻译方括号里的按键"))
         case .sidecarCreated:
             Text("RAW 文件本身不会被改动，星级记在这个同名的 .xmp 小文件里，Lightroom 等软件也能读取。")
         }
@@ -231,5 +234,52 @@ enum AnyHintButtonStyle: ButtonStyle {
             .background(Capsule().fill(self == .primary ? Color.white : Color.white.opacity(0.14)))
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .contentShape(Capsule())
+    }
+}
+
+/// 一段文字，方括号里的部分画成小键帽（设计稿 .hint .kc：最小宽 18，高 18，圆角 5，字 11）
+struct KeycapText: View {
+    let source: String
+    @Environment(\.displayScale) private var scale
+
+    init(_ source: String) { self.source = source }
+
+    var body: some View {
+        Self.segments(source).reduce(Text(verbatim: "")) { text, segment in
+            switch segment {
+            case .plain(let s): text + Text(verbatim: s)
+            case .key(let k): text + Text(Image(nsImage: Self.keycap(k, scale: scale))).baselineOffset(-4)
+            }
+        }
+    }
+
+    enum Segment: Equatable { case plain(String), key(String) }
+
+    /// “按 [Z] 切换” → [.plain("按 "), .key("Z"), .plain(" 切换")]
+    static func segments(_ source: String) -> [Segment] {
+        var out: [Segment] = []
+        var rest = Substring(source)
+        while let open = rest.firstIndex(of: "["), let close = rest[open...].firstIndex(of: "]") {
+            if open > rest.startIndex { out.append(.plain(String(rest[..<open]))) }
+            out.append(.key(String(rest[rest.index(after: open)..<close])))
+            rest = rest[rest.index(after: close)...]
+        }
+        if !rest.isEmpty { out.append(.plain(String(rest))) }
+        return out
+    }
+
+    @MainActor
+    private static func keycap(_ key: String, scale: CGFloat) -> NSImage {
+        let view = Text(verbatim: key)
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 5)
+            .frame(minWidth: 18, minHeight: 18, maxHeight: 18)
+            .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.white.opacity(0.1)))
+            .overlay(RoundedRectangle(cornerRadius: 5, style: .continuous).strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+            .environment(\.colorScheme, .dark)
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = max(scale, 2)
+        return renderer.nsImage ?? NSImage()
     }
 }

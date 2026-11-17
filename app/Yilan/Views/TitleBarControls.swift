@@ -96,6 +96,10 @@ struct ToolGroup: View {
     let onReveal: () -> Void
     let onCopyPath: () -> Void
     let onOpen: () -> Void
+    /// 窗口很窄时缩放控件收进这里（spec E1-10 ⑤）
+    var zoomState: ZoomState? = nil
+    var zoomInMenu = false
+    var onZoom: (ZoomCommand.Action) -> Void = { _ in }
 
     var body: some View {
         HStack(spacing: 2) {
@@ -105,6 +109,12 @@ struct ToolGroup: View {
             ToolButton(symbol: "info.circle", help: "信息（I）", selected: infoSelected, action: onInfo)
                 .disabled(!enabled)
             Menu {
+                if zoomInMenu, let zoomState {
+                    Section(String(localized: "缩放 · \(ZoomPercentLabel.text(zoomState.percent))", comment: "⋯ 菜单里缩放组的标题；%@ 是当前比例")) {
+                        ZoomMenuItems(state: zoomState, includeSteps: true, stepsFirst: true, onZoom: onZoom)
+                    }
+                    Divider()
+                }
                 Button("在访达中显示", action: onReveal).disabled(!enabled)
                 Button("拷贝文件路径", action: onCopyPath).disabled(!enabled)
                 Divider()

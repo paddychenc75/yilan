@@ -8,6 +8,8 @@ struct RootView: View {
     @State private var monitors = EventMonitors()
     /// 正在拖入文件：遮罩上的说明
     @State private var drop: DropSummary?
+    /// 顶部栏控件的实测宽度（中英文不同），决定收缩到哪一档
+    @State private var barWidths = TopBarWidths()
 
     var body: some View {
         GeometryReader { geo in
@@ -76,7 +78,7 @@ struct RootView: View {
             rotation: model.rotation,
             videoLayer: showsVideoLayer ? model.video.layer : nil,
             onNavigate: { model.step($0) },
-            onZoomChanged: { model.zoomPercent = $0 },
+            onZoomChanged: { model.zoomState = $0 },
             onNeedsFullResolution: { model.requestFullResolution() },
             onDisplayChanged: { model.displayDidChange(maxPixel: $0) }
         )
@@ -155,6 +157,13 @@ struct RootView: View {
         let size = layout.size
         let compact = size.width < Theme.compactWidth
         let visible = topVisible
+        let zoom = showsZoomControl ? model.zoomState : nil
+        let widths = effectiveBarWidths
+        let tier = TopBarTier.choose(width: size.width, widths: widths, hasZoom: zoom != nil)
+        let center = tier.centerWidth(widths)
+        // 文件名最多到筛选组左边再留 14，长名字截断，不和中间重叠
+        let titleMax = max(0, size.width / 2 - center / 2 - TopBarTier.gap - 86)
+        let _ = ShotHooks.logTopBar(width: size.width, widths: widths, tier: tier)
         ZStack(alignment: .top) {
             // 标题栏（高 56）：红绿灯是系统的，这里只放文件名和右侧控件
             HStack(spacing: 14) {
@@ -170,25 +179,23 @@ struct RootView: View {
                             .foregroundStyle(Theme.text2)
                     }
                     .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: titleMax, alignment: .leading)
                     .allowsHitTesting(false)
                 }
                 Spacer(minLength: 0)
                 HStack(spacing: 14) {
+                    // 顶部缩放控件（spec E1）：[缩放] [序号] [工具组]
+                    if let zoom, tier.zoom != .menu {
+                        ZoomControl(state: zoom, percentOnly: tier.zoom == .percent) { model.zoom($0) }
+                    }
                     if let i = model.currentIndex {
                         CounterPill(index: i, total: model.items.count,
                                     rating: !model.stripVisible || layout.fullScreen ? model.currentRating : nil)
                     }
                     // 欢迎界面不显示工具组（设计稿“首次启动 · 欢迎”）
                     if model.hasOpenedFolder {
-                        ToolGroup(
-                            enabled: model.current != nil && model.failure == nil,
-                            infoSelected: showsInfoPanel,
-                            onRotate: { model.rotate(-1) },
-                            onInfo: model.toggleInfo,
-                            onReveal: model.revealCurrentInFinder,
-                            onCopyPath: model.copyCurrentPath,
-                            onOpen: model.showOpenPanel
-                        )
+                        toolGroup(zoomInMenu: zoom != nil && tier.zoom == .menu)
                     }
                 }
                 .onHover { model.setHovering("tools", $0) }
@@ -198,16 +205,79 @@ struct RootView: View {
             .frame(height: Theme.titleBarHeight)
 
             if model.hasOpenedFolder {
-                FilterControl(selection: model.filter, counts: model.counts, compact: compact) { model.setFilter($0) }
+                centerGroup(slim: tier.segSlim)
                     .padding(.top, 10)
+                    .frame(maxWidth: .infinity, alignment: tier.leftAligned ? .leading : .center)
+                    .padding(.leading, tier.leftAligned ? TopBarTier.leftEdge : 0)
                     .onHover { model.setHovering("filter", $0) }
             }
+            topBarMeasurer
         }
         .frame(width: size.width, height: size.height, alignment: .top)
         // 全屏：从菜单栏下面滑出来
         .offset(y: layout.fullScreen ? (visible ? menuBarHeight : -Theme.titleBarHeight) : 0)
         .opacity(visible ? 1 : 0)
         .allowsHitTesting(visible)
+    }
+
+    /// 测量视图一直在量；没有序号、没有工具组时按 0 算
+    private var effectiveBarWidths: TopBarWidths {
+        var widths = barWidths
+        if model.currentIndex == nil { widths.counter = 0 }
+        if !model.hasOpenedFolder { widths.tools = 0 }
+        return widths
+    }
+
+    /// 缩放控件只在有可显示的图片时出现（spec E1-07）
+    private var showsZoomControl: Bool {
+        model.current != nil && model.failure == nil && model.displayedItem == model.current
+    }
+
+    private func toolGroup(zoomInMenu: Bool) -> ToolGroup {
+        ToolGroup(
+            enabled: model.current != nil && model.failure == nil,
+            infoSelected: showsInfoPanel,
+            onRotate: { model.rotate(-1) },
+            onInfo: model.toggleInfo,
+            onReveal: model.revealCurrentInFinder,
+            onCopyPath: model.copyCurrentPath,
+            onOpen: model.showOpenPanel,
+            zoomState: model.zoomState,
+            zoomInMenu: zoomInMenu,
+            onZoom: { model.zoom($0) }
+        )
+    }
+
+    /// 中间一组：全部 / 图片 / 视频
+    private func centerGroup(slim: Bool) -> some View {
+        HStack(spacing: TopBarTier.groupSpacing) {
+            FilterControl(selection: model.filter, counts: model.counts, compact: slim) { model.setFilter($0) }
+        }
+    }
+
+    /// 隐藏的测量视图：量出各控件每种样子的宽度（文字随语言变化），供 TopBarTier 选档
+    private var topBarMeasurer: some View {
+        let sample = model.zoomState ?? ZoomState(percent: 100, isFit: true, canZoomIn: true, canZoomOut: false)
+        let total = max(model.items.count, 1)
+        return ZStack {
+            FilterControl(selection: model.filter, counts: model.counts, compact: false) { _ in }
+                .fixedSize().measure { barWidths.segFull = $0 }
+            FilterControl(selection: model.filter, counts: model.counts, compact: true) { _ in }
+                .fixedSize().measure { barWidths.segSlim = $0 }
+            ZoomControl(state: sample, percentOnly: false) { _ in }
+                .fixedSize().measure { barWidths.zoomFull = $0 }
+            ZoomControl(state: sample, percentOnly: true) { _ in }
+                .fixedSize().measure { barWidths.zoomPercent = $0 }
+            // 序号按最宽的情况量（带“· ★4”），切换缩略图栏时顶部栏不跳
+            CounterPill(index: total - 1, total: total, rating: 4)
+                .fixedSize().measure { barWidths.counter = $0 }
+            toolGroup(zoomInMenu: false)
+                .fixedSize().measure { barWidths.tools = $0 }
+        }
+        .opacity(0)
+        .frame(width: 0, height: 0, alignment: .topLeading)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 
     // MARK: - 图片区里的控件：箭头、播放按钮、视频控制条、缩略图栏
@@ -237,15 +307,6 @@ struct RootView: View {
                     .allowsHitTesting(bottomVisible)
 
                 starBar(layout)
-
-                if let percent = model.zoomPercent {
-                    ZoomPill(percent: percent)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                        .padding(.leading, 32)
-                        .padding(.bottom, layout.fullScreen ? 24 : bottomInset + 8)
-                        .allowsHitTesting(false)
-                        .opacity(model.chromeVisible || layout.fullScreen ? 1 : 0)
-                }
             }
             .frame(width: size.width, height: size.height, alignment: .topLeading)
         }
@@ -671,5 +732,12 @@ enum WindowStyler {
             let y = (titlebar.frame.height - size.height) / 2
             if button.frame.origin != NSPoint(x: x, y: y) { button.setFrameOrigin(NSPoint(x: x, y: y)) }
         }
+    }
+}
+
+extension View {
+    /// 量出视图的宽度（顶部栏收缩用）
+    func measure(_ report: @escaping (CGFloat) -> Void) -> some View {
+        onGeometryChange(for: CGFloat.self) { $0.size.width } action: { report($0) }
     }
 }

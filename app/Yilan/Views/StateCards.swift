@@ -154,18 +154,3 @@ struct RawDecodingChip: View {
     }
 }
 
-/// 缩放比例胶囊（设计稿“放大 200%”画板左下角）
-struct ZoomPill: View {
-    let percent: Int
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "plus.magnifyingglass").font(.system(size: 13, weight: .medium))
-            Text(verbatim: (Double(percent) / 100).formatted(.percent.precision(.fractionLength(0)))).font(Theme.mono(12))
-        }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 12)
-        .frame(height: 30)
-        .regularGlass(Capsule())
-    }
-}

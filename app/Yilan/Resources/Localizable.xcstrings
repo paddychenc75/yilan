@@ -1823,6 +1823,16 @@
         }
       }
     },
+    "放大（⌘+）" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom In (⌘+)"
+          }
+        }
+      }
+    },
     "数字按大小排序：img2 在 img10 前面" : {
       "localizations" : {
         "en" : {
@@ -1833,12 +1843,12 @@
         }
       }
     },
-    "数字键 1–5 现在用来评星，0 清除星级。0 和 1 不再用来缩放：按 Z 在适应窗口和实际大小之间切换，⌘0 实际大小，⌘9 适应窗口。" : {
+    "数字键 [1]–[5] 现在用来评星，[0] 清除星级。[0] 和 [1] 不再用来缩放：按 [Z] 在适应窗口和实际大小之间切换，[⌘0] 实际大小，[⌘9] 适应窗口。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Number keys 1–5 now set star ratings, and 0 clears the rating. 0 and 1 no longer zoom: press Z to switch between Zoom to Fit and Actual Size, ⌘0 for Actual Size, ⌘9 for Zoom to Fit."
+            "value" : "Number keys [1]–[5] now set star ratings, and [0] clears the rating. [0] and [1] no longer zoom: press [Z] to switch between Zoom to Fit and Actual Size, [⌘0] for Actual Size, [⌘9] for Zoom to Fit."
           }
         }
       }
@@ -2614,12 +2624,42 @@
         }
       }
     },
+    "缩小（⌘−）" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom Out (⌘−)"
+          }
+        }
+      }
+    },
     "缩放" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zoom"
+          }
+        }
+      }
+    },
+    "缩放 · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom · %@"
+          }
+        }
+      }
+    },
+    "缩放比例" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom Level"
           }
         }
       }

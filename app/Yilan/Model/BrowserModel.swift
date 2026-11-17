@@ -5,9 +5,20 @@ import UniformTypeIdentifiers
 
 /// 缩放指令：界面（菜单、快捷键）发给大图区
 struct ZoomCommand: Equatable {
-    enum Action: Equatable { case fit, actualSize, zoomIn, zoomOut, toggle }
+    enum Action: Equatable { case fit, actualSize, percent200, zoomIn, zoomOut, toggle }
     let action: Action
     let serial: Int
+}
+
+/// 大图区报告的缩放状态（顶部缩放控件用）
+struct ZoomState: Equatable {
+    /// 实际比例（100 = 1 像素对应 1 点），适应窗口时也有值
+    var percent: Int
+    var isFit: Bool
+    /// 还能放大（没到 3200%）
+    var canZoomIn: Bool
+    /// 还能缩小（不是适应窗口）
+    var canZoomOut: Bool
 }
 
 /// 顶部提示条：切换类型、删除、文件夹变化等
@@ -78,8 +89,8 @@ final class BrowserModel {
     var stripVisible = true
     private(set) var chromeVisible = true
     private(set) var zoomCommand: ZoomCommand?
-    /// 当前缩放比例（100 = 1 像素对应 1 点）；适应窗口时为 nil
-    var zoomPercent: Int?
+    /// 当前缩放状态；没有图片时为 nil
+    var zoomState: ZoomState?
     private(set) var toast: Toast?
     /// 当前文件的显示旋转（顺时针 90° 的倍数，只影响显示，不改文件）；切换文件后复位
     private(set) var rotation = 0

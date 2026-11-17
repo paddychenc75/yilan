@@ -51,6 +51,14 @@ enum ShotHooks {
     static let stripHidden = false
     #endif
 
+    /// 调试顶部栏收缩：环境变量 YILAN_LOG_TOPBAR=1 时把宽度和选中的档位打到标准输出
+    static func logTopBar(width: CGFloat, widths: TopBarWidths, tier: TopBarTier) {
+        #if DEBUG
+        guard ProcessInfo.processInfo.environment["YILAN_LOG_TOPBAR"] != nil else { return }
+        print("topbar w=\(width) \(widths) -> \(tier)")
+        #endif
+    }
+
     /// 截图时不让控件自动隐藏
     static var keepsChrome: Bool { hoverFraction != nil || openInfo || deleteState != nil || showStars }
     static var anyRatingShot: Bool { rating != nil || showStars || hint != nil || stripHidden }

@@ -18,7 +18,7 @@ final class ImageStageView: NSView {
     }
 
     var onNavigate: ((Int) -> Void)?
-    var onZoomChanged: ((Int?) -> Void)?
+    var onZoomChanged: ((ZoomState?) -> Void)?
     var onNeedsFullResolution: (() -> Void)?
     /// 所在屏幕的长边物理像素变了（换了屏幕、缩放比例变了），参数是新的像素数
     var onDisplayChanged: ((Int) -> Void)?
@@ -51,7 +51,7 @@ final class ImageStageView: NSView {
     private var scale: CGFloat?
     /// 放大时图片中心在视图里的位置
     private var zoomCenter: CGPoint = .zero
-    private var reportedZoom: Int?
+    private var reportedZoom: ZoomState?
 
     // 滚轮切换
     private var scrollAccumulator: CGFloat = 0
@@ -144,6 +144,10 @@ final class ImageStageView: NSView {
         let old = content
         guard old?.identity != new?.identity || old?.url != new?.url else { return }
         content = new
+        if new == nil, reportedZoom != nil {
+            reportedZoom = nil
+            onZoomChanged?(nil)
+        }
         let sameFile = old?.url == new?.url
         if !sameFile { scale = nil }
 
@@ -283,10 +287,12 @@ final class ImageStageView: NSView {
         imageLayer.contentsScale = backingScale
         CATransaction.commit()
 
-        let percent: Int? = isFit ? nil : Int((s * 100).rounded())
-        if percent != reportedZoom {
-            reportedZoom = percent
-            onZoomChanged?(percent)
+        // 顶部缩放控件：适应窗口时也显示实际比例（spec E1-02）；最小是适应窗口，最大 3200%（PD-02）
+        let state = ZoomState(percent: max(1, Int((s * 100).rounded())), isFit: isFit,
+                              canZoomIn: s < maxScale * 0.999, canZoomOut: !isFit)
+        if state != reportedZoom {
+            reportedZoom = state
+            onZoomChanged?(state)
         }
         // 显示尺寸超过了解码尺寸，需要原始分辨率
         let shownPixels = unrotated.width * backingScale
@@ -320,6 +326,7 @@ final class ImageStageView: NSView {
         switch action {
         case .fit: zoom(to: 0, around: center, animated: true)
         case .actualSize: zoom(to: 1, around: center, animated: true)
+        case .percent200: zoom(to: 2, around: center, animated: true)
         case .zoomIn: zoom(to: currentScale * 1.25, around: center, animated: true)
         case .zoomOut: zoom(to: currentScale / 1.25, around: center, animated: true)
         case .toggle: toggleZoom(at: center)
@@ -471,7 +478,7 @@ struct ImageStage: NSViewRepresentable {
     var rotation = 0
     var videoLayer: CALayer?
     let onNavigate: (Int) -> Void
-    let onZoomChanged: (Int?) -> Void
+    let onZoomChanged: (ZoomState?) -> Void
     let onNeedsFullResolution: () -> Void
     var onDisplayChanged: (Int) -> Void = { _ in }
 
