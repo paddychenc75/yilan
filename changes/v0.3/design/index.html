@@ -479,6 +479,13 @@ html,body{margin:0;background:var(--canvas);color:var(--t1);font-family:var(--sf
 .devn .g2 b{color:var(--label-2);font-weight:600}
 .devn code{font:500 11.5px var(--mono);color:#fff;background:#1d1e22;border-radius:5px;padding:1px 6px}
 .devn .sw2{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:4px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+
+/* 方案一：信息行里的星（缩略图栏信息行，居中，16pt） */
+.mstars{display:flex;gap:3px;align-items:center;height:16px;white-space:nowrap}
+.mstars .st{width:16px;height:16px;stroke-width:1.5}
+.mstars .st:not(.on):not(.hv){stroke:rgba(255,255,255,.34)}
+.mstars.hov .st:not(.on):not(.hv){stroke:rgba(255,255,255,.6)}
+.mstars .st.hv{fill:rgba(255,226,160,.45);stroke:var(--brand-sun)}
 </style>
 </head>
 <body>
@@ -712,10 +719,17 @@ const rby=n=>RL.find(x=>x.n===n);
 const FL=RL.filter(x=>x.r>=4);               /* ≥4 星：7 个 */
 const atLeast=n=>RL.filter(x=>x.r>=n).length, unrated=RL.filter(x=>!x.r).length;
 
-/* 画面上的五星控件：深色玻璃胶囊，锚在舞台底边正中，缩略图栏上沿再往上 8（栏隐藏或全屏时距底 32 / 140）。
-   和箭头、缩放控件一起出现（鼠标移动）；按 0–5 时单独闪现约 1 秒 */
+/* 按键评星时闪现的五星胶囊：深色玻璃，锚在舞台底边正中，缩略图栏上沿再往上 8（栏隐藏或全屏时距底 32 / 140）。
+   只在按 0–5 时闪现约 1 秒（设置里可关），鼠标移动时不出现 */
 function stageStars(n,o={}){const bt=o.video?(o.nodock?70:182):(o.nodock?32:140);   /* 视频：贴着控制条上沿再往上 8（控制条距底 128 或 16，高 46） */
   return`<div class="rate g adapt ${o.flash?'flash':''}" style="bottom:${bt}px">${stars5(n,22,{hv:o.hv,pop:o.pop})}</div>`}
+/* 信息行里的星：16pt，间距 3，居中在缩略图栏信息行（栏顶 +9，和文件名同一行）。hover = 悬停到第几颗（预览）；rel = 画板里单独摆放 */
+function rowStars(n,o={}){const hv=o.hover||0;
+  const st=[1,2,3,4,5].map(i=>star(16,!hv&&i<=n,(hv&&i<=hv?'hv':''))).join('');
+  return`<span class="mstars ${hv?'hov':''}" style="${o.rel?'':'position:absolute;left:50%;top:9px;transform:translateX(-50%)'}">${st}</span>`}
+const withR=(r,name='IMG_2034.HEIC',patch={})=>{const base=RL.find(x=>x.n===name),it={...base,...patch,r};return{it,list:RL.map(x=>x===base?it:x)}};
+const hideDims=(h,it)=>h.replace(`<span class="num">${it.w} × ${it.h}</span>`,'');
+const hideSize=(h,it)=>h.replace(`<span class="num">${it.vid?mmss(it.dur)+' · ':''}${it.s} · ${it.fmt}</span>`,'');
 /* 顶部缩放控件：− 百分比 +，高 36，和序号胶囊同高同材质，在顶部栏右组里、序号胶囊左边。
    mode：full = − 38% +；pct = 只留百分比（− / + 进菜单）；none = 整个收进 ⋯ 菜单 */
 const ZFULL=1200, SLIM=1060, ZMENU=920, LEFTAL=760;   /* 窗口宽度阈值：<1200 缩放只留百分比；<1060 筛选组瘦身；<920 缩放收进 ⋯ 菜单；<760 筛选组不再居中 */
@@ -800,36 +814,51 @@ function w3(o){const W=o.w||1280,compact=o.compact??W<900,T=tiers(W),st=o.st||ST
   const zm=o.zm||T.zoom;
   const hasZ=o.item&&!o.item.err&&!o.nozoom&&zm!=='none';
   const zcHtml=hasZ?zoomTop(o.pct||38,{mode:zm,...(o.zo||{})}):'';
-  const extra=(o.nofg?'':filterGroup(st,{mode:o.bm||T.btn,slim:T.slim,left:T.left,panel:o.panel}))+(o.chips?chipsBar(st):'')+(o.stars!=null?stageStars(o.stars,{nodock:o.nodock,flash:o.flash,pop:o.pop,video:!!(o.item&&o.item.vid)}):'')+(o.extra||'');
+  const extra=(o.nofg?'':filterGroup(st,{mode:o.bm||T.btn,slim:T.slim,left:T.left,panel:o.panel}))+(o.chips?chipsBar(st):'')+(o.flash&&o.stars!=null?stageStars(o.stars,{nodock:o.nodock,flash:o.flash,pop:o.pop,video:!!(o.item&&o.item.vid)}):'')+(o.extra||'');
   const {st:_s,bm:_bm,panel:_p,chips:_ch,zm:_b,stars:_c,flash:_d,pop:_e,nozoom:_f,nofg:_g,zo:_h,pct:_i,extra:_j,...rest}=o;
-  return win({list:R.list,noseg:1,compact,zcHtml,...rest,extra})}
+  const mm=o.metaMid!==undefined?o.metaMid:(o.item&&!o.item.err&&!o.nodock?rowStars(o.item.r||0):'');
+  return win({list:R.list,noseg:1,compact,zcHtml,...rest,metaMid:mm,extra})}
 
 /* ---- 1.1 ---- */
 const mainRest=w3({item:I34,nonav:1});
-const mainMove=w3({item:I34,stars:4,extra:cursorSVG(760,430)});
+const U0=withR(0);
+const rowUn=w3({item:U0.it,list:U0.list,nonav:1});
+const rowHover=w3({item:I34,nonav:1,metaMid:rowStars(4,{hover:3}),extra:cursorSVG(646,700)});
+const rowClear=w3({item:I34,nonav:1,metaMid:rowStars(4,{hover:4}),extra:`<div class="rtip gt" style="left:50%;bottom:142px;z-index:6">再点一次第 4 颗 = 清除星级</div>`+cursorSVG(666,700)});
 const rateMoment=w3({item:I34,nonav:1,stars:4,flash:1,pop:4});
-const stripHidden=w3({item:I34,nodock:1,stars:4,pillSfx:starSfx(4)});
-const posPortrait=w3({item:rby('IMG_2035.HEIC'),stars:3});
-const posSmall=w3({w:760,h:540,item:I34,stars:4,dw:700});
+const stripHidden=w3({item:I34,nodock:1,nonav:1,pillSfx:starSfx(4)});
+const LONGN='IMG_20261015_184622_HDR.HEIC',LG=withR(4,'IMG_2034.HEIC',{n:LONGN});
+const rowNarrow=hideDims(w3({w:640,h:440,item:LG.it,list:LG.list,dw:576,nonav:1}),LG.it);
+const giveWay=`<div class="board" style="width:1440px;height:360px;padding:30px 36px;flex-direction:column;gap:12px"><img class="bg" src="../../../design/photos/p1043.jpg" alt="">
+ ${[['宽度够：名称 + 尺寸 | 星 | 大小 + 格式（短名称）',h=>h.replace(LONGN,'IMG_2034.HEIC').replace(`<span class="num">${LG.it.w} × ${LG.it.h}</span>`,'<span class="num">5712 × 4284</span>')],['第 1 步：尺寸文字先让位（长名称）',h=>hideDims(h,LG.it)],['第 2 步：再让大小和格式；名称最后才被截断；星始终在、始终居中',h=>hideSize(hideDims(h,LG.it),LG.it)]].map(([l,f])=>`<div class="crow" style="gap:20px"><div style="width:560px;height:104px;position:relative;flex:none">${f(dock(LG.list,LG.list.indexOf(LG.it),1280,{dw:560,style:'left:0;transform:none;bottom:0',metaMid:rowStars(4)}))}</div><div style="font-size:12.5px;color:rgba(255,255,255,.8)">${l}</div></div>`).join('')}</div>`;
+const posPortrait=w3({item:rby('IMG_2035.HEIC'),nonav:1,stars:3,flash:1});
+const posSmall=w3({w:760,h:540,item:I34,nonav:1,stars:4,flash:1,dw:700});
 const posFs=win({w:1440,h:900,item:I34,list:RL,fs:1,extra:stageStars(4)});
 const posBoard=`<div class="board" style="width:1440px;height:430px;padding:28px 36px;flex-direction:row;gap:20px;align-items:flex-end"><img class="bg" src="../../../design/photos/p1043.jpg" alt="">${scaled(posPortrait,1280,800,.42)}${scaled(posSmall,760,540,.46)}${scaled(posFs,1440,900,.28)}</div>`;
 const IP=h=>h.replace('class="ip gt"','class="ip gt" style="bottom:132px"');
 const infoHeic=w3({item:I31,panel:300,stars:3,extra:IP(infoV3(I31,'photo','文件内部'))});
 const infoRaw=w3({item:rby('DSC_0812.ARW'),panel:300,stars:4,extra:IP(infoV3(rby('DSC_0812.ARW'),'photo','DSC_0812.xmp'))});
-const rateStates=`<div class="board" style="width:1440px;height:330px;padding:36px"><img class="bg" src="../../../design/photos/p1043.jpg" alt="">
- <div class="crow" style="gap:48px;align-items:flex-start">
-  <div class="var"><div class="rate g adapt rel">${stars5(0,22)}</div>未评星<br>五颗都是描边</div>
-  <div class="var"><div class="rate g adapt rel">${stars5(3,22,{hv:4})}</div>评了 3 星，鼠标移到第 4 颗<br>预览：第 4 颗半透明填充</div>
-  <div class="var"><div class="rate g adapt rel flash">${stars5(4,22,{pop:4})}</div>刚评 4 星<br>最后一颗放大 130% 并发光，约 1 秒后淡出</div>
-  <div class="var"><div class="rate g adapt rel">${stars5(5,22)}</div>5 星</div>
-  <div class="var"><div class="rate g adapt rel" style="opacity:.4">${stars5(0,22)}</div>文件不可写 / 无法评星<br>整条 40% 不透明，点击弹出提示</div>
+const dk=(inner,w=130)=>`<div class="g adapt" style="position:relative;width:${w}px;height:34px;border-radius:12px;display:grid;place-items:center">${inner}</div>`;
+const hitBox=`<span style="position:relative;display:inline-block;height:16px">${rowStars(4,{rel:1})}<span style="position:absolute;left:0;top:-4px;width:95px;height:24px;border:1px dashed #ff2d92;pointer-events:none;background:repeating-linear-gradient(90deg,transparent 0 18px,rgba(255,45,146,.7) 18px 19px)"></span></span>`;
+const rateStates=`<div class="board" style="width:1440px;height:380px;padding:30px 36px"><img class="bg" src="../../../design/photos/p1043.jpg" alt="">
+ <div class="cl" style="width:auto;margin-bottom:-12px">信息行里的星（16pt，放在缩略图栏信息行中间）</div>
+ <div class="crow" style="gap:36px;align-items:flex-start">
+  <div class="var">${dk(rowStars(0,{rel:1}))}未评星<br>淡空心星，描边 34%</div>
+  <div class="var">${dk(rowStars(4,{rel:1}))}已评 4 星<br>亮星 #FFE2A0，其余仍是淡空心</div>
+  <div class="var">${dk(rowStars(4,{rel:1,hover:3}))}悬停第 3 颗<br>1–3 颗预览填充，其余描边提亮到 60%</div>
+  <div class="var">${dk(rowStars(4,{rel:1,hover:4}))}悬停当前星（第 4 颗）<br>预览不变；点击 = 清除星级</div>
+  <div class="var">${dk(hitBox)}点击热区<br>每颗 19 × 24（粉色虚线，设计标注）</div>
+  <div class="var"><div class="g adapt" style="position:relative;width:130px;height:34px;border-radius:12px;display:grid;place-items:center;opacity:.4">${rowStars(0,{rel:1})}</div>不可写 / 无法评星<br>整行 40% 不透明，点击弹出提示</div>
  </div>
- <div class="crow" style="gap:48px;align-items:flex-start;margin-top:6px">
-  <div class="var"><div class="rate g adapt rel">${stars5(3,22)}</div>点击当前的第 3 颗 → 清除星级<br>（和按 0 一样）</div>
-  <div class="var"><div class="toast g adapt" style="position:relative;left:auto;transform:none">${ic('star')}已清除星级</div>清除时才有文字提示，约 1.5 秒后淡出</div>
+ <div class="cl" style="width:auto;margin:6px 0 -12px">按 0–5 的闪现（画面底部居中的胶囊，约 1 秒；设置里可关）</div>
+ <div class="crow" style="gap:48px;align-items:flex-start">
+  <div class="var"><div class="rate g adapt rel flash">${stars5(4,22,{pop:4})}</div>刚评 4 星<br>最后一颗放大 130% 并发光，约 1 秒后淡出</div>
+  <div class="var"><div class="toast g adapt" style="position:relative;left:auto;transform:none">${ic('star')}已清除星级</div>按 0 清除时才有文字提示，约 1.5 秒</div>
  </div></div>`;
-const contrast=`<div class="cmp" style="gap:24px">${[['p49','亮色画面（白色建筑）'],['p1016','中间调（岩石）'],['p1019','暗色画面']].map(([f,n])=>`<div style="gap:8px"><div style="position:relative;width:464px;height:200px;border-radius:14px;overflow:hidden"><img src="../../../design/photos/${f}.jpg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"><div class="rate g adapt" style="bottom:14px">${stars5(3,22)}</div><div style="position:absolute;left:12px;top:12px"><div class="th rt" style="width:76px;height:52px;opacity:1"><img src="../../../design/photos/t/${f}.jpg">${ratingBadge(4)}</div></div></div><span style="font-size:12px;color:var(--label)">${n}</span></div>`).join('')}</div>`;
-/* 缩略图角标可读性：左侧窗口里的缩略图栏，选中、未选中、被栏边缘渐隐遮住的 */
+const BR=n=>withR(n,'IMG_2051.JPG'),DK=n=>withR(n,'harbor_night.png');
+const rdim=(o,r)=>{const x=o(r);return crop(w3({item:x.it,list:x.list,nonav:1}),310,668,660,132)};
+const contrast=`<div class="board" style="width:1440px;height:400px;padding:28px 36px;flex-direction:row;gap:24px 28px;flex-wrap:wrap;align-content:flex-start"><img class="bg" src="../../../design/photos/p1043.jpg" alt="">
+ ${[['亮色照片 · 未评星',BR,0],['亮色照片 · 已评 4 星',BR,4],['暗色照片 · 未评星',DK,0],['暗色照片 · 已评 4 星',DK,4]].map(([l,o,r])=>`<div style="display:flex;flex-direction:column;gap:6px"><span style="font:600 12px var(--sf);color:rgba(255,255,255,.75)">${l}</span>${rdim(o,r)}</div>`).join('')}</div>`;
 const badgeBoard=`<div class="board" style="width:1440px;height:250px;padding:36px"><img class="bg" src="../../../design/photos/p1043.jpg" alt="">
  <div class="crow" style="gap:40px;align-items:flex-start"><div class="var"><div class="rel" style="width:700px;height:96px">${dock(RL,8,1200,{dw:700,style:'bottom:0'})}</div>栏两端 28 点是渐隐区：没完全露出的缩略图不画角标</div>
  <div class="var"><div style="display:flex;gap:10px;align-items:center"><div class="th rt" style="width:76px;height:52px;opacity:1"><img src="../../../design/photos/t/p1016.jpg">${ratingBadge(4)}</div><div class="th rt on" style="width:76px;height:52px;transform:none"><img src="../../../design/photos/t/p1016.jpg">${ratingBadge(4)}</div></div>未选中 / 选中：亮黄星 + 白色数字<br>黑底 78%，高 16 点</div></div></div>`;
@@ -884,10 +913,10 @@ const noticeKeys=w3({item:I34,stars:4,extra:`<div class="hint gt" style="top:66p
 function settingsBrowse3(){let h=settings('browse');
   const row=(l,c,s='',ann='')=>`<div class="row" ${ann?`data-ann="${ann}"`:''}><div class="lb">${l}${s?`<small>${s}</small>`:''}</div>${c}</div>`;
   const rad=(on,l,s)=>`<div class="row" style="padding:10px 14px"><div class="rd ${on?'on':''}"></div><div class="lb">${l}<small>${s}</small></div></div>`;
-  const add=`<div class="grp">${row('打星后自动跳到下一张','<div class="tg"><i></i></div>','默认关闭。打开后，按 1–5 或 0 评星会立刻显示下一张','v0.3 新增')}</div>
+  const add=`<div class="grp">${row('评星时在画面上闪现星级','<div class="tg on"><i></i></div>','默认打开。按 0–5 评星后，画面底部居中闪现约 1 秒五星；关掉后画面上不出现任何东西，反馈只在缩略图栏信息行里','v0.3 新增')}${row('打星后自动跳到下一张','<div class="tg"><i></i></div>','默认关闭。打开后，按 1–5 或 0 评星会立刻显示下一张','v0.3 新增')}</div>
   <div style="display:flex;flex-direction:column;gap:6px"><div class="mhead" style="padding:0 4px" data-ann="v0.3 新增">星级保存到哪里</div><div class="grp">${rad(1,'写入文件内部（推荐，其他软件可读）','JPEG、PNG、HEIC 等直接写进文件的元数据，预览、Lightroom 等都能读到')}${rad(0,'一律使用旁边的 .xmp 小文件','不改动图片本身；换到别的软件时要连同 .xmp 一起带走')}</div><div class="mrow">RAW（ARW、CR3、NEF 等）不能写入文件内部，始终使用旁边的 .xmp。</div></div>`;
   const key='<div class="grp"><div class="row"><div class="lb">自动隐藏控件';
-  return h.replace(key,add+key).replace('height:700px','height:950px')}
+  return h.replace(key,add+key).replace('height:700px','height:1010px')}
 function settingsKeys3(){let h=settings('keys');
   const R='<div class="row" style="min-height:31px;padding:4px 14px">';
   const ann=(label,a)=>{h=h.replace(R+'<div class="lb">'+label,'<div class="row" data-ann="'+a+'" style="min-height:31px;padding:4px 14px"><div class="lb">'+label)};
@@ -962,15 +991,14 @@ function settingsGeneral3(){let h=settings('general');
 /* ---- 视频文件上的五星：贴着视频控制条上沿 ---- */
 const bigplay=`<div class="bigplay g" style="left:601px;top:298px">${ic('play')}</div>`;
 const vidRest=w3({item:IV,nonav:1,extra:bigplay+vbar(IV,12,false)});
-const vidMove=w3({item:IV,stars:4,extra:bigplay+vbar(IV,12,false)+cursorSVG(700,480)});
 const vidFlash=w3({item:IV,nonav:1,stars:4,flash:1,pop:4,extra:vbar(IV,27,true)});
 const vidFiltered=w3({item:IV,st:STV,stars:4,extra:bigplay+vbar(IV,12,false)});
 const ruleCrop=(html,capB,note)=>{const y0=520,top=800-y0-capB;   /* 胶囊底边在局部图里的 y；窗口底在 y = 280 */
   return `<div style="position:relative;flex:none">${crop(html,290,y0,700,280)}
    <div class="rl v" style="left:620px;top:${top}px;height:${capB}px"></div><div class="rl h" style="left:600px;width:40px;top:${top}px"></div><div class="rlb" style="left:524px;top:${top+capB/2-9}px">${note}</div></div>`};
 const ruleBoard=`<div class="board" style="width:1440px;height:380px;padding:32px 36px;flex-direction:row;gap:40px"><img class="bg" src="../../../design/photos/p1043.jpg" alt="">
- <div style="display:flex;flex-direction:column;gap:8px"><span style="font:600 12px var(--sf);color:rgba(255,255,255,.7)">图片：胶囊底边距窗口底 140 = 缩略图栏上沿 132 + 8</span>${ruleCrop(mainMove,140,'距底 140')}</div>
- <div style="display:flex;flex-direction:column;gap:8px"><span style="font:600 12px var(--sf);color:rgba(255,255,255,.7)">视频：胶囊底边距窗口底 182 = 控制条底 128 + 控制条高 46 + 8</span>${ruleCrop(vidMove,182,'距底 182')}</div></div>`;
+ <div style="display:flex;flex-direction:column;gap:8px"><span style="font:600 12px var(--sf);color:rgba(255,255,255,.7)">图片闪现：胶囊底边距窗口底 140 = 缩略图栏上沿 132 + 8</span>${ruleCrop(rateMoment,140,'距底 140')}</div>
+ <div style="display:flex;flex-direction:column;gap:8px"><span style="font:600 12px var(--sf);color:rgba(255,255,255,.7)">视频闪现：胶囊底边距窗口底 182 = 控制条底 128 + 控制条高 46 + 8</span>${ruleCrop(vidFlash,182,'距底 182')}</div></div>`;
 const devNotes=`<div class="devn">
  <div><h4>给开发的说明 · 这一页集中列出本版设计里所有要照着做的数字</h4><div class="g2" style="color:var(--label)"><b>怎么读</b><span>长度单位都是点（pt）。“已定方案”是要实现的，“未采用”只是对照，不要实现。颜色用 #RRGGBB / 不透明度。未列出的尺寸沿用 yilan-design.html（v1.0）里的值。</span></div></div>
  <div><h4>顶部栏：按窗口宽度收缩（≥ 阈值用左边的状态，< 阈值进入下一步）</h4><div class="g2">
@@ -986,14 +1014,23 @@ const devNotes=`<div class="devn">
   <b>缩放控件</b><span>−/+ 按钮 30 × 28；百分比最小宽 62（只留百分比时 58）；点百分比的菜单向下展开、右对齐，距控件 6，最小宽 196；只留百分比时菜单多“放大 ⌘+ / 缩小 ⌘−”</span>
   <b>筛选面板</b><span>宽 <code>336</code>，圆角 22，内边距 14 / 16，厚玻璃；距按钮下沿 8，左缘和按钮左缘对齐；格式胶囊高 26、间距 6；星级行的星 21，行高 28；图片格式和视频格式之间换行</span>
  </div></div>
- <div><h4>五星控件（画面上）</h4><div class="g2">
+ <div><h4>评星控件：缩略图栏信息行里的星（已定方案）</h4><div class="g2">
+  <b>尺寸和间距</b><span>星 <code>16</code> × 16（图标 24 网格，描边 1.5 / 24），星间距 <code>3</code>，整行宽 <code>92</code>；整行水平居中在缩略图栏里（栏宽 = min(窗口宽 − 64, 900)），垂直和文件名同一行：栏顶 + <code>9</code>，行高 16</span>
+  <b>点击热区</b><span>每颗 <code>19 × 24</code>（宽 = 星 16 + 间距 3，高 = 行高 16 上下各多 4），相邻热区不留缝；点第 N 颗 = N 星；点当前星级对应的那一颗 = 清除；点比当前低的星 = 降到那一颗</span>
+  <b>未评星</b><span>五颗空心星：描边 <code>rgba(255,255,255,.34)</code>，无填充</span>
+  <b>已评星</b><span>亮星：填充和描边都是 <code>#FFE2A0</code>（品牌 sun）；其余的星仍是 .34 描边</span>
+  <b>悬停</b><span>鼠标进入整行：没亮的星描边提亮到 <code>.60</code>；指到第 N 颗：第 1…N 颗预览 = 填充 <code>rgba(255,226,160,.45)</code> + <code>#FFE2A0</code> 描边（不论当前星级）；指到当前星级对应的那颗时出现提示“再点一次 = 清除星级”</span>
+  <b>响应</b><span>点击或按键后，信息行和缩略图角标 <code>0.1</code> 秒内更新；不可写时整行 40% 不透明，点击弹出“无法保存星级”提示</span>
+  <b>让位顺序（窄窗口）</b><span>信息行三段：左（名称 + 尺寸）、中（星）、右（大小 · 格式）。星永远在，永远居中；文字和星之间至少留 <code>14</code>。不够放时：① 先隐藏尺寸文字（“5712 × 4284”）；② 再隐藏右边的“大小 · 格式”；③ 最后文件名用省略号截断（至少保留 6 个字符）</span>
+  <b>栏隐藏 / 全屏</b><span>缩略图栏隐藏时没有信息行，序号显示“9 / 20 · ★4”（星 11，亮黄；未评星只显示“9 / 20”），评星靠键盘；全屏时鼠标移到底部、栏滑出，信息行里才有星。鼠标移动时照片上不出现任何和评星有关的东西</span>
+  <b>视频文件</b><span>信息行位置不变（在控制条下面），右段是“时长 · 大小 · 格式”；控制条和信息行不叠放</span>
+ </div></div>
+ <div><h4>按键评星的闪现胶囊（画面上，只在按 0–5 的那 1 秒出现）</h4><div class="g2">
+  <b>触发和开关</b><span>按 <code>0</code>–<code>5</code> 时出现；方向键切换照片、鼠标移动都不出现。设置 › 浏览：“评星时在画面上闪现星级”，默认<b style="color:#fff">开</b>；关掉后画面上不出现胶囊，反馈只在信息行里</span>
   <b>尺寸</b><span>胶囊高 <code>38</code>，圆角 19，左右内边距 14；星 <code>22</code> × 22，星间距 4（宽约 154）；深色玻璃，边框 1pt rgba(255,255,255,.16)，背景渐变 rgba(44,44,50,.62) → rgba(28,28,32,.68)</span>
   <b>位置（水平）</b><span>窗口 / 舞台水平居中，不随照片走（竖图、小窗口、放大后都一样）</span>
   <b>位置（垂直）</b><span>底边距窗口底：图片且缩略图栏显示 <code>140</code>（= 栏上沿 132 + 8）；栏隐藏 <code>32</code>；<b style="color:#fff">视频且栏显示 <code>182</code>（= 控制条底 128 + 控制条高 46 + 8）</b>；视频且栏隐藏 <code>70</code>（= 16 + 46 + 8）；全屏同图片的 140。公式：胶囊底边 = 下面最近的控件上沿 + 8</span>
-  <b>出现和消失</b><span>和左右箭头同一时机：鼠标一动出现，静止后（沿用箭头的现有时长）一起淡出；方向键切换照片时不出现；鼠标移到视频控制条上时淡出，避免挡住进度条的时间气泡</span>
-  <b>按 0–5 闪现</b><span>单独出现约 <code>1</code> 秒（不带出箭头、缩放控件）；第 N 颗放大 <code>130%</code>，0.15 秒弹出、0.6 秒回落；发光：外发光 0 0 26 rgba(255,226,160,.26)，边框改为 1pt rgba(255,226,160,.6)；清除星级时显示文字提示“已清除星级”约 1.5 秒</span>
-  <b>点击</b><span>点第 N 颗 = N 星；点当前已亮的最后一颗 = 清除；悬停预览：高于当前星级的星填充 rgba(255,226,160,.42)</span>
-  <b>序号里的星级</b><span>缩略图栏隐藏或全屏时，序号显示“9 / 20 · ★4”，星 11，亮黄；未评星只显示“9 / 20”</span>
+  <b>时长和动画</b><span>总共约 <code>1</code> 秒：0.15 秒弹出，第 N 颗放大 <code>130%</code> 并发光（外发光 0 0 26 rgba(255,226,160,.26)，边框改为 1pt rgba(255,226,160,.6)），0.6 秒回落后淡出；鼠标悬停视频进度条时不闪现；按 0 清除时显示文字提示“已清除星级”约 1.5 秒</span>
  </div></div>
  <div><h4>缩略图角标和信息面板</h4><div class="g2">
   <b>缩略图角标</b><span>缩略图 76 × 52；角标在左上角，距边 4；高 <code>16</code>，圆角 5，内边距 左 4 右 6；星 <code>10</code>、数字 SF Pro Text 10.5 Bold 白色，间距 3；底 rgba(0,0,0,.78)；只有评了星的缩略图才画</span>
@@ -1001,7 +1038,7 @@ const devNotes=`<div class="devn">
   <b>信息面板评星行</b><span>在面板最上面一组；星 16，间距 3；右边写“N 星 / 未评星”；RAW 多一行“保存位置 xxx.xmp”</span>
  </div></div>
  <div><h4>颜色</h4><div class="g2">
-  <b>星和角标</b><span><i class="sw2" style="background:#ffe2a0"></i>亮星 #FFE2A0（品牌 sun）· 描边星 rgba(255,255,255,.62)，线宽 1.7 / 24 · 角标底 <i class="sw2" style="background:#000;opacity:.78"></i>rgba(0,0,0,.78)，数字 #FFFFFF。星只放在深色玻璃或深色角标上，不直接压在照片上</span>
+  <b>星和角标</b><span><i class="sw2" style="background:#ffe2a0"></i>亮星 #FFE2A0（品牌 sun）· 信息行里没亮的星 rgba(255,255,255,.34) 描边（悬停 .60），线宽 1.5 / 24；闪现胶囊里没亮的星 rgba(255,255,255,.62) 描边，线宽 1.7 / 24 · 角标底 <i class="sw2" style="background:#000;opacity:.78"></i>rgba(0,0,0,.78)，数字 #FFFFFF。星只放在深色玻璃或深色角标上，不直接压在照片上</span>
   <b>控件强调色</b><span>筛选按钮生效、格式胶囊选中、主按钮（前往下载 / 查看更新说明）、更新小点：用系统强调色，不用品牌色</span>
   <b>品牌色</b><span><i class="sw2" style="background:#3fc4b0"></i>jade #3FC4B0 只用在更新提示的图标上；其余品牌色规则沿用 v1.0</span>
  </div></div>
@@ -1030,50 +1067,47 @@ ${fr('封面','1440 × 810',`<div class="cover"><img src="../../../design/photos
  </div></div>`)}
 ${fr('给开发的说明','1440',devNotes,'')}`);
 
-ch('01','v0.3 评星与筛选','评星（键盘 1–5 / 0，或点画面上的五星）、筛选（星级、格式）、顶部栏缩放控件、快捷键调整、写入失败和 .xmp 提示、导出筛选结果、更新提醒。亮星用品牌 sun #FFE2A0。',`
-<h3 class="sub"><span>1.1</span>评星：画面、缩略图、信息面板</h3>
+ch('01','v0.3 评星与筛选','评星（键盘 1–5 / 0，或点缩略图栏信息行里的星）、筛选（星级、格式）、顶部栏缩放控件、快捷键调整、写入失败和 .xmp 提示、导出筛选结果、更新提醒。亮星用品牌 sun #FFE2A0。',`
+<h3 class="sub"><span>1.1</span>评星：信息行里的星、缩略图角标、信息面板</h3>
 <div class="frames">
- ${fr('主界面 · 静止','1280 × 800',mainRest,'鼠标没动：左右箭头和底部五星隐藏；顶部栏（含缩放控件）一直在；缩略图上有星角标的是已评星的文件')}
- ${fr('主界面 · 鼠标移动','1280 × 800',mainMove,'左右箭头和底部五星一起出现，鼠标静止后一起淡出')}
- ${fr('评星的瞬间 · 按下 4','1280 × 800',rateMoment,'只闪现五星，不带出箭头；第 4 颗放大发光就是反馈，约 1 秒后淡出；缩略图角标同步变成 4')}
- ${fr('缩略图栏隐藏时 · 序号里带星级','1280 × 800',stripHidden,'按 T 隐藏缩略图栏（全屏也一样）：右上角序号后面加 ★ 和星级，不用呼出五星也能看到')}
- ${fr('五星控件的位置 · 竖图、小窗口、全屏','1440 × 430',posBoard,'位置不跟照片走，永远在舞台底边正中、缩略图栏上沿再往上 8')}
+ ${fr('主界面 · 已评星，静止','1280 × 800',mainRest,'评星控件是缩略图栏信息行里居中的五颗星（16pt）：左边文件名和尺寸，右边大小和格式。照片上没有任何和评星有关的东西，鼠标移动也不会出现')}
+ ${fr('信息行 · 未评星','1280 × 800',rowUn,'五颗很淡的空心星（描边白色 34%）：不评星的人几乎看不见，留心就能发现')}
+ ${fr('信息行 · 悬停第 3 颗','1280 × 800',rowHover,'整行描边提亮到 60%，第 1–3 颗预览填充；点击 = 设为 3 星')}
+ ${fr('信息行 · 悬停当前星','1280 × 800',rowClear,'当前是 4 星，指到第 4 颗时出现提示“再点一次 = 清除星级”；点击后恢复成未评星，并显示“已清除星级”')}
+ ${fr('评星的瞬间 · 按下 4（胶囊闪现）','1280 × 800',rateMoment,'按 0–5 时，画面底部居中的胶囊闪现约 1 秒，第 4 颗放大发光；信息行里的星同时更新。设置里可关闭闪现')}
+ ${fr('缩略图栏隐藏时 · 序号里带星级','1280 × 800',stripHidden,'按 T 隐藏缩略图栏（全屏也一样）：信息行不在了，右上角序号后面加 ★ 和星级，只读；评星靠键盘（闪现照常）')}
+ ${fr('信息行 · 窄窗口 640（名称很长）','640 × 440',rowNarrow,'空间不够时，信息行先隐藏尺寸文字；星始终保留并居中')}
+ ${fr('信息行的让位顺序','1440 × 360',giveWay,'① 尺寸文字 → ② 大小和格式 → ③ 名称最后才被截断；星永远不让位')}
+ ${fr('闪现胶囊的位置 · 竖图、小窗口、全屏','1440 × 430',posBoard,'闪现胶囊不跟照片走，永远在舞台底边正中、缩略图栏上沿再往上 8')}
 </div>
 ${legend([
- ['已定方案 · 五星控件位置','深色玻璃胶囊，锚在舞台底边正中、缩略图栏上沿之上 8 点，不贴照片边缘。竖图、小窗口、放大后位置都一样；缩略图栏隐藏时距窗口底 32；全屏时距屏幕底 140，给从底部滑入的缩略图栏留位置。'],
- ['已定方案 · 缩略图角标','左上角黑底小角标“★ 4”（亮黄星 + 白色数字），不和右下角的 RAW / 时长、左下角的“新”冲突。'],
+ ['已定方案 · 评星控件在信息行里','五颗星居中放在缩略图栏的信息行里（和文件名同一行），点击评星。鼠标移动时照片上不出现任何和评星有关的东西，所以从不评星的人只会看到信息行里五颗很淡的空心星。'],
+ ['点击和悬停','点第 N 颗 = N 星；点当前星级对应的那一颗 = 清除；点比当前低的星 = 降到那一颗。悬停时整行描边提亮，第 1…N 颗预览填充；悬停当前星时提示“再点一次 = 清除星级”。点击后 0.1 秒内更新，缩略图角标同步。视频和图片都能评。'],
+ ['按键评星的反馈（已定：闪现 b）','按 0–5 时，画面底部居中的胶囊闪现约 1 秒（0.15 秒弹出、0.6 秒回落），第 N 颗放大 130% 并发光；信息行里的星同时更新。用方向键切换照片时不闪现。设置 › 浏览里有开关“评星时在画面上闪现星级”，默认开；关掉后画面上什么都不出现，反馈只在信息行里。按 0 清除时显示文字提示“已清除星级”约 1.5 秒。'],
+ ['序号里的星级','缩略图栏隐藏或全屏时，右上角序号变成“9 / 20 · ★4”（星为亮黄）；未评星时只显示“9 / 20”。缩略图栏显示时不加，因为信息行和缩略图角标已经显示了。'],
+ ['缩略图栏隐藏和全屏','信息行随缩略图栏一起隐藏，所以不能用鼠标评星，只能用键盘；全屏时鼠标移到底部、缩略图栏滑出，信息行里的星才出现。这是已知的取舍。'],
+ ['缩略图角标（规则）','只有评了星的缩略图才有角标，未评星的文件夹和现在一样干净。有星级的缩略图仍压暗到 66%，但角标不跟着变暗。被栏两端渐隐遮住（没完整露出）的缩略图不画角标；加载失败的缩略图不显示。缩略图栏的环境光色调不变。'],
+ ['颜色','亮星固定 sun #FFE2A0（品牌色），淡空心星是白色 34% 描边。信息行在深色玻璃上；闪现胶囊也是深色玻璃；星星不直接压在照片上；控件按钮仍跟随系统强调色。'],
+ ['打星后自动下一张','设置里可开（默认关）。开启后评星立刻显示下一张；如果闪现开着，胶囊在新照片上闪现一下，让人知道上一张已记录。'],
 ])}
-<h3 class="sub" style="font-size:16px;margin-top:0"><span>视频</span>视频文件上的五星</h3>
+<h3 class="sub" style="font-size:16px;margin-top:0"><span>视频</span>视频文件上的评星</h3>
 <div class="frames">
- ${fr('视频 · 静止','1280 × 800',vidRest,'视频控制条一直在；箭头和五星隐藏，中间是播放按钮（停在第一帧）')}
- ${fr('视频 · 鼠标移动','1280 × 800',vidMove,'箭头出现，五星出现在控制条正上方，和控制条之间留 8；五星不盖控制条，控制条也不盖五星')}
- ${fr('视频 · 播放中按下 4','1280 × 800',vidFlash,'只闪现五星（约 1 秒），视频继续播放，控制条不变')}
- ${fr('视频 · 筛选状态（视频 · ≥4 星）','1280 × 800',vidFiltered,'筛选按钮“筛选 · ≥4 星”，类型是视频，序号“1 / 2”；五星规则不变')}
- ${fr('五星位置 · 图片和视频对比','1440 × 380',ruleBoard,'同一个水平位置，只是垂直方向让开控制条：140 → 182（上移 42）')}
+ ${fr('视频 · 静止','1280 × 800',vidRest,'评星控件仍在缩略图栏信息行里，在视频控制条下面，互不叠放；不再需要给控制条让位的特殊规则；鼠标移动也不出现任何评星控件')}
+ ${fr('视频 · 播放中按下 4','1280 × 800',vidFlash,'闪现胶囊出现在视频控制条正上方，和控制条之间留 8，视频继续播放，约 1 秒后淡出')}
+ ${fr('视频 · 筛选状态（视频 · ≥4 星）','1280 × 800',vidFiltered,'筛选按钮“筛选 · ≥4 星”，类型是视频，序号“1 / 2”；信息行里的星照常')}
+ ${fr('闪现胶囊的位置 · 图片和视频对比','1440 × 380',ruleBoard,'同一个水平位置，视频时垂直方向让开控制条：140 → 182（上移 42）')}
 </div>
 ${legend([
- ['视频上的规则','五星胶囊的底边永远在“它下面最近的控件”上沿再往上 8：图片时下面是缩略图栏（上沿距窗口底 132），所以是 140；视频时下面是视频控制条（底 128、高 46），所以是 182。水平方向不变，仍然居中，用户的视线和鼠标位置只需要往上移一点。缩略图栏隐藏时：图片 32，视频 70（控制条距底 16）。'],
- ['为什么放在控制条上面','控制条宽 580 居中，占满了舞台底部中间；五星和它同一条竖轴，向上挪 42 是最小的改动，用户不用重新找位置。放到控制条两侧会偏离中轴，放进控制条里会让它变得更挤、也更容易误点进度条。'],
- ['不遮挡进度条','五星在控制条上方，控制条在下方，两者之间始终留 8 点，不重叠。鼠标悬停进度条时会出现时间气泡（在进度条上方 16 点），这时五星淡出让位，鼠标离开后回来。播放时按 0–5：只闪现五星，视频不暂停，控制条不动。'],
- ['图片区','视频文件的画面区在控制条上方再让出 16（原有规则：底部让出 190），五星浮在画面下沿上，不改变画面大小。'],
+ ['视频上的闪现','闪现胶囊的底边永远在“它下面最近的控件”上沿再往上 8：图片时下面是缩略图栏（上沿距窗口底 132），所以是 140；视频时下面是视频控制条（底 128、高 46），所以是 182。水平方向仍然居中。缩略图栏隐藏时：图片 32，视频 70（控制条距底 16）。闪现只有约 1 秒，鼠标悬停进度条时不闪现（时间气泡优先）。播放时按 0–5：只闪现胶囊，视频不暂停，控制条不动。'],
+ ['信息行不受控制条影响','控制条在信息行上面（底 128），信息行在缩略图栏里，两者本来就不重叠，所以平时（包括鼠标移动）不再有“胶囊和控制条抢位置”的问题。'],
 ])}
-
 <div class="frames" style="margin-top:8px">
- ${fr('评星控件 · 状态','1440 × 330',rateStates,'悬停预览、刚评分、清除、不可写')}
- ${fr('星的可读性 · 亮、中、暗三种照片','1440 × 260',contrast,'星一律在深色玻璃 / 深色角标上，亮星用 sun #FFE2A0；三种照片上对比度都够')}
+ ${fr('评星控件 · 状态','1440 × 380',rateStates,'信息行里的星：未评星、已评、悬停、清除、热区；以及按键后的闪现和清除提示')}
+ ${fr('信息行里的星 · 亮、暗照片上的可读性','1440 × 400',contrast,'栏的玻璃随照片取色；左列是未评星的淡空心星，右列是已评星；亮、暗照片上都看得清')}
  ${fr('缩略图角标 · 可读性','1440 × 250',badgeBoard,'未选中的缩略图也是亮黄星 + 白色数字；被栏边缘渐隐遮住的缩略图不画角标')}
  ${fr('信息面板 · 评星行（JPEG / HEIC）','1280 × 800',infoHeic,'“评星”在面板最上面，星可以直接点；写在文件内部')}
  ${fr('信息面板 · 评星行（RAW）','1280 × 800',infoRaw,'RAW 的星级存在旁边的 .xmp 里，“保存位置”写出文件名')}
 </div>
-${legend([
- ['打星','键盘 1–5 设置星级，0 清除；点画面上的第 N 颗设置 N 星，点当前已亮的最后一颗清除。视频和图片都能评。信息面板里的星同样可以点。⌘Z 撤销最近一次评星（和撤销删除共用，见 1.6 的编辑菜单）。'],
- ['五星什么时候出现','不常驻。鼠标一动，它和左右箭头一起出现，鼠标静止后一起淡出。按 0–5 评星时只单独闪现约 1 秒（不带出箭头）；用方向键切换照片时不出现。缩放控件在顶部栏里，不跟五星一起出现和消失。'],
- ['反馈','评分后第 N 颗放大 130% 并发光（0.15 秒弹出、0.6 秒回落），不再加文字气泡；缩略图角标同步变化。只有清除星级时才显示一条文字提示“已清除星级”。'],
- ['序号里的星级','缩略图栏隐藏或全屏时，右上角序号变成“9 / 20 · ★4”（星为亮黄）；未评星时只显示“9 / 20”。缩略图栏显示时不加，因为缩略图角标已经显示了。'],
- ['缩略图角标（规则）','只有评了星的缩略图才有角标，未评星的文件夹和现在一样干净。有星级的缩略图仍压暗到 66%，但角标不跟着变暗。被栏两端渐隐遮住（没完整露出）的缩略图不画角标；加载失败的缩略图不显示。缩略图栏的环境光色调不变。'],
- ['颜色','亮星固定 sun #FFE2A0（品牌色），描边星白色 62%。星星只放在深色玻璃或深色角标上，不直接压在照片上；控件按钮仍跟随系统强调色。'],
- ['打星后自动下一张','设置里可开（默认关）。开启后评星立刻显示下一张，五星在新照片上闪现一下，让人知道上一张已记录。'],
-])}
 
 <h3 class="sub"><span>1.2</span>缩放控件（顶部栏）与窄窗口</h3>
 <div class="frames">
@@ -1148,7 +1182,7 @@ ${legend([
 
 <h3 class="sub"><span>1.5</span>设置：浏览、快捷键</h3>
 <div class="frames">
- ${fr('设置 · 浏览（评星）','820 × 950',`<div class="annwrap">${settingsBrowse3()}</div>`,'新增“打星后自动跳到下一张”（默认关）和“星级保存到哪里”。窗口外的粉色标签是设计标注，不属于界面')}
+ ${fr('设置 · 浏览（评星）','820 × 1010',`<div class="annwrap">${settingsBrowse3()}</div>`,'新增“评星时在画面上闪现星级”（默认开）、“打星后自动跳到下一张”（默认关）和“星级保存到哪里”。窗口外的粉色标签是设计标注，不属于界面')}
  ${fr('设置 · 快捷键','820 × 840',`<div class="annwrap">${settingsKeys3()}</div>`,'新增评星、Z 切换；适应窗口 / 实际大小改为 ⌘9 / ⌘0；撤销也覆盖评星。粉色标签是设计标注，不属于界面')}
 </div>
 ${legend([
