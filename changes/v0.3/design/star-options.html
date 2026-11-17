@@ -878,6 +878,7 @@ const cmpTable=`<table class="cmpt"><thead><tr><th></th><th>方案一 <span clas
 const cmpCrops=`<div class="cmp" style="gap:24px">${[['方案一 · 星在信息行（已评 4 星）',w3({item:A.it,list:A.list,nonav:1,metaMid:rowStars(4)})],['方案二 · 指针在触发区内，胶囊出现',w3({item:A.it,list:A.list,stars:4,extra:cursorSVG(640,610)})],['方案三 · 现状：鼠标一动，胶囊出现',o3Move]].map(([l,h])=>`<div style="gap:8px"><span style="font:600 12px var(--sf);color:var(--label-2)">${l}</span>${crop(h,410,520,460,280)}</div>`).join('')}</div>`;
 
 ch('A','五星控件放哪里：三个方案对比','记录：画面上的五星胶囊每次动鼠标都会出现，很多从不评星的用户也要看到，所以重新选了位置。最终采用方案一（星放进缩略图栏信息行），按键评星时胶囊闪现约 1 秒，设置里可关。方案二、三只留一张图作记录。',`
+<div class="howto" style="max-width:1440px"><b>注意</b>v0.3 只给图片评星，视频不能评星；本页是评星控件位置的选择记录，里面出现在视频上的画板只作位置示意，以 index.html 为准。</div>
 ${fr('对比表','1440',cmpTable,'')}
 ${fr('1:1 对比 · 窗口底部中间 460 × 280','1440',cmpCrops,'三个方案同一块区域，不用放大就能看出差别')}
 `);
