@@ -1,3 +1,43 @@
+# 一览 Yilan v0.2.1
+
+## 中文
+
+### 修复
+
+- **信息面板的「位置」看起来是空的**：窗口不够高时面板中间部分会滚动，但下面被截掉的内容没有任何提示，「位置」只剩一个标题。现在内容放不下时底部会渐隐，打开面板时滚动条闪一下，提示还可以往下滚。
+- **视频缩略图是一块灰**：有些视频开头几乎没有细节（比如一整片泥沙），缩小后只是一块灰。现在取视频中间偏前（时长的 40%，最多 6 秒）的一帧，更有代表性。
+- **第二次打开文件夹时视频缩略图没有时长角标**：从磁盘缓存读回缩略图时丢了时长，已修复。
+
+升级后缩略图缓存会自动重新生成。
+
+### 系统要求和首次打开
+
+和 v0.2.0 相同：macOS 26（Tahoe）或更高版本；只做了 ad-hoc 签名，第一次打开需要在「系统设置 › 隐私与安全性」里点「仍要打开」，或执行 `xattr -dr com.apple.quarantine /Applications/Yilan.app`。
+
+校验和：`shasum -a 256 Yilan-0.2.1.zip`，对照文末的值。
+
+---
+
+## English
+
+### Fixes
+
+- **The Location section of the info panel looked empty**: when the window is not tall enough the middle of the panel scrolls, but nothing hinted that content was cut off, so Location showed only its title. The bottom now fades out when there is more below, and the scroll bar flashes when the panel opens.
+- **A video thumbnail was a flat grey block**: some videos open on a nearly featureless frame (for example, a stretch of mud), which shrinks to plain grey. The thumbnail now uses a frame at 40% of the duration (at most 6 seconds in), which is more representative.
+- **Duration badges disappeared the second time a folder was opened**: the duration was lost when reading thumbnails back from the disk cache. Fixed.
+
+Thumbnails are regenerated automatically after the upgrade.
+
+### Requirements and first launch
+
+Same as v0.2.0: macOS 26 (Tahoe) or later; ad-hoc signed only, so on first launch click "Open Anyway" in System Settings › Privacy & Security, or run `xattr -dr com.apple.quarantine /Applications/Yilan.app`.
+
+Verify the download with `shasum -a 256 Yilan-0.2.1.zip` and compare with the value below.
+
+**SHA-256**: `a121388dc5379137162a91aea35f3074bac8a8b3d557fa1c4283ffc68c2ec940`
+
+---
+
 # 一览 Yilan v0.2.0
 
 ## 中文

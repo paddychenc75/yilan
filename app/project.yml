@@ -24,8 +24,8 @@ targets:
       base:
         PRODUCT_NAME: Yilan
         PRODUCT_BUNDLE_IDENTIFIER: com.yilan.viewer
-        MARKETING_VERSION: "0.2.0"
-        CURRENT_PROJECT_VERSION: "2"
+        MARKETING_VERSION: "0.2.1"
+        CURRENT_PROJECT_VERSION: "3"
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Yilan/Info.plist
         # TODO(沙盒)：第一版本地直接构建，暂时关闭 App Sandbox。
