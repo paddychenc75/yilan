@@ -1,0 +1,925 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1600">
+<title>一览 设计稿 v0.3</title>
+<style>
+/* 画布：像 Figma 一样的深灰画布，所有画板按“章节 → 画板”排列，画板尺寸固定，方便导入 Figma 后直接成为 Frame */
+:root{
+  --canvas:#18191c; --canvas-2:#222327; --label:#9a9ca3; --label-2:#d7d9de;
+  --stage:#050506;
+  --t1:#ffffff; --t2:rgba(255,255,255,.68); --t3:rgba(255,255,255,.44); --t4:rgba(255,255,255,.18);
+  /* 控件强调色跟随系统强调色（默认蓝色），不使用品牌色——看图界面保持中性 */
+  --accent:#0a84ff; --red:#ff453a; --yellow:#ffd60a; --green:#30d158; --orange:#ff9f0a; --purple:#bf5af2;
+  --glass:linear-gradient(180deg,rgba(255,255,255,.20) 0%,rgba(255,255,255,.09) 45%,rgba(255,255,255,.06) 100%);
+  --glass-line:rgba(255,255,255,.17);
+  --thick:linear-gradient(180deg,rgba(58,58,64,.78) 0%,rgba(34,34,38,.82) 100%);
+  /* 品牌色（松石绿）：取自 App 图标（yilan-icon.svg），和 app/Yilan/Views/Theme.swift 的 Theme.Brand 保持一致。
+     只用于没有图片时的环境光、拖入遮罩；不用在开关、滑块、按钮和看图界面上 */
+  --brand-teal:#128a80; --brand-jade:#3fc4b0; --brand-teal-deep:#0e3b3b; --brand-sun:#ffe2a0;
+  --brand-teal-night:#061717; /* brand-teal-deep 每个通道 ×0.4 压暗，拖入遮罩用 */
+  --sf:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro","PingFang SC",sans-serif;
+  --sfd:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro","PingFang SC",sans-serif;
+  --mono:"SF Mono",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--canvas);color:var(--t1);font-family:var(--sf);-webkit-font-smoothing:antialiased}
+.doc{width:1600px;margin:0 auto;padding:64px 80px 160px;display:flex;flex-direction:column;gap:120px}
+.chapter{display:flex;flex-direction:column;gap:40px}
+.chapter>header{display:flex;align-items:baseline;gap:20px;border-bottom:1px solid #2c2e33;padding-bottom:16px}
+.chapter>header b{font:600 15px var(--mono);color:var(--label)}
+.chapter>header h2{margin:0;font:700 34px/1.2 var(--sfd);letter-spacing:-.01em}
+.chapter>header p{margin:0 0 0 auto;color:var(--label);font-size:14px;max-width:560px;text-align:right}
+.frames{display:flex;flex-wrap:wrap;gap:64px 56px;align-items:flex-start}
+.frame{display:flex;flex-direction:column;gap:12px}
+.cap{display:flex;gap:12px;align-items:baseline;font-size:13px;color:var(--label-2)}
+.cap b{font-weight:600}
+.cap span{color:var(--label);font-family:var(--mono);font-size:12px}
+.cap i{font-style:normal;color:var(--label);margin-left:auto}
+.note{font-size:12.5px;color:var(--label);max-width:640px;line-height:1.6;margin:0}
+
+/* ---------- 窗口 ---------- */
+.win{position:relative;overflow:hidden;border-radius:16px;background:var(--stage);flex:none;
+  box-shadow:0 0 0 1px rgba(255,255,255,.12),0 40px 90px rgba(0,0,0,.55),0 10px 30px rgba(0,0,0,.35)}
+.win.fs{border-radius:0;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.amb{position:absolute;inset:-18%;background-size:cover;background-position:center;filter:blur(80px) saturate(1.7) brightness(.5)}
+.vig{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 45%,rgba(0,0,0,0) 40%,rgba(0,0,0,.5) 100%)}
+.photo{position:absolute;border-radius:4px;overflow:hidden;box-shadow:0 18px 60px rgba(0,0,0,.55),0 2px 8px rgba(0,0,0,.4)}
+.photo img{width:100%;height:100%;display:block;object-fit:cover}
+.photo.flat{border-radius:0;box-shadow:none}
+
+.g{background:var(--glass);-webkit-backdrop-filter:blur(30px) saturate(1.8);backdrop-filter:blur(30px) saturate(1.8);
+  border:1px solid rgba(255,255,255,.16);box-shadow:0 8px 28px rgba(0,0,0,.30)}
+.gt{background:var(--thick);-webkit-backdrop-filter:blur(44px) saturate(1.6);backdrop-filter:blur(44px) saturate(1.6);
+  border:1px solid rgba(255,255,255,.11);box-shadow:0 24px 60px rgba(0,0,0,.45),0 4px 14px rgba(0,0,0,.3)}
+
+.btn,.tools,.pill,.badge-ic,.mat .s{position:relative}
+.tb{position:absolute;left:0;right:0;top:0;height:56px;display:flex;align-items:center;padding:0 16px 0 20px;gap:14px}
+.lights{display:flex;gap:8px;flex:none}
+.lights i{width:12px;height:12px;border-radius:50%;background:#ff5f57;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.25)}
+.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+.lights.dim i{background:rgba(255,255,255,.22)}
+.ttl{display:flex;flex-direction:column;gap:1px;min-width:0}
+.ttl b{font:600 13px/16px var(--sf);white-space:nowrap;text-shadow:0 1px 8px rgba(0,0,0,.5)}
+.ttl span{font:400 11px/14px var(--sf);color:var(--t2);white-space:nowrap}
+.tb .sp{flex:1}
+.seg{position:absolute;left:50%;top:10px;transform:translateX(-50%);height:36px;width:max-content;border-radius:18px;padding:3px;display:flex;gap:2px}
+.seg>div{height:28px;border-radius:14px;padding:0 13px;display:flex;align-items:center;gap:6px;font:500 12.5px var(--sf);color:rgba(255,255,255,.82);white-space:nowrap}
+.seg>div svg{width:14px;height:14px;opacity:.85}
+.seg>div em{font-style:normal;font:500 11px var(--mono);color:var(--t3)}
+.seg>div.on{background:rgba(255,255,255,.24);color:#fff;box-shadow:0 1px 6px rgba(0,0,0,.18)}
+.seg>div.on em{color:rgba(255,255,255,.75)}
+.seg>div.off{opacity:.32}
+.seg.ico>div{padding:0 10px}
+.pill{height:36px;border-radius:18px;padding:0 14px;display:flex;align-items:center;font:500 12px var(--mono);white-space:nowrap}
+.tools{height:36px;border-radius:18px;padding:0 3px;display:flex;align-items:center;gap:2px}
+.ib{width:30px;height:30px;border-radius:15px;display:grid;place-items:center;color:#fff}
+.ib svg{width:17px;height:17px}
+.ib.on{background:rgba(255,255,255,.24)}
+.ib.hover{background:rgba(255,255,255,.12)}
+.ib.dis{opacity:.3}
+
+.nav{position:absolute;width:44px;height:44px;border-radius:22px;display:grid;place-items:center;color:#fff}
+.nav svg{width:20px;height:20px}
+
+.dock{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;border-radius:24px;padding:9px 12px 10px;display:flex;flex-direction:column;gap:6px}
+.meta{display:flex;justify-content:space-between;gap:16px;padding:0 4px;font:400 11.5px/16px var(--sf);color:var(--t2);white-space:nowrap}
+.meta b{color:#fff;font-weight:600;margin-right:8px}
+.meta .num{font-family:var(--mono);font-size:11px}
+.strip{overflow:hidden;height:62px;position:relative}
+.strip.fl{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 28px);mask-image:linear-gradient(90deg,transparent 0,#000 28px)}
+.strip.fr{-webkit-mask-image:linear-gradient(270deg,transparent 0,#000 28px);mask-image:linear-gradient(270deg,transparent 0,#000 28px)}
+.strip.fl.fr{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 28px,#000 calc(100% - 28px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 28px,#000 calc(100% - 28px),transparent 100%)}
+.rail{position:absolute;top:5px;left:0;display:flex;gap:6px}
+.th{position:relative;width:76px;height:52px;border-radius:10px;overflow:hidden;flex:none;background:#1c1d21;opacity:.66}
+.th img{width:100%;height:100%;object-fit:cover;display:block}
+.th.on{opacity:1;transform:scale(1.12);box-shadow:0 0 0 2px #fff,0 6px 16px rgba(0,0,0,.5);z-index:2}
+.th.hov{opacity:.95}
+.th.err{display:grid;place-items:center;background:#2a2b30;color:var(--yellow)}
+.th.err svg{width:18px;height:18px}
+.th.load{background:linear-gradient(100deg,#25262b 30%,#34353b 50%,#25262b 70%)}
+.bdg{position:absolute;right:4px;bottom:4px;height:15px;padding:0 4px;border-radius:5px;background:rgba(0,0,0,.58);font:600 9.5px/15px var(--sf);color:#fff;display:flex;align-items:center;gap:2px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.bdg svg{width:8px;height:8px}
+.bdg.l{left:4px;right:auto}
+
+.vbar{position:absolute;left:50%;transform:translateX(-50%);height:46px;border-radius:23px;padding:0 14px 0 7px;display:flex;align-items:center;gap:12px;font:500 11.5px var(--mono);color:#fff}
+.vbar .pb{width:32px;height:32px;border-radius:16px;background:rgba(255,255,255,.2);display:grid;place-items:center}
+.vbar .pb svg{width:14px;height:14px}
+.vbar .ic{width:17px;height:17px;color:var(--t2);flex:none}
+.trk{position:relative;flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.2)}
+.trk .buf{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:rgba(255,255,255,.28)}
+.trk .pl{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:#fff}
+.trk .kn{position:absolute;top:50%;width:13px;height:13px;margin:-6.5px 0 0 -6.5px;border-radius:50%;background:#fff;box-shadow:0 1px 5px rgba(0,0,0,.45)}
+.trk .tip{position:absolute;bottom:16px;transform:translateX(-50%);padding:3px 7px;border-radius:7px;font:500 11px var(--mono);white-space:nowrap}
+.vol{width:56px;height:4px;border-radius:2px;background:rgba(255,255,255,.2);position:relative;flex:none}
+.vol i{position:absolute;left:0;top:0;bottom:0;width:70%;border-radius:2px;background:rgba(255,255,255,.85)}
+.bigplay{position:absolute;width:78px;height:78px;border-radius:39px;display:grid;place-items:center;color:#fff}
+.bigplay svg{width:28px;height:28px;margin-left:4px}
+
+.chip{position:absolute;left:50%;transform:translateX(-50%);height:34px;border-radius:17px;padding:0 14px 0 10px;display:flex;align-items:center;gap:9px;font:500 12px var(--sf);white-space:nowrap}
+.spin{width:15px;height:15px;border-radius:50%;border:2px solid rgba(255,255,255,.22);border-top-color:#fff;border-right-color:#fff}
+.mini{width:54px;height:3px;border-radius:2px;background:rgba(255,255,255,.2);position:relative}
+.mini i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:#fff}
+.chip .num{font-family:var(--mono);color:var(--t2);font-size:11px}
+
+.card{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:26px;padding:30px 32px 26px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.card h3{margin:6px 0 0;font:600 17px/1.35 var(--sfd)}
+.card p{margin:0;font-size:13px;line-height:1.6;color:var(--t2)}
+.card code{font:400 11.5px var(--mono);color:var(--t3);background:rgba(0,0,0,.25);border-radius:6px;padding:4px 8px;margin-top:2px}
+.btns{display:flex;gap:10px;margin-top:12px}
+.btn{height:32px;border-radius:16px;padding:0 16px;display:flex;align-items:center;gap:7px;font:500 13px var(--sf);white-space:nowrap;color:#fff}
+.btn svg{width:15px;height:15px}
+.btn.pri{background:#fff;color:#111;border-color:transparent;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.btn.blue{background:var(--accent);border-color:transparent}
+.btn.red{background:var(--red);border-color:transparent}
+.btn.hover{background:linear-gradient(180deg,rgba(255,255,255,.26),rgba(255,255,255,.14))}
+.btn.press{background:rgba(255,255,255,.08);transform:scale(.97)}
+.btn.dis{opacity:.35}
+.badge-ic{width:52px;height:52px;border-radius:16px;display:grid;place-items:center}
+.badge-ic svg{width:26px;height:26px}
+
+.info{position:absolute;right:16px;top:64px;width:272px;border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:14px;font-size:12px}
+.info .hd{display:flex;gap:10px;align-items:center}
+.info .hd img{width:44px;height:44px;border-radius:9px;object-fit:cover}
+.info .hd b{display:block;font:600 13px var(--sf)}
+.info .hd span{font-size:11px;color:var(--t2)}
+.info h5{margin:0 0 6px;font:600 10.5px var(--sf);letter-spacing:.06em;color:var(--t3)}
+.kv{display:flex;flex-direction:column;gap:6px}
+.kv div{display:flex;justify-content:space-between;gap:10px}
+.kv span{color:var(--t2)}
+.kv b{font-weight:500;font-family:var(--sf)}
+.kv .m{font-family:var(--mono);font-size:11.5px}
+.exif{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.exif div{border-radius:9px;background:rgba(255,255,255,.08);padding:7px 0;text-align:center;font:500 11.5px var(--mono)}
+.exif small{display:block;font:400 9.5px var(--sf);color:var(--t3);margin-top:2px}
+.hr{height:1px;background:rgba(255,255,255,.1)}
+.hist{border-radius:10px;background:rgba(0,0,0,.25);padding:8px}
+
+.toast{position:absolute;left:50%;transform:translateX(-50%);height:34px;border-radius:17px;padding:0 16px;display:flex;align-items:center;gap:8px;font:500 12px var(--sf);white-space:nowrap}
+.toast svg{width:15px;height:15px}
+.toast a{color:#64b5ff;font-weight:600;margin-left:6px}
+
+.menu{position:absolute;border-radius:14px;padding:5px;display:flex;flex-direction:column;font:400 13px var(--sf);min-width:240px}
+.mi{height:24px;border-radius:7px;padding:0 9px 0 8px;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.mi svg{width:15px;height:15px;color:var(--t2)}
+.mi .ck{width:12px;font-size:11px;color:#fff;text-align:center}
+.mi kbd{margin-left:auto;padding-left:24px;font:400 12.5px var(--sf);color:var(--t3);letter-spacing:.06em}
+.mi.on{background:var(--accent)}
+.mi.on svg,.mi.on kbd{color:#fff}
+.mi.red{color:#ff6961}.mi.red svg{color:#ff6961}
+.mi.dis{color:var(--t3)}
+.msep{height:1px;background:rgba(255,255,255,.12);margin:5px 9px}
+.mhead{font:600 11px var(--sf);color:var(--t3);padding:4px 9px 2px}
+.cursor{position:absolute;z-index:46;width:22px;height:28px;z-index:20;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
+
+.dim{position:absolute;inset:0;background:rgba(0,0,0,.38)}
+.alert{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:300px;border-radius:26px;padding:22px 20px 18px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center}
+.alert h3{margin:6px 0 0;font:600 14px/1.4 var(--sfd)}
+.alert p{margin:0;font-size:12px;color:var(--t2);line-height:1.55}
+.alert .btns{width:100%;margin-top:12px}
+.alert .btn{flex:1;justify-content:center}
+.chk{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--t2);margin-top:4px}
+.chk i{width:14px;height:14px;border-radius:4px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.06)}
+
+.drop{position:absolute;inset:10px;z-index:40;border-radius:20px;border:2px dashed rgba(255,255,255,.5);background:rgba(6,23,23,.62);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
+.drop h3{margin:8px 0 0;font:600 20px var(--sfd)}
+.drop p{margin:0;color:var(--t2);font-size:13px}
+
+.nav-map{position:absolute;right:16px;top:64px;border-radius:14px;padding:6px;width:172px}
+.nav-map .m{position:relative;width:160px;height:107px;border-radius:8px;overflow:hidden}
+.nav-map img{width:100%;height:100%;object-fit:cover;display:block;opacity:.75}
+.nav-map .vp{position:absolute;border:1.5px solid #fff;border-radius:3px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+
+/* 普通窗口（设置、关于） */
+.mwin{position:relative;overflow:hidden;border-radius:22px;background:#1e1e21;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 30px 80px rgba(0,0,0,.5);flex:none}
+.side{position:absolute;left:8px;top:8px;bottom:8px;width:212px;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.045));border:1px solid rgba(255,255,255,.08);padding:14px 10px;display:flex;flex-direction:column;gap:2px}
+.side .lights{margin:0 0 18px 6px}
+.srch{height:28px;border-radius:9px;background:rgba(255,255,255,.07);display:flex;align-items:center;gap:6px;padding:0 9px;color:var(--t3);font-size:12.5px;margin-bottom:10px}
+.srch svg{width:14px;height:14px}
+.si{height:30px;border-radius:8px;display:flex;align-items:center;gap:9px;padding:0 8px;font-size:13px}
+.si i{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;color:#fff}
+.si i svg{width:13px;height:13px}
+.si.on{background:rgba(255,255,255,.12)}
+.pane{position:absolute;left:236px;right:0;top:0;bottom:0;padding:22px 28px;display:flex;flex-direction:column;gap:16px;overflow:hidden}
+.pane h1{margin:0 0 2px;font:700 20px var(--sfd)}
+.grp{border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06)}
+.row{min-height:40px;display:flex;align-items:center;gap:12px;padding:8px 14px;font-size:13px}
+.row+.row{border-top:1px solid rgba(255,255,255,.07)}
+.row .lb{flex:1}
+.row .lb small{display:block;color:var(--t3);font-size:11.5px;margin-top:2px}
+.tg{width:38px;height:22px;border-radius:11px;background:rgba(255,255,255,.18);position:relative;flex:none}
+.tg i{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:9px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.tg.on{background:var(--accent)}.tg.on i{left:18px}
+.pop{height:24px;border-radius:7px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.06);padding:0 6px 0 10px;display:flex;align-items:center;gap:8px;font-size:12.5px;white-space:nowrap}
+.pop svg{width:11px;height:11px;color:var(--t2)}
+.sseg{display:flex;border-radius:7px;background:rgba(255,255,255,.08);padding:2px;font-size:12px}
+.sseg span{padding:3px 12px;border-radius:5px}
+.sseg span.on{background:rgba(255,255,255,.22);box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.sl{width:150px;height:4px;border-radius:2px;background:rgba(255,255,255,.18);position:relative}
+.sl i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:var(--accent)}
+.sl b{position:absolute;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.val{font:500 12px var(--mono);color:var(--t2);width:32px;text-align:right}
+.fmts{display:flex;flex-wrap:wrap;gap:6px;padding:10px 14px}
+.fmts span{font:500 11px var(--mono);padding:3px 8px;border-radius:6px;background:rgba(255,255,255,.08);color:var(--t2)}
+
+/* 规范页 */
+.sheet{background:#0e0f11;border-radius:20px;padding:40px;width:1440px;display:flex;flex-direction:column;gap:28px;box-shadow:0 0 0 1px #2a2c31}
+.sheet h3{margin:0;font:700 22px var(--sfd)}
+.sheet h3 small{font:400 13px var(--sf);color:var(--label);margin-left:12px}
+.sw{display:grid;grid-template-columns:repeat(6,1fr);gap:16px}
+.sw>div{display:flex;flex-direction:column;gap:8px}
+.sw .c{height:84px;border-radius:14px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.sw b{font-size:13px}.sw span{font:400 11.5px var(--mono);color:var(--label)}.sw em{font-style:normal;font-size:12px;color:var(--label)}
+.tt{display:flex;flex-direction:column}
+.tt>div{display:grid;grid-template-columns:150px 1fr 260px;align-items:baseline;gap:24px;padding:14px 0;border-top:1px solid #23252a}
+.tt span{font:400 12px var(--mono);color:var(--label)}
+.mat{position:relative;height:300px;border-radius:18px;overflow:hidden}
+.mat>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.mat .row4{position:absolute;inset:0;display:grid;grid-template-columns:repeat(4,1fr);gap:24px;padding:36px;align-items:center}
+.mat .s{height:200px;border-radius:24px;padding:18px;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;font-size:12px}
+.mat .s b{font-size:15px}
+.mat .s span{font:400 11px var(--mono);color:var(--t2);line-height:1.6}
+.iconset{display:grid;grid-template-columns:repeat(10,1fr);gap:12px}
+.iconset div{height:92px;border-radius:14px;background:#17181b;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-size:11px;color:var(--label)}
+.iconset svg{width:24px;height:24px;color:#fff}
+.radii{display:flex;gap:28px;align-items:flex-end}
+.radii div{display:flex;flex-direction:column;gap:10px;align-items:center;font-size:12px;color:var(--label)}
+.radii i{display:block;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25)}
+.spaces{display:flex;gap:20px;align-items:flex-end}
+.spaces div{display:flex;flex-direction:column;align-items:center;gap:8px;font:400 11px var(--mono);color:var(--label)}
+.spaces i{display:block;background:#ff2d92;opacity:.75;height:24px}
+.motion{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.motion>div{border-radius:14px;background:#17181b;padding:18px;display:flex;flex-direction:column;gap:6px}
+.motion b{font-size:14px}.motion span{font:400 12px var(--mono);color:var(--label)}.motion p{margin:0;font-size:12.5px;color:#b9bcc3;line-height:1.55}
+
+/* 组件页 */
+.board{position:relative;border-radius:20px;overflow:hidden;padding:36px;display:flex;flex-direction:column;gap:26px}
+.board>img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(30px) brightness(.55) saturate(1.4);transform:scale(1.15)}
+.board>*{position:relative}
+.crow{display:flex;gap:28px;align-items:center;flex-wrap:wrap}
+.cl{font:600 11px var(--sf);letter-spacing:.06em;color:rgba(255,255,255,.55);width:120px;flex:none}
+.var{display:flex;flex-direction:column;gap:8px;align-items:center;font-size:11px;color:rgba(255,255,255,.6)}
+.rel{position:relative}
+
+/* 标注 */
+.rl{position:absolute;background:#ff2d92;z-index:30}
+.rl.h{height:1px}.rl.v{width:1px}
+.rlb{position:absolute;z-index:31;background:#ff2d92;color:#fff;font:600 10.5px var(--mono);padding:2px 5px;border-radius:4px;white-space:nowrap}
+.rbox{position:absolute;border:1px dashed #ff2d92;z-index:30;border-radius:4px}
+
+/* 图标 */
+.appicon{display:block}
+.iconrow{display:flex;gap:40px;align-items:flex-end}
+.iconrow .var{color:var(--label)}
+.tile{border-radius:20px;padding:36px;display:flex;gap:36px;align-items:flex-end}
+
+.cover{position:relative;width:1440px;height:810px;border-radius:20px;overflow:hidden}
+.cover>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cover .shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.72) 0%,rgba(0,0,0,.25) 55%,rgba(0,0,0,0) 100%)}
+.cover .gcard{position:absolute;left:72px;top:72px;bottom:72px;width:560px;border-radius:36px;padding:48px;display:flex;flex-direction:column;gap:18px}
+.cover h1{margin:0;font:700 76px/1 var(--sfd);letter-spacing:-.02em}
+.cover h1 small{display:block;font:500 26px var(--sfd);color:var(--t2);margin-top:12px;letter-spacing:0}
+.cover .toc{margin-top:auto;display:flex;flex-direction:column;gap:9px;font-size:14px;color:var(--t2)}
+.cover .toc div{display:flex;gap:14px}
+.cover .toc b{font:500 13px var(--mono);color:var(--t3);width:24px}
+.howto{background:#202125;border:1px solid #2e3035;border-radius:16px;padding:20px 24px;display:flex;flex-direction:column;gap:8px;font-size:14px;color:#c9ccd2;line-height:1.6;max-width:1440px}
+.howto b{color:#fff}
+.howto ol{margin:0;padding-left:1.3em}
+
+/* ---------- v0.2 ---------- */
+/* 信息面板 v0.2：宽 300，浮在图片上（距右 16、距顶 64），厚玻璃，圆角 22，内边距 16。图片不让位。
+   底边不盖住缩略图栏 / 视频控制条：最多到它们上沿 − 12（缩略图栏上沿距底 132 → 面板距底 144）；底部没有控件时距底 16。
+   放不下时中间的分组在面板里滚动，顶部和底部按钮不动 */
+.ip{position:absolute;right:16px;top:64px;max-height:calc(100% - 208px);width:300px;border-radius:22px;padding:16px 16px 14px;display:flex;flex-direction:column;gap:14px;font-size:12px;overflow:hidden}
+.ip .hd{display:flex;gap:10px;align-items:center}
+.ip .hd img{width:44px;height:44px;border-radius:9px;object-fit:cover;flex:none}
+.ip .hd>div:not(.x){min-width:0;flex:1}
+.ip .hd b{display:block;font:600 13px/17px var(--sf);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ip .hd span{font-size:11px;color:var(--t2)}
+.ip .x{width:24px;height:24px;border-radius:12px;display:grid;place-items:center;color:var(--t2);background:rgba(255,255,255,.08);flex:none}
+.ip .x svg{width:12px;height:12px}
+.ip section{display:flex;flex-direction:column;gap:8px}
+.ip .ipb{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:14px;position:relative;-webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 28px),transparent)}
+.ip .ipb::after{content:'';position:absolute;right:-10px;top:4px;width:3px;height:42%;border-radius:2px;background:rgba(255,255,255,.28)}
+.ip h5{margin:0;display:flex;align-items:center;gap:6px;font:600 10.5px var(--sf);letter-spacing:.06em;color:var(--t3)}
+.ip h5 svg{width:11px;height:11px}
+.ip h5 em{font-style:normal;margin-left:auto;font-weight:500;letter-spacing:0;color:var(--t3)}
+.ip .kv{gap:7px}
+.ip .kv div{align-items:baseline}
+.ip .kv span{flex:none}
+.ip .kv b{text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ip .exif{margin:2px 0}
+.ip .empty{border-radius:10px;background:rgba(255,255,255,.05);padding:10px 12px;color:var(--t3);font-size:11.5px;line-height:1.5;display:flex;gap:8px;align-items:center}
+.ip .empty b{font-weight:500;color:var(--t2)}
+.ip .empty svg{width:15px;height:15px;flex:none;opacity:.8}
+.ip .foot{margin-top:auto;display:flex;gap:8px}
+.ip .foot .btn{height:28px;font-size:12px;padding:0 12px;flex:1;justify-content:center}
+.ip .foot .btn svg{width:13px;height:13px}
+.cpy{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;color:var(--t2);background:rgba(255,255,255,.08)}
+.cpy svg{width:12px;height:12px}
+/* 新到的缩略图：短暂高亮 2 秒后恢复普通样式 */
+.th.new{opacity:1;box-shadow:0 0 0 1.5px rgba(255,255,255,.75),0 0 18px rgba(255,255,255,.28)}
+.bdg .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);margin-right:1px}
+.th.gone{opacity:.25;filter:grayscale(1)}
+/* 键帽 */
+.kc{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:6px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.08);font:500 12px var(--sf);color:#fff;white-space:nowrap}
+.kcs{display:flex;gap:4px;align-items:center;color:var(--t3);font-size:11px}
+.new-tag{font:600 9.5px var(--sf);color:var(--accent);background:rgba(10,132,255,.16);border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:1px}
+/* 全屏顶部：系统菜单栏 + 工具栏，鼠标移到顶部时滑下 */
+.fsmb{position:absolute;left:0;right:0;top:0;height:30px;display:flex;align-items:center;gap:4px;padding:0 14px;background:rgba(20,20,24,.35);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px);font-size:13px;z-index:5}
+.fsmb span{padding:3px 8px;border-radius:5px}
+/* 玻璃在亮色图片上自动加深（系统液态玻璃的自适应行为），保证提示文字可读 */
+.g.adapt{background:linear-gradient(180deg,rgba(44,44,50,.62),rgba(28,28,32,.68))}
+.legend{display:flex;gap:28px;flex-wrap:wrap;max-width:1440px}
+.legend div{display:flex;flex-direction:column;gap:4px;max-width:330px}
+.legend b{font-size:13px;color:var(--label-2)}
+.legend p{margin:0;font-size:12.5px;color:var(--label);line-height:1.6}
+.sub{margin:8px 0 -16px;display:flex;align-items:baseline;gap:12px;font:600 20px var(--sfd);color:var(--label-2)}
+.sub span{font:500 13px var(--mono);color:var(--label)}
+
+/* ---------- v0.3 评星与筛选 ---------- */
+/* 星星：亮的用品牌 sun #FFE2A0 实心，未亮的是 62% 白描边。星星一律放在深色玻璃或深色底上，不直接压在照片上 */
+.st{flex:none;fill:none;stroke:rgba(255,255,255,.62);stroke-width:1.7;stroke-linejoin:round}
+.st.on{fill:var(--brand-sun);stroke:var(--brand-sun);filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
+.st.hv{fill:rgba(255,226,160,.42);stroke:var(--brand-sun)}
+.st.big{transform:scale(1.3);filter:drop-shadow(0 0 6px rgba(255,226,160,.7))}
+/* 画面上的五星控件：深色玻璃胶囊，高 38 */
+.rate{position:absolute;left:50%;transform:translateX(-50%);height:38px;border-radius:19px;padding:0 14px;display:flex;align-items:center;gap:4px}
+.rate.rel{position:relative;left:auto;transform:none}
+.rate .st{width:22px;height:22px}
+.rate.flash{border-color:rgba(255,226,160,.6);box-shadow:0 0 26px rgba(255,226,160,.26),0 8px 28px rgba(0,0,0,.3)}
+.rtip{position:absolute;transform:translateX(-50%);height:26px;border-radius:13px;padding:0 11px;display:flex;align-items:center;gap:7px;font:500 12px var(--sf);white-space:nowrap}
+.rtip .kc{min-width:18px;height:18px;font-size:11px;border-radius:5px}
+/* 缩略图上的星：左上角，深色小角标（右下角留给 RAW / 时长，左下角留给“新”） */
+.bdg.s{left:4px;right:auto;top:4px;bottom:auto;gap:3px;padding:0 6px 0 4px;height:16px;background:rgba(0,0,0,.78);font:700 10.5px/16px var(--sf);color:#fff}
+.bdg.s .st{width:10px;height:10px;fill:var(--brand-sun);stroke:none;filter:none}
+/* 有星级的缩略图：整体不透明，只把图片压暗到和别的缩略图一样（66%），这样角标不会跟着变灰 */
+.th.rt{opacity:1;background:none}
+.th.rt>img{opacity:.66}
+.th.rt.on>img,.th.rt.new>img{opacity:1}
+.th.rt .bdg:not(.s){opacity:.66}
+.th.rt.on .bdg:not(.s){opacity:1}
+/* 设计标注：只在设计稿里出现，贴在窗口外面，不是界面的一部分 */
+.annwrap{position:relative;padding-right:150px}
+.ann{position:absolute;z-index:30;background:#ff2d92;color:#fff;font:600 10.5px var(--mono);padding:2px 6px;border-radius:4px;white-space:nowrap}
+.ann::before{content:'';position:absolute;right:100%;top:50%;width:14px;height:1px;background:#ff2d92}
+.hint .x{position:absolute;right:10px;top:10px;width:22px;height:22px;border-radius:11px;background:rgba(255,255,255,.1);display:grid;place-items:center;color:var(--t2)}
+.hint .x svg{width:11px;height:11px}
+.hint .kc{min-width:18px;height:18px;font-size:11px;border-radius:5px;vertical-align:1px}
+/* 评星筛选按钮（挨着 全部/图片/视频） */
+.rb{height:36px;border-radius:18px;padding:0 12px 0 11px;display:flex;align-items:center;gap:7px;font:500 12.5px var(--sf);color:rgba(255,255,255,.86);white-space:nowrap}
+.rb .st{width:14px;height:14px}
+.rb svg.cv{width:11px;height:11px;opacity:.7}
+.rb em{font-style:normal;font:500 11px var(--mono);color:var(--t3)}
+.rb.on{background:rgba(255,255,255,.24);color:#fff}
+.rb.on em{color:rgba(255,255,255,.78)}
+.rb.act{background:var(--accent);border-color:transparent;color:#fff}
+.rb.act em{color:rgba(255,255,255,.8)}
+/* 缩放控件：− 百分比 +，高 30 */
+.zoomc{position:absolute;left:32px;height:30px;border-radius:15px;padding:0 3px;display:flex;align-items:center;color:#fff}
+.zoomc.rel{position:relative;left:auto}
+.zoomc .zb{width:26px;height:24px;border-radius:12px;display:grid;place-items:center}
+.zoomc .zb svg{width:13px;height:13px}
+.zoomc .zp{height:24px;min-width:64px;padding:0 7px 0 9px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:4px;font:500 12px var(--mono)}
+.zoomc .zp svg{width:9px;height:9px;opacity:.6}
+.zoomc .hov{background:rgba(255,255,255,.16)}
+.zoomc .prs{background:rgba(255,255,255,.28);transform:scale(.94)}
+.zoomc .dis{opacity:.3}
+.zoomc .sep{width:1px;height:14px;background:rgba(255,255,255,.14);margin:0 1px}
+/* 提示卡（比一行提示条多一句说明） */
+.hint{position:absolute;left:50%;transform:translateX(-50%);width:430px;border-radius:22px;padding:14px 16px 14px 14px;display:flex;gap:12px;align-items:flex-start}
+.hint .hi{width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,.12);display:grid;place-items:center;flex:none}
+.hint .hi svg{width:18px;height:18px}
+.hint b{display:block;font:600 13px/18px var(--sf)}
+.hint p{margin:3px 0 0;font:400 12px/1.55 var(--sf);color:var(--t2)}
+.hint code{font:500 11.5px var(--mono);color:#fff;background:rgba(0,0,0,.28);border-radius:5px;padding:1px 5px}
+.hint .btns{margin-top:10px;justify-content:flex-start}
+.hint .btn{height:26px;font-size:12px;padding:0 12px}
+/* 画布上的“推荐 / 备选”标签（只在设计稿里出现） */
+.tag{font:600 11px var(--sf);padding:2px 8px;border-radius:6px;flex:none}
+.tag.rec{background:rgba(48,209,88,.16);color:#5ee07f}
+.tag.alt{background:rgba(255,255,255,.09);color:var(--label-2)}
+.cmp{display:flex;gap:40px;align-items:flex-start}
+.cmp>div{display:flex;flex-direction:column;gap:12px}
+.rd{width:16px;height:16px;border-radius:8px;border:1.5px solid rgba(255,255,255,.4);flex:none;position:relative}
+.rd.on{background:var(--accent);border-color:var(--accent)}
+.rd.on::after{content:'';position:absolute;inset:4px;border-radius:50%;background:#fff}
+.mrow{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--t2);padding:0 4px}
+
+/* 顶部栏缩放控件：高 36，和序号胶囊同高同材质 */
+.zoomt{height:36px;border-radius:18px;padding:0 4px;display:flex;align-items:center;color:#fff;white-space:nowrap}
+.zoomt.pct{padding:0 4px}
+.zoomt .zb{width:30px;height:28px;border-radius:14px;display:grid;place-items:center}
+.zoomt .zb svg{width:14px;height:14px}
+.zoomt .zp{height:28px;min-width:62px;padding:0 8px 0 10px;border-radius:14px;display:flex;align-items:center;justify-content:center;gap:4px;font:500 12px var(--mono)}
+.zoomt.pct .zp{min-width:58px}
+.zoomt .zp svg{width:9px;height:9px;opacity:.6}
+.zoomt .hov{background:rgba(255,255,255,.16)}
+.zoomt .prs{background:rgba(255,255,255,.28);transform:scale(.94)}
+.zoomt .dis{opacity:.3}
+</style>
+</head>
+<body>
+<div class="doc" id="doc"></div>
+
+<script>
+/* ============ 图标（SF Symbols 风格，24 网格，1.8 线宽） ============ */
+const P={
+ chevL:'<path d="M15 5l-7 7 7 7"/>',chevR:'<path d="M9 5l7 7-7 7"/>',
+ play:'<path d="M7 4.8v14.4c0 .8.9 1.3 1.6.9l11.2-7.2a1 1 0 000-1.8L8.6 3.9C7.9 3.5 7 4 7 4.8z" fill="currentColor" stroke="none"/>',
+ pause:'<rect x="6" y="4.5" width="4" height="15" rx="1.2" fill="currentColor" stroke="none"/><rect x="14" y="4.5" width="4" height="15" rx="1.2" fill="currentColor" stroke="none"/>',
+ vol:'<path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z" fill="currentColor" stroke="none"/><path d="M15.5 9.2a4 4 0 010 5.6M18.3 6.6a7.6 7.6 0 010 10.8"/>',
+ mute:'<path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z" fill="currentColor" stroke="none"/><path d="M16 9.5l5 5M21 9.5l-5 5"/>',
+ info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r=".6" fill="currentColor"/>',
+ rotate:'<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 3.8v4.5H9"/>',
+ trash:'<path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l.9 12.2c.1.8.7 1.3 1.5 1.3h6.2c.8 0 1.4-.5 1.5-1.3L17.5 7"/>',
+ more:'<circle cx="6" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.4" fill="currentColor" stroke="none"/>',
+ folder:'<path d="M3.5 7.5a2 2 0 012-2h3.8l2 2h7.2a2 2 0 012 2v7.5a2 2 0 01-2 2h-13a2 2 0 01-2-2z"/>',
+ reveal:'<path d="M14 4h6v6M20 4l-8.5 8.5M18 14v4.5a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 014 18.5v-11A1.5 1.5 0 015.5 6H10"/>',
+ all:'<rect x="4" y="4" width="7" height="7" rx="1.8"/><rect x="13" y="4" width="7" height="7" rx="1.8"/><rect x="4" y="13" width="7" height="7" rx="1.8"/><rect x="13" y="13" width="7" height="7" rx="1.8"/>',
+ photo:'<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="8.5" cy="10" r="1.6"/><path d="M21 15.5l-5-4.5-9.5 8"/>',
+ video:'<rect x="3" y="6" width="12.5" height="12" rx="2.5"/><path d="M15.5 10.5l5.5-3.2v9.4l-5.5-3.2z"/>',
+ warn:'<path d="M10.3 4.2L2.8 17.5a2 2 0 001.7 3h15a2 2 0 001.7-3L13.7 4.2a2 2 0 00-3.4 0z"/><path d="M12 9.5v4.5"/><circle cx="12" cy="17" r=".6" fill="currentColor"/>',
+ gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.6M12 18.6v2.6M21.2 12h-2.6M5.4 12H2.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8M18.5 18.5l-1.8-1.8M7.3 7.3L5.5 5.5"/>',
+ zin:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5l5 5M7.8 10.5h5.4M10.5 7.8v5.4"/>',
+ zout:'<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5l5 5M7.8 10.5h5.4"/>',
+ expand:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+ share:'<path d="M12 3.5v11M7.5 7.5L12 3l4.5 4.5M6 11H5v9h14v-9h-1"/>',
+ copy:'<rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2"/><path d="M15.5 8.5V5.5a1.5 1.5 0 00-1.5-1.5H5.5A1.5 1.5 0 004 5.5V14a1.5 1.5 0 001.5 1.5h3"/>',
+ strip:'<rect x="3" y="14" width="18" height="6" rx="1.8"/><rect x="3" y="4" width="18" height="7.5" rx="1.8"/>',
+ loop:'<path d="M17 3l3 3-3 3M4 11.5V10a4 4 0 014-4h12M7 21l-3-3 3-3M20 12.5V14a4 4 0 01-4 4H4"/>',
+ sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M21.5 12h-2M4.5 12h-2M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4M18.7 18.7l-1.4-1.4M6.7 6.7L5.3 5.3"/>',
+ check:'<path d="M5 12.5l4.5 4.5L19 7"/>',x:'<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
+ search:'<circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/>',
+ clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+ doc:'<path d="M6 3.5h8l4 4v13H6z"/><path d="M14 3.5v4h4"/>',
+ wall:'<rect x="3" y="4" width="18" height="12.5" rx="2"/><path d="M8 20h8M12 16.5V20"/>',
+ star:'<path d="M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.8l-5.1 2.7 1-5.7-4.1-4 5.7-.8z"/>',
+ keyb:'<rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M7.5 14h9"/>',
+};
+const ic=(n,c='')=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="${c}">${P[n]}</svg>`;
+const cursorSVG=(x,y)=>`<svg class="cursor" style="left:${x}px;top:${y}px" viewBox="0 0 22 28"><path d="M2 1.5v20.5l5.2-4.9 3.5 8 3.3-1.4-3.4-7.9h7z" fill="#000" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
+
+/* ============ 示例文件夹：~/Pictures/2026 秋 · 旅行 ============ */
+const FOLDER='2026 秋 · 旅行';
+const ip={cam:'iPhone 17 Pro',lens:'主摄 24 mm f/1.78',sp:'Display P3'};
+const sony={cam:'Sony α7 IV',lens:'FE 24-70mm F2.8 GM II',sp:'Adobe RGB'};
+const L=[
+ {n:'aurora.jpg',f:'p1022',w:4000,h:2667,s:'3.8 MB',fmt:'JPEG'},
+ {n:'city_sunrise.webp',f:'p1067',w:3200,h:2133,s:'860 KB',fmt:'WebP'},
+ {n:'DSC_0812.ARW',f:'p29',w:7008,h:4672,s:'61.2 MB',fmt:'Sony RAW',raw:1,...sony,ex:['f/8','1/500','100','35mm'],d:'2026-10-12 09:41'},
+ {n:'DSC_0815.ARW',f:'p1036',w:7008,h:4672,s:'60.7 MB',fmt:'Sony RAW',raw:1,...sony,ex:['f/11','1/320','100','24mm'],d:'2026-10-12 10:05'},
+ {n:'DSC_0821.ARW',f:'p1043',w:7008,h:4672,s:'62.4 MB',fmt:'Sony RAW',raw:1,...sony,ex:['f/5.6','1/250','200','42mm'],d:'2026-10-12 15:18'},
+ {n:'harbor_night.png',f:'p122',w:2880,h:1920,s:'7.4 MB',fmt:'PNG'},
+ {n:'IMG_2031.HEIC',f:'p1015',w:5712,h:4284,s:'4.1 MB',fmt:'HEIF',...ip,ex:['f/1.78','1/1250','64','24mm'],d:'2026-10-14 11:20'},
+ {n:'IMG_2032.MOV',f:'p1050',w:3840,h:2160,s:'212 MB',fmt:'MOV · HEVC',vid:1,dur:42,fps:'60 fps',d:'2026-10-14 16:02'},
+ {n:'IMG_2034.HEIC',f:'p1016',w:5712,h:4284,s:'3.9 MB',fmt:'HEIF',...ip,ex:['f/1.78','1/2000','50','24mm'],d:'2026-10-15 17:46'},
+ {n:'IMG_2035.HEIC',f:'v177',w:4284,h:5712,s:'4.4 MB',fmt:'HEIF',...ip,ex:['f/1.78','1/800','64','24mm'],d:'2026-10-15 18:02'},
+ {n:'IMG_2036.MOV',f:'p16',w:3840,h:2160,s:'341 MB',fmt:'MOV · HEVC',vid:1,dur:68,fps:'30 fps',d:'2026-10-16 08:30'},
+ {n:'IMG_2040.HEIC',f:'p1039',w:5712,h:4284,s:'5.2 MB',fmt:'HEIF',...ip,ex:['f/1.78','1/60','125','24mm'],d:'2026-10-17 10:11'},
+ {n:'IMG_2041.HEIC',f:'p128',w:5712,h:4284,s:'3.6 MB',fmt:'HEIF',...ip,ex:['f/1.78','1/500','64','24mm'],d:'2026-10-17 18:24'},
+ {n:'IMG_2043.MOV',f:'p1019',w:1920,h:1080,s:'48 MB',fmt:'MOV · HEVC',vid:1,dur:19,fps:'30 fps',d:'2026-10-18 07:12'},
+ {n:'IMG_2050.JPG',f:'p164',w:4032,h:3024,s:'3.1 MB',fmt:'JPEG',...ip,ex:['f/1.78','1/320','80','24mm'],d:'2026-10-19 14:40'},
+ {n:'IMG_2051.JPG',f:'p49',w:4032,h:3024,s:'2.8 MB',fmt:'JPEG',...ip,ex:['f/1.78','1/1600','50','24mm'],d:'2026-10-19 16:03'},
+ {n:'IMG_2052.JPG',f:'v1047',w:3024,h:4032,s:'3.3 MB',fmt:'JPEG',...ip,ex:['f/1.78','1/120','160','24mm'],d:'2026-10-20 12:15'},
+ {n:'scan_003.tif',f:null,w:0,h:0,s:'0 字节',fmt:'TIFF',err:1},
+ {n:'street.gif',f:'v57',w:1200,h:1800,s:'4.6 MB',fmt:'GIF · 36 帧',gif:1},
+ {n:'trail.mp4',f:'p110',w:1920,h:1080,s:'138 MB',fmt:'MP4 · H.264',vid:1,dur:151,fps:'30 fps',d:'2026-10-21 17:58'},
+];
+const by=n=>L.find(x=>x.n===n);
+const IMGS=L.filter(x=>!x.vid), VIDS=L.filter(x=>x.vid);
+const mmss=s=>`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+const full=it=>`../../../design/photos/${it.f}.jpg`, th=it=>`../../../design/photos/t/${it.f}.jpg`;
+
+/* ============ 积木 ============ */
+function thumb(it,cls=''){
+  if(cls.includes('load'))return`<div class="th load ${cls}"></div>`;
+  if(it.err)return`<div class="th err ${cls}">${ic('warn')}</div>`;
+  const nb=cls.includes('new')?'<span class="bdg l"><i class="dot"></i>新</span>':'';
+  const rb=it.r&&!it.err&&!cls.includes('nobdg')?ratingBadge(it.r):'';
+  const b=rb+nb+(it.vid?`<span class="bdg">${ic('play')}${mmss(it.dur)}</span>`:it.raw?'<span class="bdg">RAW</span>':it.gif?'<span class="bdg">GIF</span>':'');
+  return`<div class="th ${cls}${it.r?' rt':''}"><img src="${th(it)}" alt="">${b}</div>`}
+function seg(f,o={}){const SL=o.list||L;const c=o.empty?{all:0,img:0,vid:0}:{all:SL.length,img:SL.filter(x=>!x.vid).length,vid:SL.filter(x=>x.vid).length};const t=o.en?['All','Photos','Videos']:['全部','图片','视频'];
+  const it=(k,icon,label)=>`<div class="${f===k?'on':''} ${!c[k]?'off':''}">${ic(icon)}${o.icons?'':label}<em>${c[k]}</em></div>`;
+  return`<div class="seg g ${o.icons?'ico':''}" style="${o.style||''}">${it('all','all',t[0])}${it('img','photo',t[1])}${it('vid','video',t[2])}</div>`}
+function dock(list,idx,W,o={}){const dw=Math.min(W-64,o.dw||900),inner=dw-24,tw=o.tw||76,gap=6,tot=list.length*(tw+gap)-gap,off=tot<inner?Math.round((inner-tot)/2):Math.max(inner-tot-6,Math.min(6,Math.round(inner/2-(idx*(tw+gap)+tw/2))));const fl=off<0,fr2=off+tot>inner;
+  const it=list[idx];
+  const meta=it.err?`<span><b>${it.n}</b>${o.en?'Unreadable':'无法读取'}</span><span class="num">${it.fmt}</span>`:
+    `<span><b>${it.n}</b><span class="num">${it.w} × ${it.h}</span></span>${o.metaMid||''}<span class="num">${it.vid?mmss(it.dur)+' · ':''}${it.s} · ${it.fmt}</span>`;
+  return`<div class="dock g" style="width:${dw}px;${o.style||''}"><div class="meta">${meta}</div><div class="strip ${fl?'fl':''} ${fr2?'fr':''}"><div class="rail" style="transform:translateX(${off}px)">${list.map((x,i)=>thumb(x,(i===idx?'on ':'')+(o.hov===i?'hov ':'')+((o.cls&&o.cls[i])||'')+(x.r&&!((off+i*(tw+gap))>=(fl?28:0)&&(off+i*(tw+gap)+tw)<=inner-(fr2?28:0))?' nobdg':''))).join('')}</div></div></div>`}
+function fit(W,H,w,h){const k=Math.min(W/w,H/h);return[Math.round(w*k),Math.round(h*k)]}
+function hist(){const pts=(c,s,a)=>{let d='M0 60';for(let x=0;x<=236;x+=4){const u=x/236;let y=0;c.forEach(([m,w,h])=>y+=h*Math.exp(-((u-m)**2)/(2*w*w)));y+=.04*Math.sin(x*.7+s)*.5+.05;d+=` L${x} ${(60-Math.min(56,y*56)).toFixed(1)}`}return`<path d="${d} L236 60Z" fill="${a}"/>`};
+  return`<div class="hist"><svg width="236" height="60" viewBox="0 0 236 60" style="display:block;mix-blend-mode:screen">${pts([[.22,.08,.5],[.62,.12,.8],[.9,.04,.3]],1,'rgba(255,69,58,.55)')}${pts([[.3,.1,.6],[.58,.1,.7],[.85,.05,.25]],2,'rgba(48,209,88,.5)')}${pts([[.15,.07,.7],[.5,.14,.55],[.8,.06,.3]],3,'rgba(10,132,255,.55)')}</svg></div>`}
+function infoPanel(it,o={}){const ex=it.ex||[];
+  return`<div class="info gt" style="${o.style||''}">
+   <div class="hd"><img src="${th(it)}" alt=""><div><b>${it.n}</b><span>${FOLDER}</span></div></div>
+   ${hist()}
+   <div><h5>拍摄参数</h5><div class="exif">${['光圈','快门','ISO','焦距'].map((k,i)=>`<div>${ex[i]||'—'}<small>${k}</small></div>`).join('')}</div></div>
+   <div class="kv"><div><span>设备</span><b>${it.cam||'—'}</b></div><div><span>镜头</span><b>${it.lens||'—'}</b></div><div><span>拍摄时间</span><b class="m">${it.d||'—'}</b></div></div>
+   <div class="hr"></div>
+   <div class="kv"><div><span>格式</span><b>${it.fmt}</b></div><div><span>尺寸</span><b class="m">${it.w} × ${it.h}</b></div><div><span>像素</span><b class="m">${(it.w*it.h/1e6).toFixed(1)} MP</b></div><div><span>大小</span><b class="m">${it.s}</b></div><div><span>色彩空间</span><b>${it.sp||'sRGB'}</b></div></div>
+   <div class="hr"></div>
+   <div class="kv"><div><span>位置</span><b>~/Pictures/${FOLDER}</b></div></div>
+  </div>`}
+function vbar(it,t,playing,o={}){const p=t/it.dur*100;
+  return`<div class="vbar g" style="width:${o.w||580}px;bottom:${o.bottom??128}px;${o.left?`left:${o.left}px;`:''}">
+   <div class="pb">${ic(playing?'pause':'play')}</div><span>${mmss(t)}</span>
+   <div class="trk"><div class="buf" style="width:${Math.min(100,p+22)}%"></div><div class="pl" style="width:${p}%"></div><div class="kn" style="left:${p}%"></div>${o.tip?`<div class="tip gt" style="left:${o.tip[0]}%">${o.tip[1]}</div>`:''}</div>
+   <span style="color:var(--t2)">${mmss(it.dur)}</span>${ic('loop','ic')}${ic(o.muted?'mute':'vol','ic')}<div class="vol"><i style="width:${o.muted?0:70}%"></i></div></div>`}
+
+/* 主窗口 */
+function win(o){
+  const W=o.w||1280,H=o.h||800,list=o.list||L,it=o.item?(typeof o.item==='string'?by(o.item):o.item):null,idx=it?list.indexOf(it):0;
+  const pnl=o.panel||0,pl=W-16-pnl; /* v0.2 信息面板浮在图片上：图片、缩略图栏、视频条都不动，右箭头也不动，被面板盖住 */
+  const top=o.fs?0:64,bot=o.immersive||o.fs?0:(o.nodock?24:132)+(it&&it.vid?58:0),side=o.fs||o.immersive?0:32;
+  const sx=side,sw=W-side*2,sh=H-top-bot;
+  let stage='';
+  if(it&&!it.err){
+    if(o.zoom){stage=`<div class="photo flat" style="left:0;top:0;width:${W}px;height:${H}px;background:url(${full(it)}) ${o.zoom.pos}/${o.zoom.size} no-repeat"></div>`}
+    else{const[pw,ph]=fit(o.fs||o.immersive?W:sw,o.fs||o.immersive?H:sh,it.w,it.h);const fl=o.fs||o.immersive;
+      stage=`<div class="photo ${fl&&pw>=W-2?'flat':''}" style="left:${fl?(W-pw)/2:sx+(sw-pw)/2}px;top:${(fl?0:top)+((fl?H:sh)-ph)/2}px;width:${pw}px;height:${ph}px;${o.blur?'filter:blur(9px) saturate(.9);':''}"><img src="${full(it)}" alt=""></div>`}}
+  const amb=it&&!it.err?`<div class="amb" style="background-image:url(${th(it)})"></div><div class="vig"></div>`:`<div class="amb" style="background:radial-gradient(60% 60% at 30% 30%,rgba(14,59,59,.70),transparent),radial-gradient(60% 60% at 75% 70%,rgba(255,226,160,.15),rgba(18,138,128,.16) 50%,transparent);filter:blur(40px) brightness(.8)"></div>`;
+  const chrome=o.immersive?'':`
+   ${o.fs?'':`<div class="tb">
+      <div class="lights ${o.inactive?'dim':''}"><i></i><i></i><i></i></div>
+      ${o.compact?'':`<div class="ttl"><b>${o.title||(it?it.n:(o.en?'Yilan':'一览'))}</b><span>${o.sub||FOLDER}</span></div>`}
+      <div class="sp"></div>
+      ${o.empty||!it?'':(o.zcHtml||'')}
+      ${o.empty||!it?'':`<div class="pill g">${o.cur||idx+1} / ${o.total||list.length}${o.pillSfx||''}</div>`}
+      ${o.notools?'':`<div class="tools g"><div class="ib ${o.empty?'dis':''}">${ic('rotate')}</div><div class="ib ${o.info||o.panel?'on':''} ${o.empty?'dis':''}">${ic('info')}</div><div class="ib">${ic('more')}</div></div>`}
+    </div>`}
+   ${o.noseg?'':seg(o.filter||'all',{empty:o.empty,icons:o.compact,en:o.en,list:o.segList,style:o.fs?'top:16px':''})}
+   ${it&&!o.empty&&!o.nonav?`<div class="nav g" style="left:${o.fs?24:20}px;top:${top+sh/2-22}px;${idx===0?'opacity:.35':''}">${ic('chevL')}</div><div class="nav g" style="right:${o.fs?24:20}px;top:${top+sh/2-22}px;${o.info||pnl?'display:none;':''}">${ic('chevR')}</div>`:''}
+   ${it&&!o.nodock?dock(list,idx,W,{dw:o.dw,tw:o.tw,hov:o.hov,en:o.en,cls:o.cls,metaMid:o.metaMid}):''}
+  `;
+  const fsChrome=o.fs&&o.fsdock?dock(list,idx,W,{dw:960}):'';
+  return`<div class="win ${o.fs?'fs':''}" style="width:${W}px;height:${H}px">${amb}${stage}${o.fs&&!o.fsdock?'':''}${o.fs?(o.fsdock?fsChrome+seg(o.filter||'all',{style:'top:18px'}):''):chrome}${o.extra||''}</div>`}
+
+/* ============ 页面内容 ============ */
+const chapters=[];
+const ch=(no,title,desc,html)=>chapters.push(`<section class="chapter"><header><b>${no}</b><h2>${title}</h2><p>${desc}</p></header>${html}</section>`);
+const fr=(name,size,html,extra='')=>`<div class="frame"><div class="cap"><b>${name}</b><span>${size}</span>${extra?`<i>${extra}</i>`:''}</div>${html}</div>`;
+
+
+
+
+
+
+
+
+
+
+
+
+function settings(page='browse'){const items=[['gear','通用','#8e8e93',page==='general'],['photo','浏览','#0a84ff',page==='browse'],['video','视频','#ff9f0a'],['doc','文件格式','#30d158'],['clock','缓存与性能','#bf5af2'],['keyb','快捷键','#636366',page==='keys']];
+ const row=(l,c,s='')=>`<div class="row"><div class="lb">${l}${s?`<small>${s}</small>`:''}</div>${c}</div>`;
+ const pop=t=>`<div class="pop">${t}<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3.5 4.5L6 2l2.5 2.5M3.5 7.5L6 10l2.5-2.5"/></svg></div>`;
+ return`<div class="mwin" style="width:820px;height:700px"><div class="side"><div class="lights"><i></i><i></i><i></i></div><div class="srch">${ic('search')}搜索</div>${items.map(([i,t,c,on])=>`<div class="si ${on?'on':''}"><i style="background:${c}">${ic(i)}</i>${t}</div>`).join('')}</div>
+ ${page==='keys'?keysPane():page==='general'?generalPane(row,pop):`<div class="pane"><h1>浏览</h1>
+  <div class="grp">${row('启动时',pop('打开上次的文件夹'))}${row('默认显示',pop('全部（图片和视频）'))}${row('排序方式',pop('文件名'),'数字按大小排序：img2 在 img10 前面')}${row('到达最后一个时','<div class="sseg"><span class="on">停止</span><span>循环到第一个</span></div>')}</div>
+  <div class="grp">${row('鼠标滚轮','<div class="sseg"><span class="on">切换图片</span><span>缩放</span></div>','按住 ⌃ 时执行另一种操作')}${row('双击图片',pop('在适应窗口和 100% 之间切换'))}</div>
+  <div class="grp">${row('自动隐藏控件','<div class="tg"><i></i></div>','默认关闭。打开后，鼠标静止一段时间只显示图片')}${row('隐藏延迟','<div class="sl"><i style="width:25%"></i><b style="left:25%"></b></div><span class="val">2 秒</span>')}${row('环境光背景','<div class="tg on"><i></i></div>','用当前图片的颜色铺满窗口背景')}</div>
+  <div class="grp">${row('默认打开方式','<div class="btn blue" style="height:26px;font-size:12px;padding:0 12px">设为默认</div>','让一览打开下列格式的文件')}<div class="fmts">${['JPEG','PNG','HEIF','HEIC','WebP','GIF','SVG','TIFF','BMP','ARW','CR3','NEF','RAF','DNG','MP4','MOV'].map(x=>`<span>${x}</span>`).join('')}</div></div>
+ </div>`}</div>`}
+/* 设置 · 通用：界面语言。改了之后在同一组里出现“重新打开”提示（选中的语言和正在用的不一样时） */
+function generalPane(row,pop){
+ const relaunch=`<svg viewBox="0 0 16 16" style="width:14px;height:14px;flex:none"><circle cx="8" cy="8" r="8" fill="var(--accent)"/><path d="M11.2 8a3.2 3.2 0 1 1-1-2.3" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><path d="M10.9 3.6v2.4H8.5" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+ return`<div class="pane"><h1>通用</h1>
+  <div class="grp">${row('语言',pop('English'),'跟随系统时：系统语言是中文或英文就用它，否则用英文')}<div class="row" style="gap:10px">${relaunch}<div class="lb" style="font-size:12.5px;color:var(--t2)">重新打开一览后生效</div><div class="btn blue" style="height:26px;font-size:12px;padding:0 12px">立即重新打开</div></div></div>
+ </div>`}
+
+
+function appIcon(s){return`<svg class="appicon" width="${s}" height="${s}" viewBox="0 0 1024 1024"><defs> <clipPath id="body${s}"><rect x="100" y="100" width="824" height="824" rx="185"/></clipPath> <clipPath id="cen${s}"><rect x="354.0" y="297.0" width="316" height="430" rx="54"/></clipPath> <filter id="sh${s}" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#04302c" flood-opacity=".34"/></filter> <filter id="lift${s}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="18"/></filter> <linearGradient id="bg${s}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3fc4b0"/><stop offset="1" stop-color="#128a80"/></linearGradient> </defs> <g filter="url(#sh${s})"> <g clip-path="url(#body${s})"> <rect width="1024" height="1024" fill="url(#bg${s})"/> <path d="M810.0 391.0 Q810.0 369.0 830.7 376.4 L853.3 384.6 Q874.0 392.0 874.0 414.0 L874.0 610.0 Q874.0 632.0 853.3 639.4 L830.7 647.6 Q810.0 655.0 810.0 633.0 Z" fill="#f2fffb" fill-opacity="0.18" stroke="#fbfffd" stroke-opacity="0.8" stroke-width="5"/> <path d="M214.0 391.0 Q214.0 369.0 193.3 376.4 L170.7 384.6 Q150.0 392.0 150.0 414.0 L150.0 610.0 Q150.0 632.0 170.7 639.4 L193.3 647.6 Q214.0 655.0 214.0 633.0 Z" fill="#f2fffb" fill-opacity="0.18" stroke="#fbfffd" stroke-opacity="0.8" stroke-width="5"/> <path d="M686.0 356.0 Q686.0 324.0 716.8 332.6 L763.2 345.4 Q794.0 354.0 794.0 386.0 L794.0 638.0 Q794.0 670.0 763.2 678.6 L716.8 691.4 Q686.0 700.0 686.0 668.0 Z" fill="#f2fffb" fill-opacity="0.32" stroke="#fbfffd" stroke-opacity="0.8" stroke-width="5"/> <path d="M338.0 356.0 Q338.0 324.0 307.2 332.6 L260.8 345.4 Q230.0 354.0 230.0 386.0 L230.0 638.0 Q230.0 670.0 260.8 678.6 L307.2 691.4 Q338.0 700.0 338.0 668.0 Z" fill="#f2fffb" fill-opacity="0.32" stroke="#fbfffd" stroke-opacity="0.8" stroke-width="5"/> <rect x="354.0" y="311.0" width="316" height="430" rx="54" fill="#04302c" opacity="0.3" filter="url(#lift${s})"/> <g clip-path="url(#cen${s})"> <rect x="354.0" y="297.0" width="316" height="215.0" fill="#0e3b3b"/> <rect x="354.0" y="512" width="316" height="215.0" fill="#082a2b"/> <path d="M426 512 A86 86 0 0 1 598 512Z" fill="#ffe2a0"/> <rect x="442.0" y="560" width="140" height="12" rx="6" fill="#ffe2a0" opacity="0.9"/><rect x="472.0" y="598" width="80" height="12" rx="6" fill="#ffe2a0" opacity="0.55"/> </g> <rect x="356.5" y="299.5" width="311" height="425" rx="51.5" fill="none" stroke="#fbfffd" stroke-opacity="0.8" stroke-width="5"/> <rect x="150" y="505.0" width="724" height="14" rx="7.0" fill="#fffaf0"/> </g> <rect x="102.0" y="102.0" width="820" height="820" rx="183.0" fill="none" stroke="#e0fff8" stroke-opacity="0.28" stroke-width="4"/> </g> </svg>`}
+
+
+
+
+const GPS={lat:'35°00′41.2″ N',lon:'135°46′21.8″ E',alt:'48 m'};
+const kvr=rows=>`<div class="kv">${rows.map(([k,v,m])=>`<div><span>${k}</span><b class="${m?'m':''}">${v}</b></div>`).join('')}</div>`;
+const sec=(t,body,extra='')=>`<section><h5>${t}${extra?`<em>${extra}</em>`:''}</h5>${body}</section>`;
+function infoV2(it,kind,mh){
+ const fileRows=[['文件夹',`~/Pictures/${FOLDER}`],['大小',it.s,1],['像素尺寸',`${it.w} × ${it.h}`,1],['格式',kind==='png'?'PNG · sRGB':kind==='vid'?'QuickTime 影片':`${it.fmt} · ${it.sp||'sRGB'}`],['创建时间',kind==='png'?'2026-10-22 14:32':`${it.d}`,1],['修改时间',kind==='png'?'2026-10-22 14:35':`${it.d}`,1]];
+ const loc=sec('位置',kvr([['纬度',GPS.lat,1],['经度',GPS.lon,1],['海拔',GPS.alt,1]]),`<span class="cpy">${ic('copy')}</span>`);
+ let body='';
+ if(kind==='photo'){const ex=it.ex;
+  body=sec('文件',kvr(fileRows))+'<div class="hr"></div>'+
+   sec('拍摄',kvr([['拍摄时间',`${it.d}:36`,1],['相机',it.cam],['镜头',it.lens]])+`<div class="exif">${['光圈','快门','ISO','焦距'].map((k,i)=>`<div>${ex[i]}<small>${k}</small></div>`).join('')}</div>`+kvr([['曝光补偿','+0.3 EV',1],['闪光灯','未闪光'],['白平衡','自动']]))+'<div class="hr"></div>'+loc;}
+ else if(kind==='vid'){
+  body=sec('文件',kvr(fileRows))+'<div class="hr"></div>'+
+   sec('视频',kvr([['时长',mmss(it.dur),1],['分辨率',`${it.w} × ${it.h}`,1],['编码','HEVC（H.265）'],['帧率',it.fps.replace(' fps','.00 fps'),1],['码率','40.4 Mbps',1],['音频','AAC · 立体声 · 48 kHz']]))+'<div class="hr"></div>'+
+   sec('拍摄',kvr([['拍摄时间',`${it.d}:12`,1],['相机','iPhone 17 Pro']]))+'<div class="hr"></div>'+loc;}
+ else{
+  body=sec('文件',kvr(fileRows))+'<div class="hr"></div>'+
+   sec('拍摄',`<div class="empty">${ic('photo')}<span><b>没有拍摄信息</b><br>截图和导出的图片通常不带相机数据</span></div>`);}
+ return`<div class="ip gt" style="${mh?`max-height:${mh}`:''}"><div class="hd"><img src="${th(it)}" alt=""><div><b>${it.n}</b><span>${kind==='vid'?'视频':'图片'} · ${it.fmt.split(' ·')[0]}</span></div><div class="x">${ic('x')}</div></div><div class="ipb">${body}</div>
+  <div class="foot"><div class="btn g">${ic('reveal')}在访达中显示</div><div class="btn g">${ic('copy')}拷贝信息</div></div></div>`}
+const legend=items=>`<div class="legend">${items.map(([b,t])=>`<div><b>${b}</b><p>${t}</p></div>`).join('')}</div>`;
+
+
+/* 全屏顶部：系统菜单栏 + 窗口工具栏一起滑下 */
+function fsTop(it,list){const idx=list.indexOf(it);
+ return`<div style="position:absolute;left:0;right:0;top:0;height:140px;background:linear-gradient(180deg,rgba(0,0,0,.42),rgba(0,0,0,0))"></div>
+ <div class="fsmb"><svg viewBox="0 0 16 20" style="width:13px;height:16px;margin-right:10px" fill="#fff"><path d="M13.3 10.6c0-2.4 2-3.5 2-3.6-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.2-2.8.8-3.5.8-.7 0-1.8-.8-3-.8C3.8 5.3 2.3 6.2 1.5 7.6-.2 10.5 1 14.9 2.7 17.2c.8 1.2 1.7 2.4 3 2.4 1.2 0 1.6-.8 3-.8s1.8.8 3 .8c1.3 0 2.1-1.2 2.9-2.3.9-1.3 1.3-2.6 1.3-2.7 0 0-2.6-1-2.6-4zM11 3.5c.6-.8 1.1-1.9 1-3-.9 0-2.1.6-2.7 1.4-.6.7-1.1 1.8-1 2.9 1 .1 2.1-.5 2.7-1.3z"/></svg>${['一览','文件','编辑','显示','前往','窗口','帮助'].map((n,i)=>`<span style="${i==0?'font-weight:700':''}">${n}</span>`).join('')}<span style="margin-left:auto;font-variant-numeric:tabular-nums">11月10日 周二 09:41</span></div>
+ <div style="position:absolute;left:0;right:0;top:30px;height:56px"><div class="tb"><div class="lights"><i></i><i></i><i></i></div><div class="ttl"><b>${it.n}</b><span>${FOLDER}</span></div><div class="sp"></div><div class="pill g">${idx+1} / ${list.length}</div><div class="tools g"><div class="ib">${ic('rotate')}</div><div class="ib">${ic('info')}</div><div class="ib">${ic('more')}</div></div></div>${seg('all')}</div>`}
+const fsNav=(H,dim)=>`<div class="nav g" style="left:24px;top:${H/2-22}px">${ic('chevL')}</div><div class="nav g" style="right:24px;top:${H/2-22}px">${ic('chevR')}</div>`;
+
+
+/* 设置 · 快捷键 */
+function keysPane(){
+ const K=(...a)=>a.map(x=>x==='/'?'<span>/</span>':`<span class="kc">${x}</span>`).join('');
+ const g=(t,rows)=>`<div style="display:flex;flex-direction:column;gap:6px"><div class="mhead" style="padding:0 4px">${t}</div><div class="grp">${rows.map(([k,a,n])=>`<div class="row" style="min-height:31px;padding:4px 14px"><div class="lb">${a}${n?'<span class="new-tag">v0.2</span>':''}</div><div class="kcs">${k}</div></div>`).join('')}</div></div>`;
+ return`<div class="pane" style="gap:12px"><h1>快捷键</h1>
+  ${g('浏览',[[K('←','→','↑','↓'),'上一个 / 下一个'],[K('Home','/','End'),'第一个 / 最后一个'],[K('⌘1','⌘2','⌘3'),'全部 / 只看图片 / 只看视频'],[K('T'),'显示或隐藏缩略图栏']])}
+  ${g('查看',[[K('0','/','1'),'适应窗口 / 实际大小'],[K('⌘+','⌘−'),'放大 / 缩小'],[K('F','/','Esc'),'进入 / 退出全屏',1],[K('I'),'显示或隐藏信息面板',1],[K('R','/','⇧R'),'向右 / 向左旋转']])}
+  ${g('文件',[[K('⌫'),'移到废纸篓',1],[K('⌘Z'),'撤销上一次删除',1],[K('⌘O'),'打开…']])}
+  ${g('视频',[[K('空格'),'播放 / 暂停'],[K('J','/','L'),'快退 / 快进 5 秒'],[K('M'),'静音']])}
+ </div>`}
+
+
+
+/* ============ 09 v0.3 评星与筛选 ============ */
+const STAR_D='M12 3.8l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.8l-5.1 2.7 1-5.7-4.1-4 5.7-.8z';
+const star=(s,on,cls='')=>`<svg viewBox="0 0 24 24" width="${s}" height="${s}" class="st ${on?'on':''} ${cls}"><path d="${STAR_D}"/></svg>`;
+const stars5=(n,s,o={})=>[1,2,3,4,5].map(i=>star(s,i<=n,(o.hv&&i<=o.hv&&i>n?'hv ':'')+(o.pop===i?'big':''))).join('');
+/* 缩略图角标：左上角深色小角标，亮黄星 + 白色数字 */
+function ratingBadge(r){return`<span class="bdg s">${star(10,1)}${r}</span>`}
+/* 示例评星：已评星的文件才带 r，没评星的缩略图保持干净 */
+const RATE={'aurora.jpg':5,'DSC_0812.ARW':4,'DSC_0821.ARW':2,'IMG_2031.HEIC':3,'IMG_2032.MOV':4,'IMG_2034.HEIC':4,'IMG_2035.HEIC':3,'IMG_2040.HEIC':3,'IMG_2050.JPG':4,'IMG_2052.JPG':5,'trail.mp4':4};
+const RL=L.map(x=>RATE[x.n]?{...x,r:RATE[x.n]}:x);
+const rby=n=>RL.find(x=>x.n===n);
+const FL=RL.filter(x=>x.r>=4);               /* ≥4 星：7 个 */
+const atLeast=n=>RL.filter(x=>x.r>=n).length, unrated=RL.filter(x=>!x.r).length;
+
+/* 画面上的五星控件：深色玻璃胶囊，锚在舞台底边正中，缩略图栏上沿再往上 8（栏隐藏或全屏时距底 32 / 140）。
+   和箭头、缩放控件一起出现（鼠标移动）；按 0–5 时单独闪现约 1 秒 */
+function stageStars(n,o={}){const bt=o.nodock?32:140;
+  return`<div class="rate g adapt ${o.flash?'flash':''}" style="bottom:${bt}px">${stars5(n,22,{hv:o.hv,pop:o.pop})}</div>`}
+/* 顶部缩放控件：− 百分比 +，高 36，和序号胶囊同高同材质，在顶部栏右组里、序号胶囊左边。
+   mode：full = − 38% +；pct = 只留百分比（− / + 进菜单）；none = 整个收进 ⋯ 菜单 */
+const ZFULL=1200, SLIM=1060, ZMENU=920, LEFTAL=760;   /* 窗口宽度阈值：<1200 缩放只留百分比；<1060 筛选组瘦身；<920 缩放收进 ⋯ 菜单；<760 筛选组不再居中 */
+const MINUS='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg>',PLUS='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5v14"/></svg>';
+function zoomMenu(cur,hi,mode){const it=(l,k,i)=>`<div class="mi ${hi===i?'on':''}"><span class="ck">${cur===i?'✓':''}</span>${l}<kbd>${k||''}</kbd></div>`;
+  return`<div class="menu gt" style="right:0;top:42px;min-width:196px;z-index:9">${it('适应窗口','⌘9',0)}${it('实际大小','⌘0',1)}${it('200%','',2)}${mode==='pct'?`<div class="msep"></div>${it('放大','⌘+',3)}${it('缩小','⌘−',4)}`:''}</div>`}
+function zoomTop(pct,o={}){const mode=o.mode||'full',st=k=>o.hov===k?'hov':o.prs===k?'prs':'';
+  const pc=`<div class="zp ${st('p')}">${pct}%<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5L6 1.8l3 2.7M3 7.5l3 2.7 3-2.7"/></svg></div>`;
+  const body=mode==='pct'?pc:`<div class="zb ${st('m')} ${o.dmin?'dis':''}">${MINUS}</div>${pc}<div class="zb ${st('a')} ${o.dmax?'dis':''}">${PLUS}</div>`;
+  return`<div style="position:relative;flex:none"><div class="zoomt g ${mode==='pct'?'pct':''}">${body}</div>${o.menu!=null?zoomMenu(o.cur??0,o.menu,mode):''}</div>`}
+/* ⋯ 菜单（窗口很窄时，缩放收进这里） */
+function moreMenu(hi){const it=(l,k,i,ck)=>`<div class="mi ${hi===i?'on':''}"><span class="ck">${ck?'✓':''}</span>${l}<kbd>${k||''}</kbd></div>`;
+  return`<div class="menu gt" style="right:16px;top:52px;min-width:210px;z-index:9"><div class="mhead">缩放 · 38%</div>${it('放大','⌘+',0)}${it('缩小','⌘−',1)}${it('适应窗口','⌘9',2,1)}${it('实际大小','⌘0',3)}${it('200%','',4)}<div class="msep"></div>${it('在访达中显示','⇧⌘R',5)}${it('拷贝文件路径','⌥⌘C',6)}${it('设为桌面图片','',7)}</div>`}
+/* 顶部筛选组：全部/图片/视频 + 评星筛选按钮，整组居中。按钮只显示条件，不显示数量。compact：类型只留图标，评星只留星和值 */
+function filterGroup(type,counts,rate,o={}){
+  const t=(k,icon,label)=>`<div class="${type===k?'on':''} ${!counts[k]&&type!==k?'off':''}" ${o.compact?'style="padding:0 10px"':''}>${ic(icon)}${o.compact?'':label}<em>${counts[k]}</em></div>`;
+  const sg=`<div class="seg g" style="position:relative;left:auto;top:auto;transform:none">${t('all','all','全部')}${t('img','photo','图片')}${t('vid','video','视频')}</div>`;
+  const label=rate===-1?'未评星':`≥${rate}${o.compact?'':' 星'}`;
+  const active=rate!==0;
+  const btn=`<div class="rb g ${o.open?'on':active?'act':''}">${star(14,active&&rate>0)}${active?label:(o.compact?'':'评星')}<svg class="cv" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5l3 3 3-3"/></svg></div>`;
+  return`<div style="position:absolute;${o.left?'left:84px':'left:50%;transform:translateX(-50%)'};top:10px;display:flex;gap:10px;z-index:6">${sg}<div style="position:relative">${btn}${o.menu||''}</div></div>`}
+/* 筛选菜单：不限 / 「星级不低于」+ 五行星星 / 未评星 */
+function rateMenu(sel,hi){const cnt=c=>`<kbd style="font-family:var(--mono);font-size:11.5px;letter-spacing:0">${c}</kbd>`;
+  const txt=(k,label,c)=>`<div class="mi ${hi===k?'on':''}" style="height:26px"><span class="ck">${sel===k?'✓':''}</span>${label}${cnt(c)}</div>`;
+  const stR=n=>`<div class="mi ${hi===n?'on':''}" style="height:26px"><span class="ck">${sel===n?'✓':''}</span><span style="display:flex;gap:2px">${stars5(n,13)}</span>${cnt(atLeast(n))}</div>`;
+  return`<div class="menu gt" style="left:0;top:44px;min-width:218px;z-index:8">${txt(0,'不限',RL.length)}<div class="msep"></div><div class="mhead">星级不低于</div>${[1,2,3,4,5].map(stR).join('')}<div class="msep"></div>${txt(-1,'未评星',unrated)}</div>`}
+/* 信息面板：在 infoV2 的最上面加一个“评星”组 */
+function infoV3(it,kind,note){const h=infoV2(it,kind);
+  const sec3=`<section><h5>评星</h5><div class="kv"><div style="align-items:center"><span style="display:flex;gap:3px;align-items:center">${stars5(it.r||0,16)}</span><b>${it.r?it.r+' 星':'未评星'}</b></div>${note?`<div><span>保存位置</span><b class="m">${note}</b></div>`:''}</div></section><div class="hr"></div>`;
+  return h.replace('<div class="ipb">','<div class="ipb">'+sec3)}
+const scaled=(html,w,h,k)=>`<div style="width:${w*k}px;height:${h*k}px;flex:none"><div style="width:${w}px;height:${h}px;transform:scale(${k});transform-origin:0 0">${html}</div></div>`;
+
+const I34=rby('IMG_2034.HEIC'), I31=rby('IMG_2031.HEIC');
+const starSfx=r=>`<span style="color:var(--t3)"> · </span><span style="display:inline-flex;align-items:center;gap:3px;color:#fff">${star(11,1)}${r}</span>`;
+/* 一览窗口：顶部栏含缩放控件（按窗口宽度自动收缩），其余照旧 */
+const FGD=['all',{all:20,img:16,vid:4},0];
+function w3(o){const W=o.w||1280,compact=o.compact??W<900,slim=W<SLIM,left=W<LEFTAL;
+  const zm=o.zm||(W>=ZFULL?'full':W>=ZMENU?'pct':'none');
+  const hasZ=o.item&&!o.item.err&&!o.nozoom&&zm!=='none';
+  const zcHtml=hasZ?zoomTop(o.pct||38,{mode:zm,...(o.zo||{})}):'';
+  const fg=o.fg||FGD;
+  const extra=(o.nofg?'':filterGroup(fg[0],fg[1],fg[2],{compact:slim,left,...(fg[3]||{})}))+(o.stars!=null?stageStars(o.stars,{nodock:o.nodock,flash:o.flash,pop:o.pop}):'')+(o.extra||'');
+  const {fg:_a,zm:_b,stars:_c,flash:_d,pop:_e,nozoom:_f,nofg:_g,zo:_h,pct:_i,extra:_j,...rest}=o;
+  return win({list:RL,noseg:1,compact,zcHtml,...rest,extra})}
+
+/* ---- 1.1 ---- */
+const mainRest=w3({item:I34,nonav:1});
+const mainMove=w3({item:I34,stars:4,extra:cursorSVG(760,430)});
+const rateMoment=w3({item:I34,nonav:1,stars:4,flash:1,pop:4});
+const stripHidden=w3({item:I34,nodock:1,stars:4,pillSfx:starSfx(4)});
+const posPortrait=w3({item:rby('IMG_2035.HEIC'),stars:3});
+const posSmall=w3({w:760,h:540,item:I34,stars:4,dw:700});
+const posFs=win({w:1440,h:900,item:I34,list:RL,fs:1,extra:stageStars(4)});
+const posBoard=`<div class="board" style="width:1440px;height:430px;padding:28px 36px;flex-direction:row;gap:20px;align-items:flex-end"><img class="bg" src="../../../design/photos/p1043.jpg" alt="">${scaled(posPortrait,1280,800,.42)}${scaled(posSmall,760,540,.46)}${scaled(posFs,1440,900,.28)}</div>`;
+const IP=h=>h.replace('class="ip gt"','class="ip gt" style="bottom:132px"');
+const infoHeic=w3({item:I31,panel:300,stars:3,extra:IP(infoV3(I31,'photo','文件内部'))});
+const infoRaw=w3({item:rby('DSC_0812.ARW'),panel:300,stars:4,extra:IP(infoV3(rby('DSC_0812.ARW'),'photo','DSC_0812.xmp'))});
+const rateStates=`<div class="board" style="width:1440px;height:330px;padding:36px"><img class="bg" src="../../../design/photos/p1043.jpg" alt="">
+ <div class="crow" style="gap:48px;align-items:flex-start">
+  <div class="var"><div class="rate g adapt rel">${stars5(0,22)}</div>未评星<br>五颗都是描边</div>
+  <div class="var"><div class="rate g adapt rel">${stars5(3,22,{hv:4})}</div>评了 3 星，鼠标移到第 4 颗<br>预览：第 4 颗半透明填充</div>
+  <div class="var"><div class="rate g adapt rel flash">${stars5(4,22,{pop:4})}</div>刚评 4 星<br>最后一颗放大 130% 并发光，约 1 秒后淡出</div>
+  <div class="var"><div class="rate g adapt rel">${stars5(5,22)}</div>5 星</div>
+  <div class="var"><div class="rate g adapt rel" style="opacity:.4">${stars5(0,22)}</div>文件不可写 / 无法评星<br>整条 40% 不透明，点击弹出提示</div>
+ </div>
+ <div class="crow" style="gap:48px;align-items:flex-start;margin-top:6px">
+  <div class="var"><div class="rate g adapt rel">${stars5(3,22)}</div>点击当前的第 3 颗 → 清除星级<br>（和按 0 一样）</div>
+  <div class="var"><div class="toast g adapt" style="position:relative;left:auto;transform:none">${ic('star')}已清除星级</div>清除时才有文字提示，约 1.5 秒后淡出</div>
+ </div></div>`;
+const contrast=`<div class="cmp" style="gap:24px">${[['p49','亮色画面（白色建筑）'],['p1016','中间调（岩石）'],['p1019','暗色画面']].map(([f,n])=>`<div style="gap:8px"><div style="position:relative;width:464px;height:200px;border-radius:14px;overflow:hidden"><img src="../../../design/photos/${f}.jpg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"><div class="rate g adapt" style="bottom:14px">${stars5(3,22)}</div><div style="position:absolute;left:12px;top:12px"><div class="th rt" style="width:76px;height:52px;opacity:1"><img src="../../../design/photos/t/${f}.jpg">${ratingBadge(4)}</div></div></div><span style="font-size:12px;color:var(--label)">${n}</span></div>`).join('')}</div>`;
+/* 缩略图角标可读性：左侧窗口里的缩略图栏，选中、未选中、被栏边缘渐隐遮住的 */
+const badgeBoard=`<div class="board" style="width:1440px;height:250px;padding:36px"><img class="bg" src="../../../design/photos/p1043.jpg" alt="">
+ <div class="crow" style="gap:40px;align-items:flex-start"><div class="var"><div class="rel" style="width:700px;height:96px">${dock(RL,8,1200,{dw:700,style:'bottom:0'})}</div>栏两端 28 点是渐隐区：没完全露出的缩略图不画角标</div>
+ <div class="var"><div style="display:flex;gap:10px;align-items:center"><div class="th rt" style="width:76px;height:52px;opacity:1"><img src="../../../design/photos/t/p1016.jpg">${ratingBadge(4)}</div><div class="th rt on" style="width:76px;height:52px;transform:none"><img src="../../../design/photos/t/p1016.jpg">${ratingBadge(4)}</div></div>未选中 / 选中：亮黄星 + 白色数字<br>黑底 78%，高 16 点</div></div></div>`;
+
+
+/* ---- 1.2 缩放控件（在顶部栏里） ---- */
+const zoomFit=w3({item:I34,stars:4,zo:{hov:'a'}});
+const zoomMenuFrame=w3({item:I34,stars:4,zo:{hov:'p',menu:2,cur:0}});
+const zoom200=w3({item:rby('IMG_2040.HEIC'),zoom:{pos:'38% 42%',size:'260%'},nonav:1,pct:200,stars:3,extra:`<div class="nav-map gt"><div class="m"><img src="${th(by('IMG_2040.HEIC'))}" alt=""><div class="vp" style="left:42px;top:30px;width:62px;height:40px"></div></div></div>`});
+const wMid=w3({w:1100,h:700,item:I34,stars:4,zo:{hov:'p',menu:3,cur:0}});
+const wSlim=w3({w:1000,h:660,item:I34,stars:4,fg:['all',{all:20,img:16,vid:4},4]});
+const wCompact=w3({w:820,h:560,item:I34,stars:4,dw:760,fg:['all',{all:20,img:16,vid:4},4]});
+const wMin=w3({w:640,h:440,item:I34,stars:4,dw:576,extra:moreMenu(0)});
+const zoomStates=`<div class="board" style="width:1440px;height:250px;padding:36px"><img class="bg" src="../../../design/photos/p1043.jpg" alt="">
+ <div class="crow" style="gap:44px;align-items:flex-start">
+  <div class="var">${zoomTop(38,{})}适应窗口时（显示实际比例）</div>
+  <div class="var">${zoomTop(38,{hov:'m'})}悬停 −</div>
+  <div class="var">${zoomTop(38,{hov:'p'})}悬停百分比</div>
+  <div class="var">${zoomTop(100,{prs:'a'})}按下 +</div>
+  <div class="var">${zoomTop(800,{dmax:1})}到达 800% 上限，+ 置灰</div>
+  <div class="var">${zoomTop(38,{mode:'pct'})}窗口 &lt; 1100：只留百分比</div>
+ </div></div>`;
+const fsZoom=win({w:1440,h:900,item:I34,list:RL,fs:1,extra:fsTop(I34,RL).replace(seg('all'),filterGroup('all',{all:20,img:16,vid:4},0,{})).replace('<div class="pill g">',zoomTop(38,{})+'<div class="pill g">').replace('9 / 20</div><div class="tools g">','9 / 20'+starSfx(4)+'</div><div class="tools g">')+stageStars(4)+cursorSVG(980,8)});
+
+/* ---- 1.3 筛选 ---- */
+const filterMenuFrame=w3({item:I34,stars:4,fg:['all',{all:20,img:16,vid:4},0,{open:1,menu:rateMenu(0,4)}],extra:cursorSVG(840,208)});
+const filtered=w3({item:I34,list:FL,cur:3,total:7,fg:['all',{all:7,img:5,vid:2},4],stars:4});
+const emptyF=win({item:null,empty:1,list:RL,title:FOLDER,sub:'~/Pictures',nodock:1,noseg:1,extra:filterGroup('vid',{all:2,img:2,vid:0},5)+`<div class="card gt" style="width:420px"><div class="badge-ic" style="background:rgba(255,255,255,.1);margin-bottom:2px">${star(26,0)}</div><h3>没有符合条件的文件</h3><p>当前筛选：视频 · ≥5 星<br>放宽条件，或清除筛选后查看全部文件。</p><div class="btns"><div class="btn pri">清除筛选</div></div></div>`});
+
+/* ---- 1.4 提示 ---- */
+const toastFail=w3({item:rby('DSC_0812.ARW'),stars:4,extra:`<div class="toast g adapt" style="top:66px;z-index:7">${ic('warn').replace('<svg','<svg style="color:var(--yellow)"')}无法保存星级：此位置不可写</div>`});
+const toastXmp=w3({item:rby('DSC_0812.ARW'),stars:4,extra:`<div class="hint gt" style="top:66px;z-index:7"><div class="hi">${ic('doc')}</div><div><b>已在旁边创建 DSC_0812.xmp</b><p>RAW 文件本身不会被改动，星级记在这个同名的 <code>.xmp</code> 小文件里，Lightroom 等软件也能读取。</p><div class="btns"><div class="btn pri" style="box-shadow:none">知道了</div></div></div></div>`});
+const KC=t=>`<span class="kc">${t}</span>`;
+const noticeKeys=w3({item:I34,stars:4,extra:`<div class="hint gt" style="top:66px;z-index:7;width:480px"><div class="hi">${ic('keyb')}</div><div style="padding-right:20px"><b>快捷键有变化</b><p>数字键 ${KC('1')}–${KC('5')} 现在用来评星，${KC('0')} 清除星级。<br>${KC('0')} 和 ${KC('1')} 不再用来缩放：按 ${KC('Z')} 在适应窗口和实际大小之间切换，${KC('⌘0')} 实际大小，${KC('⌘9')} 适应窗口。</p><div class="btns"><div class="btn g">查看快捷键</div></div></div><div class="x">${ic('x')}</div></div>`});
+
+/* ---- 9.5 设置（带 data-ann 的行，标注贴在窗口外面） ---- */
+function settingsBrowse3(){let h=settings('browse');
+  const row=(l,c,s='',ann='')=>`<div class="row" ${ann?`data-ann="${ann}"`:''}><div class="lb">${l}${s?`<small>${s}</small>`:''}</div>${c}</div>`;
+  const rad=(on,l,s)=>`<div class="row" style="padding:10px 14px"><div class="rd ${on?'on':''}"></div><div class="lb">${l}<small>${s}</small></div></div>`;
+  const add=`<div class="grp">${row('打星后自动跳到下一张','<div class="tg"><i></i></div>','默认关闭。打开后，按 1–5 或 0 评星会立刻显示下一张','v0.3 新增')}</div>
+  <div style="display:flex;flex-direction:column;gap:6px"><div class="mhead" style="padding:0 4px" data-ann="v0.3 新增">星级保存到哪里</div><div class="grp">${rad(1,'写入文件内部（推荐，其他软件可读）','JPEG、PNG、HEIC 等直接写进文件的元数据，预览、Lightroom 等都能读到')}${rad(0,'一律使用旁边的 .xmp 小文件','不改动图片本身；换到别的软件时要连同 .xmp 一起带走')}</div><div class="mrow">RAW（ARW、CR3、NEF 等）不能写入文件内部，始终使用旁边的 .xmp。</div></div>`;
+  const key='<div class="grp"><div class="row"><div class="lb">自动隐藏控件';
+  return h.replace(key,add+key).replace('height:700px','height:950px')}
+function settingsKeys3(){let h=settings('keys');
+  const R='<div class="row" style="min-height:31px;padding:4px 14px">';
+  const ann=(label,a)=>{h=h.replace(R+'<div class="lb">'+label,'<div class="row" data-ann="'+a+'" style="min-height:31px;padding:4px 14px"><div class="lb">'+label)};
+  const tag='<span class="new-tag">v0.2</span>';
+  ['进入 / 退出全屏','显示或隐藏信息面板','移到废纸篓','撤销上一次删除'].forEach(l=>{h=h.replace(l+tag,l)});
+  h=h.replace('撤销上一次删除','撤销上一次评星 / 删除');
+  h=h.replace('<span class="kc">0</span><span>/</span><span class="kc">1</span>','<span class="kc">⌘9</span><span>/</span><span class="kc">⌘0</span>');
+  /* 新增一行：Z 切换 */
+  h=h.replace(R+'<div class="lb">放大 / 缩小',R+'<div class="lb" data-zrow>适应窗口 ↔ 实际大小（切换）</div><div class="kcs"><span class="kc">Z</span></div></div>'+R+'<div class="lb">放大 / 缩小');
+  h=h.replace('<div class="lb" data-zrow>','<div class="lb">');
+  ann('适应窗口 / 实际大小','v0.3 改');ann('适应窗口 ↔ 实际大小（切换）','v0.3 新增');
+  ann('进入 / 退出全屏','v0.2');ann('显示或隐藏信息面板','v0.2');ann('移到废纸篓','v0.2');ann('撤销上一次评星 / 删除','v0.2 + v0.3 改');
+  const grp=`<div style="display:flex;flex-direction:column;gap:6px"><div class="mhead" style="padding:0 4px">评星</div><div class="grp">${[['<span class="kc">1</span><span>–</span><span class="kc">5</span>','设置星级'],['<span class="kc">0</span>','清除星级']].map(([k,a])=>`<div class="row" data-ann="v0.3 新增" style="min-height:31px;padding:4px 14px"><div class="lb">${a}</div><div class="kcs">${k}</div></div>`).join('')}</div></div>`;
+  const anchor='<div style="display:flex;flex-direction:column;gap:6px"><div class="mhead" style="padding:0 4px">浏览</div>';
+  return h.replace(anchor,grp+anchor).replace('height:700px','height:840px')}
+/* ---- 9.6 菜单 / 导出 ---- */
+function menubar3(open,undo){const menus={
+ '文件':[['打开…','⌘O'],['打开最近使用','▸'],'-',['评星','▸',0,1],['导出筛选结果…',''],'-',['在访达中显示','⇧⌘R'],['拷贝文件路径','⌥⌘C'],['共享…',''],'-',['向右旋转','R'],['设为桌面图片',''],'-',['移到废纸篓','⌫',0,0,0,1],'-',['关闭窗口','⌘W']],
+ '编辑':[[undo,'⌘Z'],['重做','⇧⌘Z',0,0,1],'-',['拷贝图片','⌘C'],['拷贝文件路径','⌥⌘C'],'-',['全选','⌘A',0,0,1]],
+ '显示':[['全部','⌘1',1],['只看图片','⌘2'],['只看视频','⌘3'],'-',['评星筛选','▸'],'-',['适应窗口','⌘9'],['实际大小','⌘0'],['切换适应窗口 / 实际大小','Z'],['放大','⌘+'],['缩小','⌘−'],'-',['缩略图栏','T',1],['信息面板','I'],['环境光背景','',1],'-',['进入全屏幕','F']]};
+ const names=['一览','文件','编辑','显示','前往','窗口','帮助'];const x={文件:72,编辑:110,显示:162}[open];
+ const sub=open==='文件'?`<div class="menu gt" style="left:${x+250}px;top:${34+25*3+5}px;min-width:170px">${[['1 星','1'],['2 星','2'],['3 星','3'],['4 星','4'],['5 星','5'],'-',['清除星级','0']].map(m=>m==='-'?'<div class="msep"></div>':`<div class="mi ${m[1]==='4'?'on':''}"><span class="ck"></span>${m[0]}<kbd>${m[1]}</kbd></div>`).join('')}</div>`:'';
+ return`<div class="win" style="width:760px;height:500px;border-radius:14px"><img src="../../../design/photos/p1015.jpg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.7)">
+  <div style="position:absolute;left:0;right:0;top:0;height:30px;display:flex;align-items:center;gap:4px;padding:0 14px;background:rgba(20,20,24,.35);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px);font-size:13px"><svg viewBox="0 0 16 20" style="width:13px;height:16px;margin-right:10px" fill="#fff"><path d="M13.3 10.6c0-2.4 2-3.5 2-3.6-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.2-2.8.8-3.5.8-.7 0-1.8-.8-3-.8C3.8 5.3 2.3 6.2 1.5 7.6-.2 10.5 1 14.9 2.7 17.2c.8 1.2 1.7 2.4 3 2.4 1.2 0 1.6-.8 3-.8s1.8.8 3 .8c1.3 0 2.1-1.2 2.9-2.3.9-1.3 1.3-2.6 1.3-2.7 0 0-2.6-1-2.6-4zM11 3.5c.6-.8 1.1-1.9 1-3-.9 0-2.1.6-2.7 1.4-.6.7-1.1 1.8-1 2.9 1 .1 2.1-.5 2.7-1.3z"/></svg>${names.map((n,i)=>`<span style="padding:3px 8px;border-radius:5px;${i==0?'font-weight:700;':''}${n===open?'background:rgba(255,255,255,.22)':''}">${n}</span>`).join('')}</div>
+  <div class="menu gt" style="left:${x}px;top:34px">${menus[open].map(m=>m==='-'?'<div class="msep"></div>':`<div class="mi ${m[3]&&open==='文件'?'on':''} ${m[4]&&open==='编辑'?'dis':''} ${m[5]?'red':''}"><span class="ck">${m[2]?'✓':''}</span>${m[0]}<kbd>${m[1]}</kbd></div>`).join('')}</div>${sub}</div>`}
+const exportSheet=w3({item:I34,list:FL,cur:3,total:7,fg:['all',{all:7,img:5,vid:2},4],stars:4,extra:`<div class="dim"></div><div class="alert gt" style="top:60px;transform:translateX(-50%);width:440px;padding:22px 22px 18px;align-items:stretch;text-align:left"><h3 style="font-size:15px;margin:0">导出 7 个筛选结果</h3><p style="margin:0">筛选条件：≥4 星 · 全部类型。</p>
+ <div class="grp" style="margin-top:6px"><div class="row"><div class="lb">目标文件夹</div><div class="pop">${ic('folder').replace('<svg','<svg style="width:13px;height:13px;color:var(--t2)"')}~/Pictures/精选</div><div class="btn g" style="height:26px;font-size:12px;padding:0 12px">选择…</div></div>
+ <div class="row"><div class="lb">方式<small>拷贝会保留原文件</small></div><div class="sseg"><span class="on">拷贝</span><span>移动</span></div></div></div>
+ <div class="mrow" style="margin-top:2px">共 7 个文件，约 1.2 GB；RAW 旁边的 .xmp 会一起处理。</div>
+ <div class="btns" style="justify-content:flex-end;width:auto"><div class="btn g" style="flex:none">取消</div><div class="btn pri" style="flex:none;box-shadow:0 0 0 3px rgba(255,255,255,.2)">拷贝 7 个文件</div></div></div>`});
+const exportMoveNote=`<div class="board" style="width:640px;height:150px;padding:28px 36px"><img class="bg" src="../../../design/photos/p1043.jpg" alt=""><div class="crow" style="gap:20px;align-items:flex-start"><div class="var"><div class="sseg"><span>拷贝</span><span class="on">移动</span></div>选“移动”时</div><div class="alert gt" style="position:relative;left:auto;top:auto;transform:none;width:330px;padding:12px 14px;align-items:flex-start;text-align:left;border-radius:14px"><p style="margin:0;font-size:12px;color:var(--t2)">移动后，这 7 个文件会离开当前文件夹（不会进废纸篓）。确认按钮改为“移动 7 个文件”。</p></div></div></div>`;
+const exportDone=w3({item:rby('aurora.jpg'),list:FL,cur:1,total:7,fg:['all',{all:7,img:5,vid:2},4],stars:5,extra:`<div class="toast g adapt" style="top:66px;z-index:7">${ic('check')}已拷贝 7 个文件到“精选”<span style="color:var(--t3)">·</span><a style="margin-left:0">在访达中显示</a></div>`});
+/* ---- 章节 ---- */
+ch('00','封面','v0.3 单独一份设计稿：只含 v0.3 新增和改动的画板。颜色、材质、组件沿用 yilan-design.html 的 01–02 章。',`
+${fr('封面','1440 × 810',`<div class="cover"><img src="../../../design/photos/p1016.jpg" alt=""><div class="shade"></div>
+ <div class="gcard g">
+  ${appIcon(84)}
+  <h1>一览<small>v0.3 · 评星与筛选</small></h1>
+  <p style="margin:0;color:var(--t2);font-size:16px;line-height:1.6">给每张照片打星，按星级筛选，<br>缩放控件放进顶部栏。macOS 26 · 液态玻璃 · 2026-11-17</p>
+  <div class="toc">${[['1.1','评星：画面、缩略图、信息面板'],['1.2','缩放控件（顶部栏）与窄窗口'],['1.3','评星筛选'],['1.4','提示和首次说明'],['1.5','设置：浏览、快捷键'],['1.6','撤销、菜单与导出筛选结果']].map(([a,b])=>`<div><b>${a}</b>${b}</div>`).join('')}</div>
+ </div></div>`)}`);
+
+ch('01','v0.3 评星与筛选','评星（键盘 1–5 / 0，或点画面上的五星）、评星筛选、顶部栏缩放控件、快捷键调整、写入失败和 .xmp 提示、导出筛选结果。亮星用品牌 sun #FFE2A0。',`
+<h3 class="sub"><span>1.1</span>评星：画面、缩略图、信息面板</h3>
+<div class="frames">
+ ${fr('主界面 · 静止','1280 × 800',mainRest,'鼠标没动：左右箭头和底部五星隐藏；顶部栏（含缩放控件）一直在；缩略图上有星角标的是已评星的文件')}
+ ${fr('主界面 · 鼠标移动','1280 × 800',mainMove,'左右箭头和底部五星一起出现，鼠标静止后一起淡出')}
+ ${fr('评星的瞬间 · 按下 4','1280 × 800',rateMoment,'只闪现五星，不带出箭头；第 4 颗放大发光就是反馈，约 1 秒后淡出；缩略图角标同步变成 4')}
+ ${fr('缩略图栏隐藏时 · 序号里带星级','1280 × 800',stripHidden,'按 T 隐藏缩略图栏（全屏也一样）：右上角序号后面加 ★ 和星级，不用呼出五星也能看到')}
+ ${fr('五星控件的位置 · 竖图、小窗口、全屏','1440 × 430',posBoard,'位置不跟照片走，永远在舞台底边正中、缩略图栏上沿再往上 8')}
+</div>
+${legend([
+ ['已定方案 · 五星控件位置','深色玻璃胶囊，锚在舞台底边正中、缩略图栏上沿之上 8 点，不贴照片边缘。竖图、小窗口、放大后位置都一样；缩略图栏隐藏时距窗口底 32；全屏时距屏幕底 140，给从底部滑入的缩略图栏留位置。'],
+ ['已定方案 · 缩略图角标','左上角黑底小角标“★ 4”（亮黄星 + 白色数字），不和右下角的 RAW / 时长、左下角的“新”冲突。'],
+])}
+<div class="frames" style="margin-top:8px">
+ ${fr('评星控件 · 状态','1440 × 330',rateStates,'悬停预览、刚评分、清除、不可写')}
+ ${fr('星的可读性 · 亮、中、暗三种照片','1440 × 260',contrast,'星一律在深色玻璃 / 深色角标上，亮星用 sun #FFE2A0；三种照片上对比度都够')}
+ ${fr('缩略图角标 · 可读性','1440 × 250',badgeBoard,'未选中的缩略图也是亮黄星 + 白色数字；被栏边缘渐隐遮住的缩略图不画角标')}
+ ${fr('信息面板 · 评星行（JPEG / HEIC）','1280 × 800',infoHeic,'“评星”在面板最上面，星可以直接点；写在文件内部')}
+ ${fr('信息面板 · 评星行（RAW）','1280 × 800',infoRaw,'RAW 的星级存在旁边的 .xmp 里，“保存位置”写出文件名')}
+</div>
+${legend([
+ ['打星','键盘 1–5 设置星级，0 清除；点画面上的第 N 颗设置 N 星，点当前已亮的最后一颗清除。视频和图片都能评。信息面板里的星同样可以点。⌘Z 撤销最近一次评星（和撤销删除共用，见 1.6 的编辑菜单）。'],
+ ['五星什么时候出现','不常驻。鼠标一动，它和左右箭头一起出现，鼠标静止后一起淡出。按 0–5 评星时只单独闪现约 1 秒（不带出箭头）；用方向键切换照片时不出现。缩放控件在顶部栏里，不跟五星一起出现和消失。'],
+ ['反馈','评分后第 N 颗放大 130% 并发光（0.15 秒弹出、0.6 秒回落），不再加文字气泡；缩略图角标同步变化。只有清除星级时才显示一条文字提示“已清除星级”。'],
+ ['序号里的星级','缩略图栏隐藏或全屏时，右上角序号变成“9 / 20 · ★4”（星为亮黄）；未评星时只显示“9 / 20”。缩略图栏显示时不加，因为缩略图角标已经显示了。'],
+ ['缩略图角标（规则）','只有评了星的缩略图才有角标，未评星的文件夹和现在一样干净。有星级的缩略图仍压暗到 66%，但角标不跟着变暗。被栏两端渐隐遮住（没完整露出）的缩略图不画角标；加载失败的缩略图不显示。缩略图栏的环境光色调不变。'],
+ ['颜色','亮星固定 sun #FFE2A0（品牌色），描边星白色 62%。星星只放在深色玻璃或深色角标上，不直接压在照片上；控件按钮仍跟随系统强调色。'],
+ ['打星后自动下一张','设置里可开（默认关）。开启后评星立刻显示下一张，五星在新照片上闪现一下，让人知道上一张已记录。'],
+])}
+
+<h3 class="sub"><span>1.2</span>缩放控件（顶部栏）与窄窗口</h3>
+<div class="frames">
+ ${fr('缩放控件 · 适应窗口（默认宽度）','1280 × 800',zoomFit,'顶部栏右组：[− 38% +] [序号] [工具组]；适应窗口时也显示，显示的是实际缩放比例')}
+ ${fr('缩放控件 · 百分比菜单','1280 × 800',zoomMenuFrame,'点百分比向下展开：适应窗口 ⌘9 / 实际大小 ⌘0 / 200%；当前状态前面打勾')}
+ ${fr('缩放控件 · 放大 200%','1280 × 800',zoom200,'位置不变；右上角导航图在顶部栏下面，沿用')}
+ ${fr('顶部栏 · 1100（< 1200）','1100 × 700',wMid,'第 1 步：缩放控件只留百分比，− / + 进菜单（放大 ⌘+、缩小 ⌘−）')}
+ ${fr('顶部栏 · 1000（< 1060）','1000 × 660',wSlim,'第 2 步：类型切换只留图标，评星按钮只留星和值（≥4）')}
+ ${fr('顶部栏 · 820（< 920，且 < 900 文件名已隐藏）','820 × 560',wCompact,'第 3 步：缩放整个收进 ⋯ 菜单，顶部栏右组只剩序号和工具组；文件名隐藏是原有规则')}
+ ${fr('顶部栏 · 最小宽度 640（< 760）','640 × 440',wMin,'第 4 步：筛选组不再居中，紧跟在红绿灯后面；打开 ⋯ 菜单可见“缩放”组')}
+ ${fr('缩放控件 · 状态','1440 × 250',zoomStates,'')}
+ ${fr('全屏 · 鼠标移到顶部','1440 × 900',fsZoom,'缩放控件和序号、工具组一起随顶部栏滑下，序号里带星级')}
+</div>
+${legend([
+ ['位置','在顶部栏右组里、序号胶囊左边（居中的筛选组和序号之间）：[缩放] [序号] [工具组]。高 36，和序号胶囊同高、同材质（常规玻璃），间距 14。不再有左下角的缩放胶囊。'],
+ ['显示','顶部栏显示它就显示，适应窗口时也显示；随顶部栏一起淡出（开启“自动隐藏控件”时）。没有图片（空文件夹、出错）时不显示。全屏时在鼠标移到屏幕顶部才滑下的那一栏里。'],
+ ['操作','点 − 或 + 按 ⌘− / ⌘+ 同样的步长缩放；点百分比弹出菜单，菜单向下展开、右对齐。到达上限 800% 时 + 置灰，到达下限时 − 置灰。'],
+ ['菜单和快捷键','适应窗口 ⌘9、实际大小 ⌘0、200%；适应窗口时前面打勾。单键 Z 在适应窗口和实际大小之间切换（和双击图片一样）。数字键 0、1 不再缩放，留给评星。'],
+ ['窄窗口怎么收（按顺序）','① 窗口宽度 < 1200：缩放控件只留百分比（38% ⌄），− / + 进它的菜单。② < 1060：全部/图片/视频只留图标，评星按钮只留星和值（≥4）。③ < 920：缩放控件整个收进 ⋯ 菜单的“缩放”组。④ < 760：筛选组不再在窗口中间，改为紧跟红绿灯。另有原有规则：< 900（Theme.compactWidth）隐藏文件名。'],
+ ['为什么这样收','缩放有快捷键（⌘+ ⌘− ⌘9 ⌘0 Z）和双击图片，收进菜单代价最小，所以最先收；筛选和序号告诉你“现在看的是哪些、第几张”，要一直看得见，最后才动。先让缩放变窄，再让筛选变窄，再拿走缩放，最后才改筛选的位置。按最宽的情况（序号带“· ★4”）逐个宽度量过，控件之间至少留 8 点，没有重叠和裁切。'],
+])}
+
+<h3 class="sub"><span>1.3</span>评星筛选</h3>
+<div class="frames">
+ ${fr('筛选 · 菜单展开','1280 × 800',filterMenuFrame,'挨着 全部/图片/视频：“评星”按钮；菜单分“不限 / 星级不低于（只画星）/ 未评星”，右侧是符合的文件数')}
+ ${fr('筛选 · ≥4 星','1280 × 800',filtered,'按钮变成强调色，只写条件“≥4 星”；右上角“3 / 7”是在结果里的位置和结果总数')}
+ ${fr('筛选 · 没有符合条件的文件','1280 × 800',emptyF,'筛选组合（视频 · ≥5 星）没有结果；卡片里给出“清除筛选”')}
+</div>
+${legend([
+ ['条件','不限、星级不低于 1–5 星、未评星；单选。和 全部/图片/视频 同时生效：先选类型，再选评星，结果取交集。'],
+ ['数字只在一处','筛选按钮只显示条件，不显示数量；右上角序号显示“位置 / 结果总数”（3 / 7）；类型旁边的数字是结果里各类型的数量。菜单里每项后面是当前文件夹里的文件数。'],
+ ['评星后不再符合时','在筛选状态下改了当前照片的星级、使它不再符合条件：这张照片留在原地，直到用户切到别的照片，它才从结果里消失（序号和总数那时更新）。这样改错了还能马上改回来。'],
+ ['切换筛选时','留在当前文件；当前文件不符合时，跳到之后第一个符合的文件，之后没有则跳到之前最近的一个。重新打开文件夹时恢复为不限。'],
+ ['清除筛选','点卡片里的“清除筛选”，或菜单里选“不限”。清除后回到清除前正在看的文件。'],
+ ['快捷键','全部 / 只看图片 / 只看视频仍是 ⌘1 / ⌘2 / ⌘3，不变。评星筛选先不设快捷键，只在菜单和按钮里。'],
+])}
+
+<h3 class="sub"><span>1.4</span>提示和首次说明</h3>
+<div class="frames">
+ ${fr('提示 · 无法保存星级','1280 × 800',toastFail,'写入失败时，星级不记录；提示 4 秒后淡出')}
+ ${fr('提示 · 第一次创建 .xmp','1280 × 800',toastXmp,'给 RAW 评星时第一次出现；只出现一次，点“知道了”关闭')}
+ ${fr('首次启动 · 快捷键变化说明','1280 × 800',noticeKeys,'更新后第一次启动出现；不挡操作，点 × 关闭')}
+</div>
+${legend([
+ ['无法保存星级','文件夹只读、U 盘写保护、权限不够时出现，写的是“此位置不可写”；画面上的星保持原样，不假装成功。相同原因 10 秒内不重复提示。'],
+ ['.xmp 首次提示','第一次为 RAW 创建 .xmp 时显示，一句话说明它是什么；之后不再提示。设置里不放开关，避免多一项选项。'],
+ ['快捷键说明','只在从 v0.2 更新后的第一次启动出现，一次性，不是对话框：浮在窗口顶部，不压暗背景、不阻止操作；点 × 关闭，或者用户开始评星、缩放时自动收起。“查看快捷键”跳到设置里的快捷键页；新安装的用户不显示。只讲评星用了 1–5 和 0，以及缩放改用 Z、⌘0、⌘9。'],
+])}
+
+<h3 class="sub"><span>1.5</span>设置：浏览、快捷键</h3>
+<div class="frames">
+ ${fr('设置 · 浏览（评星）','820 × 950',`<div class="annwrap">${settingsBrowse3()}</div>`,'新增“打星后自动跳到下一张”（默认关）和“星级保存到哪里”。窗口外的粉色标签是设计标注，不属于界面')}
+ ${fr('设置 · 快捷键','820 × 840',`<div class="annwrap">${settingsKeys3()}</div>`,'新增评星、Z 切换；适应窗口 / 实际大小改为 ⌘9 / ⌘0；撤销也覆盖评星。粉色标签是设计标注，不属于界面')}
+</div>
+${legend([
+ ['保存方式','默认“写入文件内部”：JPEG 等直接写进图片的元数据，别的软件读得到；选“一律使用旁边的 .xmp”则不改图片本身。RAW 不管选哪个都用 .xmp。'],
+ ['快捷键页','数字键 0 单独按 = 清除星级；⌘0 = 实际大小，⌘9 = 适应窗口，Z = 在两者间切换；⌘1 / ⌘2 / ⌘3 的类型切换不变。⌘Z 撤销最近一次评星或删除。'],
+])}
+
+<h3 class="sub"><span>1.6</span>撤销、菜单与导出筛选结果</h3>
+<div class="frames">
+ ${fr('菜单 · 编辑（刚评过星）','760 × 500',menubar3('编辑','撤销“评星”'),'⌘Z 也撤销评星：菜单名随最近一次操作变化')}
+ ${fr('菜单 · 编辑（刚删除过）','760 × 500',menubar3('编辑','撤销“移到废纸篓”'),'最近一次是删除时显示这一条；评星和删除按时间顺序依次撤销')}
+ ${fr('菜单 · 文件','760 × 500',menubar3('文件'),'评星子菜单（1–5、清除星级）；“导出筛选结果…”只在有筛选时可用')}
+ ${fr('菜单 · 显示','760 × 500',menubar3('显示'),'评星筛选子菜单；适应窗口 ⌘9、实际大小 ⌘0、切换 Z；类型切换仍是 ⌘1–3')}
+ ${fr('导出 · 确认','1280 × 800',exportSheet,'窗口顶部落下的表单：选文件夹、选拷贝或移动')}
+ ${fr('导出 · 选“移动”时','640 × 150',exportMoveNote,'')}
+ ${fr('导出 · 完成','1280 × 800',exportDone,'完成后显示结果提示，可直接在访达中显示')}
+</div>
+${legend([
+ ['撤销','⌘Z 撤销最近一次评星或最近一次删除，哪个更近撤销哪个，可连续撤销；菜单项文字随之变成“撤销“评星””或“撤销“移到废纸篓””。撤销评星会把星级恢复为评分前的值（包括“未评星”），并回到那张照片。关闭窗口后不能再撤销。'],
+ ['入口','菜单“文件 › 导出筛选结果…”。没有筛选条件时置灰。导出范围是当前筛选出的全部文件（类型 + 评星）。'],
+ ['拷贝和移动','默认拷贝（保留原文件）。选移动时按钮改为“移动 N 个文件”，并提示“文件会离开当前文件夹”（不进废纸篓）。同名文件自动加序号，不覆盖。'],
+ ['完成','导出完成后显示提示“已拷贝 N 个文件到‘文件夹名’ · 在访达中显示”，4 秒后淡出。导出过程较长时顶部显示进度条（沿用加载进度样式）。'],
+])}
+`);
+
+document.getElementById('doc').innerHTML=chapters.join('');
+/* 把带 data-ann 的行标注贴到窗口外（设计标注） */
+document.querySelectorAll('.annwrap').forEach(w=>{const wr=w.getBoundingClientRect(),right=w.firstElementChild.getBoundingClientRect().right-wr.left;w.querySelectorAll('[data-ann]').forEach(e=>{const r=e.getBoundingClientRect(),d=document.createElement('div');d.className='ann';d.style.top=(r.top-wr.top+r.height/2-9)+'px';d.style.left=(right+16)+'px';d.textContent=e.dataset.ann;w.appendChild(d)})});
+</script>
+</body>
+</html>
