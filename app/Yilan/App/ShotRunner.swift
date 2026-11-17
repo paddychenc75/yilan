@@ -78,7 +78,7 @@ enum ShotRunner {
     }
 
     #if DEBUG
-    /// 截图用的假更新数据（格式和 changes/release-notes-template.md 一致）
+    /// 截图用的假更新数据（格式和 docs/release-notes-template.md 一致）
     private static func showUpdate(_ state: String, model: BrowserModel) {
         let updater = UpdateChecker.shared
         let short = """

@@ -101,7 +101,7 @@ struct ReleaseNotesTests {
 
     @Test("固定格式：中文界面只要中文段，英文界面只要英文段，都不要安装段")
     func standardFormat() throws {
-        let body = (try? file("changes/release-notes-template.md")) ?? Self.template
+        let body = (try? file("docs/release-notes-template.md")) ?? Self.template
         let zh = ReleaseNotes.section(of: body, language: .simplifiedChinese)
         let en = ReleaseNotes.section(of: body, language: .english)
         #expect(zh.contains("### 新功能") && !zh.contains("### New") && !zh.contains("系统要求") && !zh.contains("## 中文"))
