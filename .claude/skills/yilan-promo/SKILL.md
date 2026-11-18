@@ -39,7 +39,7 @@ description: 一个版本发布后（或负责人要求时），制作这个版�
 搜索词固定是 `paddychenc75/yilan`（仓库地址只有这一个，搜出来是唯一结果）。做之前先确认仓库还是公开的、这个版本的 Release 已经发布且附件名对得上：
 
 ```sh
-gh repo view paddychenc75/yilan --json visibility,licenseInfo --jq '{visibility,license:.licenseInfo.spdxId}'
+gh repo view paddychenc75/yilan --json visibility,licenseInfo --jq '{visibility,license:.licenseInfo.name}'
 gh release view v<版本号> --json assets --jq '[.assets[].name]'
 ```
 
