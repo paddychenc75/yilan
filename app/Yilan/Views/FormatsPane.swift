@@ -1,7 +1,8 @@
 import AppKit
 import SwiftUI
 
-/// 设置 › 文件格式：每组一张卡片，一行一个格式；开着的行只有名字和开关，关着的行在开关左边写现在由谁打开。
+/// 设置 › 文件格式：每组一张卡片，一行一个格式。不用开关：macOS 没有“取消默认”，只有“设为默认”这一个方向，
+/// 所以每行是一个「设为默认」按钮；已经是一览的行只显示状态。
 /// RAW 有 8 种，默认收起成一行，点开才展开。
 struct FormatsPane: View {
     @Bindable var model: DefaultHandlers
@@ -9,10 +10,16 @@ struct FormatsPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("打开开关后，双击这种格式的文件就用一览打开。")
-                .font(.system(size: 12.5))
-                .foregroundStyle(Theme.text2)
-                .fixedSize(horizontal: false, vertical: true)
+            HStack(alignment: .center, spacing: 12) {
+                Text("设为默认后，双击这种格式的文件就用一览打开。")
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(Theme.text2)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                Button("全部设为默认") { model.requestAll(on: true) }
+                    .buttonStyle(AccentButtonStyle(height: 28, fontSize: 12.5, enabled: !model.isBusy && !model.allOn))
+                    .disabled(model.isBusy || model.allOn)
+            }
             if let banner = model.banner {
                 FormatsBanner(banner: banner, onStop: model.stop)
             }
@@ -20,16 +27,17 @@ struct FormatsPane: View {
                 groupView(group)
             }
             HStack(spacing: 8) {
-                Text("关掉开关后，交还给系统自带的应用（预览、QuickTime Player、Safari）。")
+                Text("想改回别的应用：在访达里选中文件，「显示简介」›「打开方式」。")
                     .font(.system(size: 11.5))
                     .foregroundStyle(Theme.text3)
                 Spacer(minLength: 0)
-                Button("全部关闭") { model.requestAll(on: false) }
-                    .buttonStyle(GrayButtonStyle(enabled: !model.isBusy && model.anyOn))
-                    .disabled(model.isBusy || !model.anyOn)
-                Button("全部设为一览") { model.requestAll(on: true) }
-                    .buttonStyle(GrayButtonStyle(enabled: !model.isBusy && !model.allOn))
-                    .disabled(model.isBusy || model.allOn)
+                if model.anyOn {
+                    Button("全部交还给系统自带应用…") { model.requestAll(on: false) }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(model.isBusy ? Theme.text3 : Theme.link)
+                        .disabled(model.isBusy)
+                }
             }
             .padding(.horizontal, 4)
         }
@@ -53,11 +61,13 @@ struct FormatsPane: View {
             HStack(spacing: 8) {
                 Text(group.title).font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.text2)
                 Spacer(minLength: 0)
-                Button(on == formats.count ? "全部关闭" : "全部打开") { model.requestGroup(group) }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 12))
-                    .foregroundStyle(model.isBusy ? Theme.text3 : Theme.link)
-                    .disabled(model.isBusy)
+                if on < formats.count {
+                    Button("本组全部设为默认") { model.requestGroup(group) }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 12))
+                        .foregroundStyle(model.isBusy ? Theme.text3 : Theme.link)
+                        .disabled(model.isBusy)
+                }
             }
             .padding(.horizontal, 4)
             VStack(spacing: 0) {
@@ -68,7 +78,7 @@ struct FormatsPane: View {
                             Text("索尼、佳能、尼康、富士等 \(formats.count) 种", comment: "文件格式页：RAW 组收起时的说明")
                                 .font(.system(size: 11.5)).foregroundStyle(Theme.text3)
                             Spacer(minLength: 0)
-                            Text("\(on) 种由一览打开", comment: "文件格式页：RAW 组里几种由一览打开")
+                            Text("\(on) 种默认用一览打开", comment: "文件格式页：RAW 组里几种由一览打开")
                                 .font(.system(size: 12)).foregroundStyle(Theme.text2)
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 10, weight: .semibold))
@@ -101,18 +111,19 @@ struct FormatsPane: View {
             status(format, isOn: isOn)
                 .font(.system(size: 12))
                 .lineLimit(1)
-            SettingsSwitch(isOn: Binding(get: { isOn }, set: { value in
-                Task { await model.setSwitch(format, on: value) }
-            }))
-            .disabled(model.isBusy)
-            .accessibilityLabel(Text("默认用一览打开 \(format.name)"))
+            if !isOn, model.notes[format] == nil || model.notes[format] == .unchanged {
+                Button("设为默认") { Task { await model.setSwitch(format, on: true) } }
+                    .buttonStyle(GrayButtonStyle(height: 24, fontSize: 11.5, enabled: !model.isBusy))
+                    .disabled(model.isBusy)
+                    .accessibilityLabel(Text("默认用一览打开 \(format.name)"))
+            }
         }
         .padding(.horizontal, 14)
         .frame(height: 40)
         .background(model.notes[format] == .busy ? Color.white.opacity(0.06) : .clear)
     }
 
-    /// 开关左边的小字：开着且没有提示时什么都不写；关着时写现在由谁打开
+    /// 行右边的状态：已经是一览就写「默认用一览打开」；不是就写现在由谁打开，后面跟「设为默认」按钮
     @ViewBuilder private func status(_ format: HandlerFormat, isOn: Bool) -> some View {
         switch model.notes[format] {
         case .justSet:
@@ -136,7 +147,9 @@ struct FormatsPane: View {
             Text("等待中…").foregroundStyle(Theme.text3)
         case nil:
             if isOn {
-                EmptyView()
+                Label { Text("默认用一览打开") } icon: { Image(systemName: "checkmark").font(.system(size: 9, weight: .bold)) }
+                    .labelStyle(TightLabelStyle())
+                    .foregroundStyle(Theme.text2)
             } else if model.current[format] == nil {
                 Text("没有应用", comment: "文件格式：这个格式没有应用能打开").foregroundStyle(Theme.text3)
             } else {
