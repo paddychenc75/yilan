@@ -41,7 +41,7 @@ extension BrowserModel {
 
     /// 给当前文件打星（键盘 1–5 / 0、点五星、菜单）
     func rateCurrent(_ value: Int, fromKeyboard: Bool) {
-        guard let item = current, pendingDelete == nil else { return }
+        guard let item = current, pendingDelete == nil, edit == nil else { return }
         // 视频：1–5 给一句提示，0 什么都不做；不写、不进撤销记录
         guard RatingFileIO.isRatable(item) else {
             if value > 0 { showToast(symbol: "video", text: String(localized: "视频暂不支持评星"), solid: true, duration: 1.6) }
@@ -267,22 +267,26 @@ extension BrowserModel {
 
     // MARK: - 撤销
 
-    var canUndo: Bool { undoHistory.canUndo && pendingDelete == nil }
+    var canUndo: Bool { undoHistory.canUndo && pendingDelete == nil && edit == nil }
 
     /// 编辑菜单里撤销项的文字（spec R7-02）
     var undoMenuTitle: String {
         switch undoHistory.last {
         case .rating?: String(localized: "撤销“评星”")
         case .trash?: String(localized: "撤销“移到废纸篓”")
+        case .edit(.copy)?: String(localized: "撤销“另存副本”")
+        case .edit(.replace)?: String(localized: "撤销“替换原图”")
+        case .edit(.rotation)?: String(localized: "撤销“保存旋转”")
         case nil: String(localized: "撤销")
         }
     }
 
     /// ⌘Z：撤销最近一次评星或删除
     func undoLast() async {
-        guard pendingDelete == nil, !trashBusy else { return }
+        guard pendingDelete == nil, !trashBusy, edit == nil else { return }
         switch undoHistory.last {
         case .trash?: await undoDelete()
+        case .edit(let entry)?: await undoEdit(entry)
         case .rating(let change)?:
             undoHistory.pop()
             undoRating(change)

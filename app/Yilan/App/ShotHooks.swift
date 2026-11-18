@@ -15,6 +15,9 @@ import Foundation
 /// `--shot-hint=shortcuts|xmp` 显示提示卡片；`--shot-strip=hidden` 隐藏缩略图栏；
 /// `--shot-seed-ratings` 给 /tmp 下的副本按固定规律评星；`--shot-filter=t:videos,r4,ru,f:jpeg+heic` 设筛选
 /// （t: 类型，r4 不低于 4 星，e3 等于 3 星，ru 未评星，f: 格式）；`--shot-filter-panel` 打开筛选面板。
+/// 编辑模式（spec 21）：`--shot-edit=default|ratio|rotated|resize|savemenu|replace|raw|saved|rotation|failed`，
+/// 配合 `--shot-crop=0.3,0.16,0.46,0.62`（裁切框占图片的比例 x,y,w,h）、`--shot-ratio=square|r4x3|r3x2|r16x9|original`、
+/// `--shot-resize=40`（缩小到 40%）。saved 会真的另存副本（只对 /tmp 下的测试副本生效）。
 enum ShotHooks {
     #if DEBUG
     private static func value(_ name: String) -> String? {
@@ -46,6 +49,10 @@ enum ShotHooks {
     static let formats: String? = value("shot-formats")
     static let filterSpec: String? = value("shot-filter")
     static let filterPanel = CommandLine.arguments.contains("--shot-filter-panel")
+    static let edit: String? = value("shot-edit")
+    static let editCrop: [Double]? = value("shot-crop").map { $0.split(separator: ",").compactMap { Double($0) } }
+    static let editRatio: String? = value("shot-ratio")
+    static let editResize: Int? = value("shot-resize").flatMap(Int.init)
     static let windowSize: CGSize? = value("shot-window").flatMap { text in
         let parts = text.split(separator: "x").compactMap { Double($0) }
         return parts.count == 2 ? CGSize(width: parts[0], height: parts[1]) : nil
@@ -72,6 +79,10 @@ enum ShotHooks {
     static let stripHover = false
     static let filterSpec: String? = nil
     static let filterPanel = false
+    static let edit: String? = nil
+    static let editCrop: [Double]? = nil
+    static let editRatio: String? = nil
+    static let editResize: Int? = nil
     #endif
 
     /// 调试顶部栏收缩：环境变量 YILAN_LOG_TOPBAR=1 时把宽度和选中的档位打到标准输出
@@ -83,9 +94,10 @@ enum ShotHooks {
     }
 
     /// 截图时不让控件自动隐藏
-    static var keepsChrome: Bool { hoverFraction != nil || openInfo || deleteState != nil || showStars }
+    static var keepsChrome: Bool { hoverFraction != nil || openInfo || deleteState != nil || showStars || edit != nil }
     static var anyRatingShot: Bool {
         rating != nil || showStars || hint != nil || stripHidden || seedRatings || filterSpec != nil || filterPanel || update != nil
+            || edit != nil
     }
 }
 

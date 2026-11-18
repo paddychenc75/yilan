@@ -44,6 +44,17 @@ final class ImageStageView: NSView {
 
     private let container = CALayer()
     private let imageLayer = CALayer()
+    /// 编辑模式的裁切框（不编辑时隐藏）
+    let cropOverlay = CropOverlayView(frame: .zero)
+
+    /// 编辑模式：裁切框的设置；nil 表示在浏览
+    var cropConfig: CropOverlayView.Config? {
+        didSet {
+            cropOverlay.config = cropConfig
+            cropOverlay.isHidden = cropConfig == nil
+        }
+    }
+    private var isEditing: Bool { cropConfig != nil }
     /// 视频画面层（AVPlayerLayer），盖在第一帧静帧上面；还没出画面时透出下面的静帧
     private var videoLayer: CALayer?
     private var content: Content?
@@ -79,6 +90,10 @@ final class ImageStageView: NSView {
         imageLayer.magnificationFilter = .linear
         container.addSublayer(imageLayer)
         layer?.addSublayer(container)
+        cropOverlay.isHidden = true
+        cropOverlay.onPan = { [weak self] dx, dy in self?.pan(dx: dx, dy: dy) }
+        cropOverlay.isZoomed = { [weak self] in self?.scale != nil }
+        addSubview(cropOverlay)
     }
 
     @available(*, unavailable)
@@ -88,6 +103,7 @@ final class ImageStageView: NSView {
 
     override func layout() {
         super.layout()
+        cropOverlay.frame = bounds
         layoutImage(animated: false)
     }
 
@@ -261,6 +277,7 @@ final class ImageStageView: NSView {
             zoomCenter = CGPoint(x: frame.midX, y: frame.midY)
         }
         frame = frame.integral
+        cropOverlay.imageFrame = frame
 
         CATransaction.begin()
         if animated && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
@@ -363,7 +380,16 @@ final class ImageStageView: NSView {
             layoutImage(animated: false)
             return
         }
-        navigate(with: event)
+        // 编辑中滚轮不切图（spec ED-08）
+        if !isEditing { navigate(with: event) }
+    }
+
+    /// 平移放大的图片（编辑时按住空格拖、或在框外拖）
+    func pan(dx: CGFloat, dy: CGFloat) {
+        guard scale != nil else { return }
+        zoomCenter.x += dx
+        zoomCenter.y += dy
+        layoutImage(animated: false)
     }
 
     /// 滚轮切换：鼠标滚轮每一格切一张；触控板一次手势只切一张，惯性部分忽略
@@ -454,8 +480,8 @@ final class ImageStageView: NSView {
             toggleZoom(at: convert(event.locationInWindow, from: nil))
             return
         }
-        // 适应窗口时拖动大图 = 拖动窗口
-        if scale == nil, event.clickCount == 1 { window?.performDrag(with: event) }
+        // 适应窗口时拖动大图 = 拖动窗口（编辑中不拖窗口）
+        if scale == nil, event.clickCount == 1, !isEditing { window?.performDrag(with: event) }
     }
 
     override func mouseDragged(with event: NSEvent) {
@@ -466,7 +492,7 @@ final class ImageStageView: NSView {
     }
 
     override func resetCursorRects() {
-        if scale != nil { addCursorRect(bounds, cursor: .openHand) }
+        if scale != nil, !isEditing { addCursorRect(bounds, cursor: .openHand) }
     }
 }
 
@@ -481,6 +507,9 @@ struct ImageStage: NSViewRepresentable {
     let onZoomChanged: (ZoomState?) -> Void
     let onNeedsFullResolution: () -> Void
     var onDisplayChanged: (Int) -> Void = { _ in }
+    /// 编辑模式的裁切框；nil 表示在浏览
+    var crop: CropOverlayView.Config? = nil
+    var onCropChanged: (PixelRect) -> Void = { _ in }
 
     final class Coordinator {
         var lastZoomSerial: Int?
@@ -504,7 +533,9 @@ struct ImageStage: NSViewRepresentable {
         }
         view.setContent(content)
         view.setVideoLayer(videoLayer)
+        view.cropOverlay.onCropChanged = onCropChanged
         view.rotation = rotation
+        view.cropConfig = crop
         view.fitInsets = insets
         if let cmd = zoomCommand, cmd.serial != context.coordinator.lastZoomSerial {
             context.coordinator.lastZoomSerial = cmd.serial

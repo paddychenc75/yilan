@@ -32,11 +32,15 @@ struct Toast: Equatable {
     var tone: ToastTone = .normal
     /// 深色实底（v0.3 新提示：亮照片上也看得清，同更新提醒）
     var solid = false
+    /// 显示在底部缩略图栏上方（编辑保存后的提示，设计稿 edit 08），撤销做成胶囊按钮
+    var bottom = false
     let serial: Int
 }
 
 enum ToastAction: Equatable {
     case undoDelete
+    /// 撤销编辑保存（另存副本、替换原图、保存旋转）
+    case undoEdit
 }
 
 /// 提示条的图标颜色：普通白色，警告黄色（设计稿“无法保存星级”）
@@ -95,7 +99,16 @@ final class BrowserModel {
     var zoomState: ZoomState?
     private(set) var toast: Toast?
     /// 当前文件的显示旋转（顺时针 90° 的倍数，只影响显示，不改文件）；切换文件后复位
-    private(set) var rotation = 0
+    internal(set) var rotation = 0
+
+    // MARK: 编辑（BrowserModel+Edit）
+
+    /// 正在编辑（spec 21）；nil 表示在浏览
+    var edit: EditSession?
+    /// 「保存旋转」胶囊的箭头菜单打开（spec ED-41）
+    var rotationMenuOpen = false
+    /// 鼠标停在提示条上：提示条不消失（设计稿 edit「提示条」）
+    @ObservationIgnored var toastHovered = false
 
     // MARK: 视频、设置、最近打开
 
@@ -347,7 +360,7 @@ final class BrowserModel {
     // MARK: - 类型切换
 
     func setFilter(_ newFilter: MediaFilter) {
-        guard newFilter != filter, (filteredCounts[newFilter] ?? 0) > 0, pendingDelete == nil else { return }
+        guard newFilter != filter, (filteredCounts[newFilter] ?? 0) > 0, pendingDelete == nil, edit == nil else { return }
         let previous = current
         filter = newFilter
         settings.saveFilter(newFilter)
@@ -409,7 +422,7 @@ final class BrowserModel {
         if filterPanelOpen { closeFilterPanel() }
     }
     func step(_ delta: Int) {
-        guard let i = currentIndex,
+        guard edit == nil, let i = currentIndex,
               let target = Navigation.target(from: i, delta: delta > 0 ? 1 : -1, count: items.count, wrap: settings.wrapAround)
         else { return }
         select(target)
@@ -657,7 +670,15 @@ final class BrowserModel {
     /// 旋转显示（quarterTurns：1 = 顺时针 90°，-1 = 逆时针 90°）
     func rotate(_ quarterTurns: Int) {
         guard current != nil, failure == nil else { return }
+        // 编辑中：转编辑的图（裁切框跟着转，spec ED-19）
+        if let edit {
+            guard !edit.saving else { return }
+            edit.closePopups()
+            edit.rotate(clockwise: quarterTurns > 0)
+            return
+        }
         rotation = ((rotation + quarterTurns) % 4 + 4) % 4
+        rotationMenuOpen = false
     }
 
     // MARK: - 最近打开
@@ -713,19 +734,23 @@ final class BrowserModel {
 
     /// 只有在看图或视频时才自动隐藏；出错、空文件夹时控件一直显示
     private var canAutoHide: Bool {
-        settings.autoHideControls && current != nil && failure == nil && pendingDelete == nil
+        settings.autoHideControls && current != nil && failure == nil && pendingDelete == nil && edit == nil
     }
 
     // MARK: - 提示条
 
     func showToast(symbol: String, text: String, detail: String? = nil, action: ToastAction? = nil,
-                   tone: ToastTone = .normal, solid: Bool = false, duration: Double = 1.6) {
+                   tone: ToastTone = .normal, solid: Bool = false, bottom: Bool = false, duration: Double = 1.6) {
         serial += 1
-        toast = Toast(symbol: symbol, text: text, detail: detail, action: action, tone: tone, solid: solid, serial: serial)
+        toast = Toast(symbol: symbol, text: text, detail: detail, action: action, tone: tone, solid: solid,
+                      bottom: bottom, serial: serial)
+        toastHovered = false
         toastTask?.cancel()
         toastTask = Task {
             // 截图时（--shot-hold-flash）提示条一直显示
             try? await Task.sleep(for: .seconds(ShotHooks.holdFlash ? 600 : duration))
+            // 鼠标停在提示条上时不消失
+            while toastHovered, !Task.isCancelled { try? await Task.sleep(for: .milliseconds(300)) }
             guard !Task.isCancelled else { return }
             toast = nil
         }
@@ -738,7 +763,7 @@ final class BrowserModel {
 
     func performToastAction(_ action: ToastAction) {
         switch action {
-        case .undoDelete: Task { await undoLast() }
+        case .undoDelete, .undoEdit: Task { await undoLast() }
         }
     }
 
@@ -759,6 +784,8 @@ final class BrowserModel {
             if event.keyCode == 53 { UpdateChecker.shared.later() }
             return mods.isEmpty || event.keyCode == 53
         }
+        // 编辑模式：按键另有一套（spec ED-07、ED-08）
+        if edit != nil { return handleEditKey(event) }
         // 删除确认对话框：Return 确认，Esc 取消；其他按键不起作用（菜单里的 ⌘ 快捷键也已置灰）
         if pendingDelete != nil {
             switch event.keyCode {
@@ -823,6 +850,9 @@ final class BrowserModel {
             return true
         case "f":
             toggleFullScreen()
+            return true
+        case "e":
+            enterEdit()   // 不能编辑的文件上无反应（spec ED-02）
             return true
         default: break
         }

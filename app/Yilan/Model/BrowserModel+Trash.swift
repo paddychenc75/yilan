@@ -4,12 +4,12 @@ import SwiftUI
 /// 移到废纸篓和撤销（设计稿 08 · 删除到废纸篓）
 extension BrowserModel {
     /// 菜单项和 ⌫ 是否可用：主窗口在前、有当前文件、没有在等确认
-    var canDelete: Bool { current != nil && pendingDelete == nil && mainWindowIsKey }
+    var canDelete: Bool { current != nil && pendingDelete == nil && mainWindowIsKey && edit == nil }
     var canUndoDelete: Bool { canUndo }
 
     /// ⌫ / ⌘⌫ / 菜单：按设置先弹确认框，或者直接删
     func requestDelete() {
-        guard let item = current, pendingDelete == nil, !trashBusy else { return }
+        guard let item = current, pendingDelete == nil, !trashBusy, edit == nil else { return }
         // 视频正在播放时也可以删：先暂停再弹出确认
         if video.isPlaying { video.pause() }
         if settings.confirmBeforeDelete {

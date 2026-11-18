@@ -91,6 +91,11 @@ struct CounterPill: View {
 struct ToolGroup: View {
     let enabled: Bool
     let infoSelected: Bool
+    /// 浏览时转过（「保存旋转」胶囊出现时旋转按钮高亮，设计稿 edit 09）
+    var rotateSelected = false
+    /// 视频、GIF、SVG、出错：编辑按钮置灰但仍能悬停看提示（spec ED-02）
+    var editUnsupported = true
+    var onEdit: () -> Void = {}
     let onRotate: () -> Void
     let onInfo: () -> Void
     let onReveal: () -> Void
@@ -107,8 +112,13 @@ struct ToolGroup: View {
     var body: some View {
         HStack(spacing: 2) {
             // 按钮图标是逆时针箭头，点按向左转；R 向右转、⇧R 向左转（菜单“文件 › 向右旋转”）
-            ToolButton(symbol: "arrow.counterclockwise", help: "向左旋转（⇧R）", action: onRotate)
+            ToolButton(symbol: "arrow.counterclockwise", help: "向左旋转（⇧R）", selected: rotateSelected, action: onRotate)
                 .disabled(!enabled)
+            // 编辑（spec ED-01、ED-02）：不支持时不用 disabled，好让悬停提示照常出现
+            ToolButton(symbol: "crop", help: editUnsupported ? "此类文件不支持编辑" : "编辑（E）") {
+                if !editUnsupported { onEdit() }
+            }
+            .opacity(editUnsupported ? 0.3 : 1)
             ToolButton(symbol: "info.circle", help: "信息（I）", selected: infoSelected, action: onInfo)
                 .disabled(!enabled)
             Menu {

@@ -27,8 +27,17 @@ struct RootView: View {
                     AmbientBackground(image: model.failure == nil ? model.ambient : nil,
                                       id: model.failure == nil ? model.ambientItemURL : nil)
                 }
+                // 编辑中：背景在环境光上再盖 32% 黑（设计稿 edit 02）
+                if model.edit != nil {
+                    Color.black.opacity(0.32).allowsHitTesting(false).transition(.opacity)
+                }
                 stage(layout)
-                stageControls(layout)
+                popupCatcher(size)
+                if let session = model.edit {
+                    editControls(session, layout: layout)
+                } else {
+                    stageControls(layout)
+                }
                 topBar(layout)
                 cards(size)
                 overlays(layout)
@@ -74,13 +83,76 @@ struct RootView: View {
         .onDrop(of: [.fileURL], delegate: FileDropDelegate(summary: $drop) { model.open($0) })
     }
 
-    private var showsInfoPanel: Bool { model.infoVisible && model.current != nil }
+    private var showsInfoPanel: Bool { model.infoVisible && model.current != nil && model.edit == nil }
+
+    // MARK: - 编辑模式（spec 21）
+
+    /// 窄窗口（< 800）：标题隐藏、缩放只留百分比、工具条去掉「比例」字样和「复原」
+    private func editNarrow(_ size: CGSize) -> Bool { size.width < 800 }
+
+    /// 编辑中图片区：上 76、下 92（窄窗 84）、左右 56（窄窗 40）
+    private func editInsets(_ size: CGSize) -> NSEdgeInsets {
+        let narrow = editNarrow(size)
+        return NSEdgeInsets(top: 76, left: narrow ? 40 : 56, bottom: narrow ? 84 : 92, right: narrow ? 40 : 56)
+    }
+
+    /// 菜单、面板开着时：点别处关掉
+    @ViewBuilder
+    private func popupCatcher(_ size: CGSize) -> some View {
+        if model.edit?.anyPopupOpen == true || model.rotationMenuOpen {
+            Color.black.opacity(0.001)
+                .frame(width: size.width, height: size.height)
+                .onTapGesture {
+                    model.edit?.closePopups()
+                    model.rotationMenuOpen = false
+                }
+        }
+    }
+
+    /// 底部编辑工具条，占原缩略图栏的位置（距底 20）
+    private func editControls(_ session: EditSession, layout: StageLayout) -> some View {
+        EditToolbar(session: session, narrow: editNarrow(layout.size)) { model.rotate($0) }
+            .padding(.bottom, 20)
+            .frame(width: layout.size.width, height: layout.size.height, alignment: .bottom)
+    }
+
+    /// 编辑中的提示框：替换确认、保存失败
+    @ViewBuilder
+    private func editAlerts(_ size: CGSize) -> some View {
+        if let session = model.edit {
+            if session.confirmReplace {
+                EditAlert(symbol: "photo", title: String(localized: "替换原图？"),
+                          message: String(localized: "编辑后的图片会存成「\(session.item.name)」。\n原图移到废纸篓，按 ⌘Z 可以找回。",
+                                          comment: "替换原图确认框；%@ 是原文件名"),
+                          secondary: String(localized: "取消"), primary: String(localized: "替换"),
+                          onSecondary: { session.confirmReplace = false }, onPrimary: { model.confirmReplace() })
+                    .frame(width: size.width, height: size.height)
+                    .transition(.opacity)
+            } else if let failure = session.failure {
+                EditAlert(symbol: "exclamationmark.triangle", symbolColor: Theme.yellow, title: String(localized: "没能保存"),
+                          message: failure.message + "\n" + String(localized: "原图没有任何改动，编辑也还在。"),
+                          secondary: String(localized: "存到其他位置…"), primary: String(localized: "好"),
+                          onSecondary: { model.saveEditElsewhere() }, onPrimary: { session.failure = nil })
+                    .frame(width: size.width, height: size.height)
+                    .transition(.opacity)
+            }
+        }
+    }
 
     // MARK: - 大图
 
     private func stage(_ layout: StageLayout) -> some View {
         let fs = layout.fullScreen
         // 信息面板浮在图片上：图片区和面板开关无关，开关面板时图片不移动、不缩放
+        if model.edit != nil {
+            return ImageStage(content: stageContent, insets: editInsets(layout.size), zoomCommand: model.zoomCommand,
+                              rotation: model.edit?.turns ?? 0, videoLayer: nil,
+                              onNavigate: { _ in }, onZoomChanged: { model.zoomState = $0 },
+                              onNeedsFullResolution: { model.requestFullResolution() },
+                              onDisplayChanged: { model.displayDidChange(maxPixel: $0) },
+                              crop: model.edit.map { .init(editedSize: $0.editedSize, crop: $0.crop, ratio: $0.ratioValue) },
+                              onCropChanged: { rect in model.edit?.crop = rect })
+        }
         return ImageStage(
             content: stageContent,
             insets: NSEdgeInsets(top: fs ? 0 : Theme.imageInsetTop,
@@ -88,12 +160,14 @@ struct RootView: View {
                                  bottom: fs ? 0 : bottomInset,
                                  right: layout.imageSideInset),
             zoomCommand: model.zoomCommand,
-            rotation: model.rotation,
+            rotation: model.edit?.turns ?? model.rotation,
             videoLayer: showsVideoLayer ? model.video.layer : nil,
             onNavigate: { model.step($0) },
             onZoomChanged: { model.zoomState = $0 },
             onNeedsFullResolution: { model.requestFullResolution() },
-            onDisplayChanged: { model.displayDidChange(maxPixel: $0) }
+            onDisplayChanged: { model.displayDidChange(maxPixel: $0) },
+            crop: model.edit.map { .init(editedSize: $0.editedSize, crop: $0.crop, ratio: $0.ratioValue) },
+            onCropChanged: { rect in model.edit?.crop = rect }
         )
     }
 
@@ -142,7 +216,8 @@ struct RootView: View {
 
     /// 顶部一排：窗口里随自动隐藏；全屏时鼠标碰到顶边才出现
     private var topVisible: Bool {
-        model.isFullScreen ? model.fullScreenTopRevealed : model.chromeVisible
+        if model.edit != nil { return true }   // 编辑中顶部栏一直在
+        return model.isFullScreen ? model.fullScreenTopRevealed : model.chromeVisible
     }
 
     /// 缩略图栏、视频控制条：全屏时鼠标进入底部 120 点才出现
@@ -178,6 +253,12 @@ struct RootView: View {
         let titleMax = max(0, size.width / 2 - center / 2 - TopBarTier.gap - 86)
         let _ = ShotHooks.logTopBar(width: size.width, widths: widths, tier: tier)
         ZStack(alignment: .top) {
+          if let session = model.edit {
+            EditTopBar(session: session, zoom: model.zoomState, narrow: editNarrow(size),
+                       titleMax: max(0, size.width - 560),
+                       onZoom: { model.zoom($0) }, onCancel: { model.cancelEdit() },
+                       onSave: { model.saveEdit() }, onReplace: { model.requestReplace() })
+          } else {
             // 标题栏（高 56）：红绿灯是系统的，这里只放文件名和右侧控件
             HStack(spacing: 14) {
                 Color.clear.frame(width: 52, height: 12)   // 红绿灯占位
@@ -224,6 +305,22 @@ struct RootView: View {
                     .padding(.leading, tier.leftAligned ? TopBarTier.leftEdge : 0)
                     .onHover { model.setHovering("filter", $0) }
             }
+            // 浏览时转过：工具组下方 4pt 的「保存旋转」胶囊（spec ED-41）
+            if model.showsSaveRotation, let item = model.current {
+                SaveRotationChip(lossless: model.currentSupportsLosslessRotation, menuOpen: model.rotationMenuOpen,
+                                 copyName: EditNaming.baseName(item.url.deletingPathExtension().lastPathComponent, attempt: 1)
+                                    + "." + (item.format == .raw ? (model.settings.editRawFormat == .heif ? "heic" : "jpg") : item.url.pathExtension),
+                                 onSave: { model.saveRotation() },
+                                 onToggleMenu: { model.rotationMenuOpen.toggle() },
+                                 onRotateOriginal: { model.saveRotation(toOriginal: true) },
+                                 onSaveCopy: { model.saveRotation(toOriginal: false) })
+                    .onHover { model.setHovering("rotationChip", $0) }
+                    .padding(.top, Theme.titleBarHeight + 4)
+                    .padding(.trailing, 16)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .transition(.opacity)
+            }
+          }
             topBarMeasurer
         }
         .frame(width: size.width, height: size.height, alignment: .top)
@@ -268,6 +365,9 @@ struct RootView: View {
         ToolGroup(
             enabled: model.current != nil && model.failure == nil,
             infoSelected: showsInfoPanel,
+            rotateSelected: model.rotation != 0,
+            editUnsupported: model.editUnsupported,
+            onEdit: { model.enterEdit() },
             onRotate: { model.rotate(-1) },
             onInfo: model.toggleInfo,
             onReveal: model.revealCurrentInFinder,
@@ -524,7 +624,15 @@ struct RootView: View {
             }
 
             // 提示条画在信息面板上面：窄窗口里居中的提示条可能和面板重叠，不能被盖住
-            if let toast = model.toast {
+            if let toast = model.toast, toast.bottom {
+                // 编辑保存后的提示条：缩略图栏上方 16（设计稿 edit 08）
+                EditToastView(toast: toast, maxWidth: size.width - 64) { model.performToastAction($0) }
+                    .onHover { model.toastHovered = $0 }
+                    .padding(.bottom, model.stripVisible && !layout.fullScreen ? Theme.imageInsetBottom + 16 : 40)
+                    .frame(width: size.width, height: size.height, alignment: .bottom)
+                    .transition(.opacity)
+                    .id(toast.serial)
+            } else if let toast = model.toast {
                 ToastView(toast: toast) { model.performToastAction($0) }
                     .padding(.top, toastTop)
                     .transition(.opacity)
@@ -541,6 +649,8 @@ struct RootView: View {
                     .padding(.top, 66)
                     .padding(.horizontal, 40)
             }
+
+            editAlerts(size)
 
             if let pending = model.pendingDelete {
                 DeleteConfirm(

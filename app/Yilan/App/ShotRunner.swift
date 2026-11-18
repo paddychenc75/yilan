@@ -69,6 +69,7 @@ enum ShotRunner {
             default:
                 break
             }
+            if let state = ShotHooks.edit { await showEdit(state, model: model) }
             if ShotHooks.dumpMenus {
                 try? await Task.sleep(for: .milliseconds(300))
                 if let menu = NSApp.mainMenu { print(describe(menu, depth: 0), terminator: "") }
@@ -128,6 +129,46 @@ enum ShotRunner {
         case "failed": model.showToast(symbol: "exclamationmark.triangle", text: String(localized: "无法检查更新，请检查网络"), tone: .warning, duration: 60)
         case "long": updater.applyForShots(release: release, state: "sheet")
         default: updater.applyForShots(release: release, state: state)
+        }
+    }
+    #endif
+
+    #if DEBUG
+    /// 编辑模式截图（设计稿 edit 02–10）
+    private static func showEdit(_ state: String, model: BrowserModel) async {
+        if state == "rotation" {
+            model.rotate(1)
+            try? await Task.sleep(for: .milliseconds(400))
+            model.rotationMenuOpen = true
+            return
+        }
+        // RAW：等完整解码（预览图的尺寸和完整版相同，不影响编辑）
+        for _ in 0..<50 where !model.canEditCurrent { try? await Task.sleep(for: .milliseconds(100)) }
+        model.enterEdit()
+        guard let s = model.edit else { return }
+        try? await Task.sleep(for: .milliseconds(400))
+        if state == "rotated" { model.rotate(1) }
+        if let name = ShotHooks.editRatio, let r = CropRatio(rawValue: name) { s.setRatio(r) }
+        else if state == "ratio" { s.setRatio(.square) }
+        if let c = ShotHooks.editCrop, c.count == 4 {
+            let size = s.editedSize
+            var rect = PixelRect(x: Int(c[0] * Double(size.width)), y: Int(c[1] * Double(size.height)),
+                                 width: Int(c[2] * Double(size.width)), height: Int(c[3] * Double(size.height)))
+            if let r = s.ratioValue { rect.height = Int((Double(rect.width) / r).rounded()) }
+            s.crop = CropMath.clamp(rect, bounds: size)
+        }
+        if let p = ShotHooks.editResize, let scale = ResizeMath.scale(forPercent: p) { s.scale = scale }
+        try? await Task.sleep(for: .milliseconds(300))
+        switch state {
+        case "ratio": s.ratioMenuOpen = true
+        case "resize": s.resizeOpen = true
+        case "savemenu", "raw": s.saveMenuOpen = true
+        case "replace": s.confirmReplace = true
+        case "failed": s.failure = .notWritable(folder: s.item.url.deletingLastPathComponent().lastPathComponent)
+        case "saved":
+            // 真的另存副本：只对 /tmp 下的测试副本
+            if isTemporary(s.item.url) { model.saveEdit() }
+        default: break
         }
     }
     #endif

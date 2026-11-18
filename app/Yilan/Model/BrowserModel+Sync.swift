@@ -96,7 +96,7 @@ extension BrowserModel {
     }
 
     /// 新文件的缩略图高亮 2 秒，然后淡回普通样式
-    private func markFresh(_ urls: [URL]) {
+    func markFresh(_ urls: [URL]) {
         guard !urls.isEmpty else { return }
         freshURLs.formUnion(urls)
         freshTask?.cancel()

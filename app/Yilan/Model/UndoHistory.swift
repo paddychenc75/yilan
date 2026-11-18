@@ -7,11 +7,22 @@ struct RatingChange: Equatable, Sendable {
     let new: Int
 }
 
-/// 删除和评星共用的撤销记录（spec R7-01）：按时间先后，⌘Z 撤销最近的一条，最多 100 条
+/// 一次编辑保存（spec ED-39、ED-42）：撤销时怎么恢复
+enum EditUndo: Equatable, Sendable {
+    /// 另存的副本：撤销 = 副本（和为它新建的 .xmp）进废纸篓
+    case copy(original: MediaItem, created: URL, sidecar: URL?)
+    /// 替换原图：撤销 = 编辑后的文件进废纸篓，原图从废纸篓放回
+    case replace(TrashEntry)
+    /// 保存旋转改了原图的方向标记：撤销 = 改回 old
+    case rotation(url: URL, old: Int, new: Int)
+}
+
+/// 删除、评星和编辑共用的撤销记录（spec R7-01）：按时间先后，⌘Z 撤销最近的一条，最多 100 条
 struct UndoHistory: Equatable {
     enum Entry: Equatable {
         case trash(TrashEntry)
         case rating(RatingChange)
+        case edit(EditUndo)
     }
 
     private(set) var entries: [Entry] = []

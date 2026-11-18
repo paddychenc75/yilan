@@ -26,6 +26,8 @@ final class AppSettings {
         static let ratingStorage = "ratingStorageMode"
         static let lastLaunchedVersion = "lastLaunchedVersion"
         static let didShowSidecarHint = "didShowSidecarHint"
+        /// 编辑 RAW 时存 JPEG 还是 HEIF（spec ED-33）
+        static let editRawFormat = "editRawFormat"
     }
 
     /// 设置里“默认显示”的选项：沿用上次，或者固定一种
@@ -76,6 +78,7 @@ final class AppSettings {
     var ratingStorage: RatingStorageMode { didSet { defaults.set(ratingStorage.rawValue, forKey: Key.ratingStorage) } }
     /// 第一次为 RAW 创建 .xmp 的提示已经出现过（spec S-17）
     var didShowSidecarHint: Bool { didSet { defaults.set(didShowSidecarHint, forKey: Key.didShowSidecarHint) } }
+    var editRawFormat: RawExportFormat { didSet { defaults.set(editRawFormat.rawValue, forKey: Key.editRawFormat) } }
 
     @ObservationIgnored private let defaults: UserDefaults
     /// 设置存放的域名（判断“以前用过一览”时只看这个域，不看全局域）
@@ -120,6 +123,7 @@ final class AppSettings {
         autoCheckUpdates = defaults.bool(forKey: Key.autoCheckUpdates)
         ratingStorage = defaults.string(forKey: Key.ratingStorage).flatMap(RatingStorageMode.init(rawValue:)) ?? .sidecar
         didShowSidecarHint = defaults.bool(forKey: Key.didShowSidecarHint)
+        editRawFormat = defaults.string(forKey: Key.editRawFormat).flatMap(RawExportFormat.init(rawValue:)) ?? .jpeg
     }
 
     /// 从 v0.2 升级后第一次启动（spec K-10）：以前用过（存过任何设置或最近打开）、但没记过版本号。

@@ -140,7 +140,7 @@ struct AppCommands: Commands {
                 Button("清除星级") { model.rateCurrent(0, fromKeyboard: false) }
                     .keyboardShortcut("0", modifiers: [])
             }
-            .disabled(!model.currentIsRatable || !model.mainWindowIsKey || model.pendingDelete != nil)
+            .disabled(!model.currentIsRatable || !model.mainWindowIsKey || model.pendingDelete != nil || model.isEditing)
         }
         CommandGroup(after: .newItem) {
             Divider()
@@ -155,6 +155,10 @@ struct AppCommands: Commands {
             Button("向左旋转") { model.rotate(-1) }
                 .keyboardShortcut("r", modifiers: [.shift])
                 .disabled(model.current == nil)
+            // 编辑：裁切、旋转、调整尺寸（spec ED-03）
+            Button("编辑") { model.enterEdit() }
+                .keyboardShortcut("e", modifiers: [])
+                .disabled(!model.canEditCurrent || model.isEditing || !model.mainWindowIsKey)
             Divider()
             // 只在主窗口在前时可用：设置窗口的输入框里按 ⌫ 是删字
             Button("移到废纸篓") { model.requestDelete() }
@@ -165,7 +169,7 @@ struct AppCommands: Commands {
         CommandGroup(replacing: .undoRedo) {
             Button(model.canUndo && model.mainWindowIsKey ? model.undoMenuTitle : String(localized: "撤销")) { model.undoFromMenu() }
                 .keyboardShortcut("z")
-                .disabled(model.mainWindowIsKey && !model.canUndo)
+                .disabled(model.mainWindowIsKey && (!model.canUndo || model.isEditing))
             Button("重做") { model.redoFromMenu() }
                 .keyboardShortcut("z", modifiers: [.command, .shift])
                 .disabled(model.mainWindowIsKey)
@@ -178,9 +182,9 @@ struct AppCommands: Commands {
             // 筛选（spec F-10）
             Button("筛选…") { model.toggleFilterPanel() }
                 .keyboardShortcut("f")
-                .disabled(!model.hasOpenedFolder || model.allItems.isEmpty)
+                .disabled(!model.hasOpenedFolder || model.allItems.isEmpty || model.isEditing)
             Button("清除筛选") { model.clearBrowseFilter() }
-                .disabled(!model.browseFilter.isActive)
+                .disabled(!model.browseFilter.isActive || model.isEditing)
             Divider()
             // 数字键让给评星：⌘9 适应窗口、⌘0 实际大小、Z 切换（spec 4.2）
             Button("适应窗口") { model.zoom(.fit) }.keyboardShortcut("9")
@@ -199,7 +203,7 @@ struct AppCommands: Commands {
                 set: { model.setInfoVisible($0) }
             ))
             .keyboardShortcut("i", modifiers: [])
-            .disabled(model.current == nil || !model.mainWindowIsKey)
+            .disabled(model.current == nil || !model.mainWindowIsKey || model.isEditing)
             Divider()
             Button(model.isFullScreen ? "退出全屏幕" : "进入全屏幕") { model.toggleFullScreen() }
                 .keyboardShortcut("f", modifiers: [])
@@ -207,10 +211,14 @@ struct AppCommands: Commands {
             Divider()
         }
         CommandMenu("前往") {
-            Button("上一个") { model.previous() }.keyboardShortcut(.upArrow, modifiers: [])
-            Button("下一个") { model.next() }.keyboardShortcut(.downArrow, modifiers: [])
-            Button("第一个") { model.first() }.keyboardShortcut(.home, modifiers: [])
-            Button("最后一个") { model.last() }.keyboardShortcut(.end, modifiers: [])
+            // 编辑中不切图（spec ED-08）
+            Group {
+                Button("上一个") { model.previous() }.keyboardShortcut(.upArrow, modifiers: [])
+                Button("下一个") { model.next() }.keyboardShortcut(.downArrow, modifiers: [])
+                Button("第一个") { model.first() }.keyboardShortcut(.home, modifiers: [])
+                Button("最后一个") { model.last() }.keyboardShortcut(.end, modifiers: [])
+            }
+            .disabled(model.isEditing)
         }
     }
 
@@ -221,6 +229,6 @@ struct AppCommands: Commands {
             set: { _ in model.setFilter(filter) }
         ))
         .keyboardShortcut(key)
-        .disabled((model.filteredCounts[filter] ?? 0) == 0)
+        .disabled((model.filteredCounts[filter] ?? 0) == 0 || model.isEditing)
     }
 }

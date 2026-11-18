@@ -239,7 +239,7 @@ struct ThumbnailCell: View {
         ZStack(alignment: .bottomTrailing) {
             content
             badge.padding(4)
-            if fresh && !selected {
+            if fresh {
                 // 设计稿 .th.new：左下角“● 新”角标
                 Badge {
                     HStack(spacing: 3) {
