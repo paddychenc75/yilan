@@ -47,7 +47,19 @@ enum Theme {
 extension View {
     /// 常规玻璃：标题栏控件、缩略图栏、箭头（设计稿 .g）
     func regularGlass<S: Shape>(_ shape: S, interactive: Bool = false) -> some View {
-        glassEffect(.regular.interactive(interactive), in: shape)
+        systemGlass(shape, interactive: interactive)
+    }
+
+    /// 系统玻璃。macOS 26 起用 Liquid Glass；macOS 15 没有，用半透明的毛玻璃材质加一圈细描边代替。
+    /// 全应用只在这里判断系统版本，别处不要直接调用 glassEffect。
+    @ViewBuilder
+    func systemGlass<S: Shape>(_ shape: S, interactive: Bool = false) -> some View {
+        if #available(macOS 26.0, *) {
+            glassEffect(.regular.interactive(interactive), in: shape)
+        } else {
+            background(shape.fill(.ultraThinMaterial))
+                .overlay(shape.stroke(Color.white.opacity(0.12), lineWidth: 1))
+        }
     }
 
     /// 厚玻璃：卡片、菜单（设计稿 .gt，深灰 78–82%）
@@ -57,7 +69,7 @@ extension View {
             colors: [Color(red: 58 / 255, green: 58 / 255, blue: 64 / 255).opacity(0.78),
                      Color(red: 34 / 255, green: 34 / 255, blue: 38 / 255).opacity(0.82)],
             startPoint: .top, endPoint: .bottom)))
-        .glassEffect(.regular, in: shape)
+        .systemGlass(shape)
         .overlay(shape.stroke(Color.white.opacity(0.11), lineWidth: 1))
         .shadow(color: .black.opacity(0.45), radius: 30, y: 24)
     }

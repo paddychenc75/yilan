@@ -112,7 +112,7 @@ struct StarBar: View {
                 colors: [Color(red: 44 / 255, green: 44 / 255, blue: 50 / 255).opacity(0.62),
                          Color(red: 28 / 255, green: 28 / 255, blue: 32 / 255).opacity(0.68)],
                 startPoint: .top, endPoint: .bottom)))
-            .glassEffect(.regular, in: Capsule())
+            .systemGlass(Capsule())
             .overlay(Capsule().stroke(flashing ? Theme.Brand.sun.opacity(0.6) : Color.white.opacity(0.16), lineWidth: 1))
             .shadow(color: Theme.Brand.sun.opacity(flashing ? 0.26 : 0), radius: 13)
             .shadow(color: .black.opacity(0.3), radius: 14, y: 8)

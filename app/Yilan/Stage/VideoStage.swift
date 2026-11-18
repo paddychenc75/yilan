@@ -265,7 +265,7 @@ struct VideoPosterOverlay: View {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: Circle())
+        .systemGlass(Circle(), interactive: true)
         .help("播放（空格）")
         .accessibilityLabel("播放")
     }
