@@ -145,9 +145,9 @@ struct MetadataFixtureTests {
 
     @Test("视频：时长、分辨率、编码、帧率、码率、音频")
     func video() async throws {
-        let folder = try fixtureCopy(["trail.mp4"])
+        let folder = try fixtureCopy(["river.mp4"])
         defer { try? FileManager.default.removeItem(at: folder) }
-        let meta = await MetadataReader.read(try item(folder.appendingPathComponent("trail.mp4")))
+        let meta = await MetadataReader.read(try item(folder.appendingPathComponent("river.mp4")))
         let v = try #require(meta.video)
         #expect((v.duration ?? 0) > 0)
         #expect(v.codec != nil)
@@ -544,11 +544,11 @@ struct VideoThumbnailTests {
         #expect(ThumbnailGenerator.videoFrameTime(duration: 0) == .zero)
     }
 
-    @Test("样例视频 trail.mp4（开头是一片泥沙）能生成有画面的缩略图，带时长；缓存键已换版本")
+    @Test("样例视频 river.mp4能生成有画面的缩略图，带时长；缓存键已换版本")
     func trailThumbnail() async throws {
-        let folder = try fixtureCopy(["trail.mp4"])
+        let folder = try fixtureCopy(["river.mp4"])
         defer { try? FileManager.default.removeItem(at: folder) }
-        let thumb = await ThumbnailGenerator.generate(try item(folder.appendingPathComponent("trail.mp4")))
+        let thumb = await ThumbnailGenerator.generate(try item(folder.appendingPathComponent("river.mp4")))
         let image = try #require(thumb.image)
         #expect(max(image.width, image.height) <= ThumbnailGenerator.maxPixel)
         #expect(abs(try #require(thumb.duration) - 10.64) < 0.1)

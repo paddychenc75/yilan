@@ -95,7 +95,7 @@ enum ThumbnailGenerator {
     }
 
     /// 视频缩略图取哪一秒：时长的 40%，最多 6 秒。第 0 秒常常是黑帧、淡入或还没对好焦的画面
-    /// （比如 trail.mp4 的开头只有一片几乎没有细节的泥沙，缩成 76 × 52 就是一块灰），取靠后一点更有代表性
+    /// （有的视频开头只有一片几乎没有细节的画面，缩成 76 × 52 就是一块灰），取靠后一点更有代表性
     static func videoFrameTime(duration: Double?) -> CMTime {
         guard let duration, duration.isFinite, duration > 0 else { return .zero }
         return CMTime(seconds: min(duration * 0.4, 6), preferredTimescale: 600)

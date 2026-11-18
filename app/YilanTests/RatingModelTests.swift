@@ -279,7 +279,7 @@ struct RatingModelTests {
 
     @Test("视频：按 1–5 提示不支持，按 0 什么都不做；不写、不进撤销记录")
     func videoNotRatable() async throws {
-        let dir = try MetaFixtures.copy(["trail.mp4"])
+        let dir = try MetaFixtures.copy(["river.mp4"])
         defer { try? FileManager.default.removeItem(at: dir) }
         let model = try makeModel(dir)
         #expect(!model.currentIsRatable && !model.canRateCurrent)
@@ -289,7 +289,7 @@ struct RatingModelTests {
         #expect(model.toast?.text == String(localized: "视频暂不支持评星"))
         #expect(!model.canUndo && model.ratingFlash == nil && model.currentRating == nil)
         await idle(model)
-        #expect(try FileManager.default.contentsOfDirectory(atPath: dir.path) == ["trail.mp4"])
+        #expect(try FileManager.default.contentsOfDirectory(atPath: dir.path) == ["river.mp4"])
     }
 
     @Test("星级 -1 的文件：按 0 不动它，按 3 改写")

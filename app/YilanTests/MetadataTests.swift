@@ -397,7 +397,7 @@ struct RatingReadTests {
     func fixtures() throws {
         let dir = MetaFixtures.sample
         let index = try MetaFixtures.index(dir)
-        for name in ["IMG_2052.jpg", "aurora.jpg", "IMG_2031.heic", "harbor_night.png", "scan_003.tif", "trail.mp4", "mountains.svg"] {
+        for name in ["IMG_2052.jpg", "aurora.jpg", "IMG_2031.heic", "harbor_night.png", "scan_003.tif", "river.mp4", "mountains.svg"] {
             #expect(RatingFileIO.read(try MetaFixtures.item(dir.appendingPathComponent(name)), sidecars: index).value == 0)
         }
         for name in MetaFixtures.rawSamples {
@@ -551,11 +551,11 @@ struct InteropTests {
 
     @Test("视频不评星：不读、不写它的小文件")
     func video() throws {
-        let dir = try MetaFixtures.copy(["trail.mp4"])
+        let dir = try MetaFixtures.copy(["river.mp4"])
         defer { try? FileManager.default.removeItem(at: dir) }
-        let side = dir.appendingPathComponent("trail.xmp")
+        let side = dir.appendingPathComponent("river.xmp")
         try Data(lightroomStyleXMP.utf8).write(to: side)
-        let item = try MetaFixtures.item(dir.appendingPathComponent("trail.mp4"))
+        let item = try MetaFixtures.item(dir.appendingPathComponent("river.mp4"))
         #expect(RatingFileIO.read(item, sidecars: try MetaFixtures.index(dir)).value == 0)
         #expect(throws: RatingWriteError.self) {
             try RatingFileIO.write(3, for: item, mode: .embedded, sidecars: try MetaFixtures.index(dir))

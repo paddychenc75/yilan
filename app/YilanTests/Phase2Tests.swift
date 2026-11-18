@@ -234,7 +234,7 @@ struct VideoTransportTests {
 struct VideoPlayerControllerTests {
     @Test("准备后读出时长；切走后释放播放项")
     func prepareAndStop() async throws {
-        let url = MetaFixtures.sample.appendingPathComponent("trail.mp4")
+        let url = MetaFixtures.sample.appendingPathComponent("river.mp4")
         try #require(FileManager.default.fileExists(atPath: url.path))
         let item = MediaItem(url: url, format: SupportedFormats.format(forExtension: "mp4")!,
                              fileSize: 1, modificationDate: Date())

@@ -21,7 +21,7 @@
 | `scan_003.tif` | [Heuernte bei Wergzahna im September 2017.webm](https://commons.wikimedia.org/wiki/File:Heuernte_bei_Wergzahna_im_September_2017.webm) | Cmuelle8 | CC0 | 用 `ffmpeg` 取视频第 8 秒的一帧（1920 × 1080），再用 `sips -s format tiff` 转成不压缩的 TIFF |
 | `gears.gif` | [Spur gears animation.gif](https://commons.wikimedia.org/wiki/File:Spur_gears_animation.gif) | Jahobr | CC0 | 原文件，没有改动（动图） |
 | `mountains.svg` | [Vector Illustration of a Mountain Landscape with Pine Trees.svg](https://commons.wikimedia.org/wiki/File:Vector_Illustration_of_a_Mountain_Landscape_with_Pine_Trees.svg) | Missaruthra | CC0 | 原文件，没有改动（660 × 659，不含脚本和外部链接） |
-| `trail.mp4` | [Sandwatt (Fussspuren).webm](https://commons.wikimedia.org/wiki/File:Sandwatt_(Fussspuren).webm) | Rhetos | CC0 | Commons 上只有 WebM（VP8 + Vorbis），AVFoundation 播放不了。用 `ffmpeg` 转成 MP4：H.264 1280 × 720 + AAC 立体声，10.6 秒，去掉容器元数据 |
+| `river.mp4` | [Klamath River (28205908032).webm](https://commons.wikimedia.org/wiki/File:Klamath_River_(28205908032).webm) | BLM Oregon & Washington（美国土地管理局） | 公共领域 | 原文件是 WebM（VP9 + Opus），AVFoundation 播放不了。用 `ffmpeg` 取前 10.6 秒转成 MP4：H.264 1280 × 720 + AAC 立体声，去掉容器元数据 |
 | `IMG_2036.mov` | [Flor di tuna, Aruba (Opuntia caracassana).webm](https://commons.wikimedia.org/wiki/File:Flor_di_tuna,_Aruba_(Opuntia_caracassana).webm) | Ginelly.Q | CC0 | 原文件是 WebM（VP9 + Opus）。用 `ffmpeg` 转成 QuickTime MOV：HEVC（hvc1）1280 × 720 + AAC，14.5 秒，去掉容器元数据 |
 | `broken.jpg` | 自己生成 | — | — | 2 KB 的无效数据，扩展名是 .jpg，用来测试“文件已损坏” |
 | `notes.txt` | 自己生成 | — | — | 一个文本文件，用来测试“不支持的文件会被跳过” |

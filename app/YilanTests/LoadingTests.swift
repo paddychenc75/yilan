@@ -249,7 +249,7 @@ struct DecoderFixtureTests {
         #expect(failure.kind == .missing)
         #expect(failure.reason == String(localized: "文件已被移走或删除。"))
         // 视频也一样
-        let video = dir.appendingPathComponent("trail.mp4")
+        let video = dir.appendingPathComponent("river.mp4")
         let videoItem = try realItem(video)
         try FileManager.default.removeItem(at: video)
         #expect(await decodeFailure(videoItem)?.kind == .missing)
