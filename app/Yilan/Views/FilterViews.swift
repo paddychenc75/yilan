@@ -47,6 +47,7 @@ struct FilterButton: View {
                     if active {
                         Text(verbatim: "·").opacity(0.6)
                         Text(verbatim: mode == .full ? filter.summaryParts.joined(separator: " · ") : "\(filter.activeKinds)")
+                            .monospacedDigit()
                     }
                     Image(systemName: "chevron.down")
                         .font(.system(size: 8.5, weight: .semibold))
@@ -65,7 +66,7 @@ struct FilterButton: View {
         .buttonStyle(.plain)
         .regularGlass(Capsule())
         .fixedSize()
-        .help(Text("筛选（⌘F）"))
+        .help(active ? Text(verbatim: filter.summaryParts.joined(separator: " · ")) : Text("筛选（⌘F）"))
         .accessibilityLabel(Text("筛选"))
         .accessibilityValue(Text(verbatim: filter.summaryParts.joined(separator: ", ")))
     }

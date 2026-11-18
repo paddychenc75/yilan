@@ -15,14 +15,14 @@ struct TopBarLayoutTests {
 
     @Test("按设计稿的宽度算出的阈值和设计稿一致（±10）")
     func thresholds() {
-        // 设计稿：1260 / 1180 / 1050 / 940 / 890 / 730
-        let design: [(CGFloat, Int)] = [(1260, 0), (1180, 1), (1050, 2), (940, 3), (890, 4), (730, 5)]
+        // 筛选按钮只写条件个数后，原来第一档（完整条件，1260）取消，其余阈值不变：1180 / 1050 / 940 / 890 / 730
+        let design: [(CGFloat, Int)] = [(1180, 0), (1050, 1), (940, 2), (890, 3), (730, 4)]
         for (threshold, index) in design {
             #expect(step(threshold) <= index, "宽 \(threshold) 应该不超过第 \(index) 档")
             #expect(step(threshold - 10) >= index + 1, "宽 \(threshold - 10) 应该进入第 \(index + 1) 档")
         }
         #expect(step(1400) == 0)
-        #expect(step(640) == 6)
+        #expect(step(640) == 5)
     }
 
     @Test("从 1400 到 640 每一档都不重叠")
@@ -48,7 +48,7 @@ struct TopBarLayoutTests {
     @Test("没有图片时不算缩放控件")
     func noZoom() {
         let tier = TopBarTier.choose(width: 1100, widths: zh, hasZoom: false)
-        #expect(tier.filter == .full || tier.filter == .count)
+        #expect(tier.filter == .count)
         #expect(tier.rightWidth(zh, hasZoom: false) == CGFloat(102 + 16 + 102 + 14))
     }
 }

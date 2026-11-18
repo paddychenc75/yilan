@@ -26,9 +26,9 @@ struct TopBarTier: Equatable {
     var segSlim: Bool
     var leftAligned: Bool
 
-    /// 设计稿的顺序：① 筛选缩成数量 ② 缩放只留百分比 ③ 类型只留图标 ④ 筛选缩成漏斗 ⑤ 缩放进 ⋯ 菜单 ⑥ 筛选组靠左
+    /// 筛选按钮只写条件个数（“筛选 · 2”），不写完整条件：条件一变按钮宽度就变，顶部栏会抖，也放不下。
+    /// 收缩顺序：① 缩放只留百分比 ② 类型只留图标 ③ 筛选缩成漏斗 ④ 缩放进 ⋯ 菜单 ⑤ 筛选组靠左
     static let steps: [TopBarTier] = [
-        .init(filter: .full, zoom: .full, segSlim: false, leftAligned: false),
         .init(filter: .count, zoom: .full, segSlim: false, leftAligned: false),
         .init(filter: .count, zoom: .percent, segSlim: false, leftAligned: false),
         .init(filter: .count, zoom: .percent, segSlim: true, leftAligned: false),
