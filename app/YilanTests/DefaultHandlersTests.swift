@@ -84,6 +84,21 @@ struct DefaultHandlersTests {
         #expect(env.model.notes[.png] == .restored)
     }
 
+    @Test("“预览”打不开 SVG：关掉 SVG 交给 Safari；自带应用都打不开时交给别的能打开的应用")
+    func svgGoesToSafari() async {
+        let safari = AppRef(bundleID: "com.apple.Safari", path: "/Applications/Safari.app", name: "Safari")
+        let env = make([.svg: Self.me], installed: [Self.preview, Self.quickTime, safari, Self.photoshop, Self.me])
+        env.system.cannotOpen = ["com.apple.Preview": [HandlerFormat.svg.typeIdentifier],
+                                 "com.apple.QuickTimePlayerX": [HandlerFormat.svg.typeIdentifier]]
+        await env.model.setSwitch(.svg, on: false)
+        #expect(env.model.current[.svg] == safari)
+
+        await env.model.setSwitch(.svg, on: true)
+        env.system.cannotOpen["com.apple.Safari"] = [HandlerFormat.svg.typeIdentifier]
+        await env.model.setSwitch(.svg, on: false)
+        #expect(env.model.current[.svg] == Self.photoshop)
+    }
+
     @Test("已经是一览的格式再打开不调用系统、不记录")
     func alreadyOn() async {
         let env = make([.jpeg: Self.meDebug])

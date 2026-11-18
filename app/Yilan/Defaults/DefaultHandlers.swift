@@ -23,6 +23,8 @@ protocol HandlerSystem: AnyObject {
     /// 按 bundle id 找应用（找不到 = 已经删掉）
     func app(bundleID: String) -> AppRef?
     func setHandler(_ app: AppRef, for type: UTType) async throws
+    /// 能打开这个格式的应用的 bundle id，按系统给的顺序
+    func openers(for type: UTType) -> [String]
 }
 
 /// 真实的系统（NSWorkspace / Launch Services）
@@ -38,6 +40,10 @@ final class WorkspaceHandlerSystem: HandlerSystem {
 
     func setHandler(_ app: AppRef, for type: UTType) async throws {
         try await NSWorkspace.shared.setDefaultApplication(at: app.url, toOpen: type)
+    }
+
+    func openers(for type: UTType) -> [String] {
+        NSWorkspace.shared.urlsForApplications(toOpen: type).compactMap { Bundle(url: $0)?.bundleIdentifier }
     }
 
     static func ref(for url: URL) -> AppRef? {
@@ -103,6 +109,14 @@ enum HandlerFormat: String, CaseIterable, Identifiable, Sendable {
         case .mp4: "public.mpeg-4"
         case .m4v: "com.apple.m4v-video"
         case .mov: "com.apple.quicktime-movie"
+        }
+    }
+
+    /// 关掉开关时交还给谁：系统自带的应用，按顺序找第一个能打开的
+    var stockBundleIDs: [String] {
+        switch self {
+        case .svg: ["com.apple.Safari", "com.apple.Preview"]
+        default: [group.systemDefaultBundleID]
         }
     }
 
@@ -248,8 +262,14 @@ final class DefaultHandlers {
 
     /// 关掉开关时设成谁：一律交给系统默认（图片是预览，视频是 QuickTime Player）。
     /// 不还原成“之前的应用”：之前的应用不一定合理（例如终端应用也声明能打开 SVG），结果也不好预料。
+    /// 系统自带应用里要真的能打开这个格式才算（“预览”打不开 SVG，SVG 交给 Safari）；
+    /// 自带应用都不行时，交给系统列出的第一个别的应用。
     func restoreTarget(_ format: HandlerFormat) -> (app: AppRef, usedSystemDefault: Bool)? {
-        system.app(bundleID: format.group.systemDefaultBundleID).map { ($0, true) }
+        let openers = system.openers(for: format.type).filter { $0 != selfApp.bundleID }
+        for id in format.stockBundleIDs where openers.contains(id) {
+            if let app = system.app(bundleID: id) { return (app, true) }
+        }
+        return openers.lazy.compactMap { self.system.app(bundleID: $0) }.first.map { ($0, false) }
     }
 
     // MARK: - 单个开关
@@ -370,7 +390,7 @@ final class DefaultHandlers {
             target = restore.app
             usedSystemDefault = restore.usedSystemDefault
         }
-        let outcome: Outcome
+        var outcome: Outcome
         do {
             try await system.setHandler(target, for: format.type)
             outcome = .changed
@@ -381,6 +401,8 @@ final class DefaultHandlers {
             }
         }
         refresh()
+        // 系统说成功但其实没变（例如目标应用打不开这个格式）：按失败处理，不能显示成已改
+        if outcome == .changed, isYilan(format) != on { outcome = .failed }
         if outcome == .changed {
             if !on {
                 var map = previous
@@ -471,6 +493,13 @@ final class FakeHandlerSystem: HandlerSystem {
     func handler(for type: UTType) -> AppRef? { handlers[type.identifier] }
 
     func app(bundleID: String) -> AppRef? { installed[bundleID] }
+
+    /// 哪些应用打不开哪些格式（bundle id → 格式名）；没写的都当作能打开
+    var cannotOpen: [String: Set<String>] = [:]
+
+    func openers(for type: UTType) -> [String] {
+        installed.keys.sorted().filter { !(cannotOpen[$0]?.contains(type.identifier) ?? false) }
+    }
 
     func setHandler(_ app: AppRef, for type: UTType) async throws {
         calls.append((app.bundleID, type.identifier))

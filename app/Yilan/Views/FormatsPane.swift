@@ -20,7 +20,7 @@ struct FormatsPane: View {
                 groupView(group)
             }
             HStack(spacing: 8) {
-                Text("关掉开关后交还给系统默认应用（预览 / QuickTime Player）。")
+                Text("关掉开关后，交还给系统自带的应用（预览、QuickTime Player、Safari）。")
                     .font(.system(size: 11.5))
                     .foregroundStyle(Theme.text3)
                 Spacer(minLength: 0)
@@ -251,7 +251,7 @@ struct FormatsPlanSheet: View {
                 .foregroundStyle(.white)
             Text(plan.turnOn
                  ? "这 \(n) 种格式现在由 \(appList) 打开。只改「用哪个应用打开」，不动文件本身，之后可以在这里随时还原。"
-                 : "图片和 RAW 交给“预览”，视频交给“QuickTime Player”。想用别的应用打开，可以之后在访达的「显示简介」里设置。")
+                 : "图片和 RAW 交给“预览”，SVG 交给“Safari”，视频交给“QuickTime Player”。想用别的应用打开，可以之后在访达的「显示简介」里设置。")
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.text2)
                 .fixedSize(horizontal: false, vertical: true)
