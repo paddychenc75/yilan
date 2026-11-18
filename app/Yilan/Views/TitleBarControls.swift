@@ -115,10 +115,8 @@ struct ToolGroup: View {
             ToolButton(symbol: "arrow.counterclockwise", help: "向左旋转（⇧R）", selected: rotateSelected, action: onRotate)
                 .disabled(!enabled)
             // 编辑（spec ED-01、ED-02）：不支持时不用 disabled，好让悬停提示照常出现
-            ToolButton(symbol: "crop", help: editUnsupported ? "此类文件不支持编辑" : "编辑（E）") {
-                if !editUnsupported { onEdit() }
-            }
-            .opacity(editUnsupported ? 0.3 : 1)
+            // 用文字而不是裁切图标：编辑模式里不只有裁切，图标也看不出是“进入编辑”的入口
+            EditEntryButton(unsupported: editUnsupported, action: onEdit)
             ToolButton(symbol: "info.circle", help: "信息（I）", selected: infoSelected, action: onInfo)
                 .disabled(!enabled)
             Menu {
@@ -172,6 +170,29 @@ struct ToolButton: View {
             .buttonStyle(.plain)
             .opacity(isEnabled ? 1 : 0.3)
             .help(help)
+    }
+}
+
+/// 顶部工具组里的「编辑」入口：文字按钮，高度和旁边的图标按钮一致
+struct EditEntryButton: View {
+    let unsupported: Bool
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button { if !unsupported { action() } } label: {
+            Text("编辑")
+                .font(.system(size: 12.5, weight: .medium))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10)
+                .frame(height: 30)
+                .background(Capsule().fill(Color.white.opacity(hovering && !unsupported ? 0.12 : 0)))
+                .contentShape(Capsule())
+                .onHover { hovering = $0 }
+        }
+        .buttonStyle(.plain)
+        .opacity(unsupported ? 0.3 : 1)
+        .help(unsupported ? Text("此类文件不支持编辑") : Text("编辑（E）"))
     }
 }
 
