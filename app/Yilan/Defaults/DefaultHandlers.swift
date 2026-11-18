@@ -175,13 +175,6 @@ final class DefaultHandlers {
         var isAll: Bool
     }
 
-    /// 关掉开关时让用户选：交还给之前的应用，还是交给系统默认
-    struct RestoreChoice: Equatable {
-        var format: HandlerFormat
-        var previous: AppRef
-        var systemDefault: AppRef
-    }
-
     /// 一个格式改完的结果
     enum Outcome: Equatable {
         case changed
@@ -202,8 +195,6 @@ final class DefaultHandlers {
     private(set) var isBusy = false
     /// 等用户确认的批量操作
     var pendingPlan: Plan?
-    /// 关掉一个开关时，之前的应用和系统默认不是同一个：先让用户选交给谁
-    var pendingRestoreChoice: RestoreChoice?
     private var stopRequested = false
     private var noteTokens: [HandlerFormat: UUID] = [:]
     private var bannerToken = UUID()
@@ -255,13 +246,10 @@ final class DefaultHandlers {
         set { store.set(try? JSONEncoder().encode(newValue), forKey: Self.previousKey) }
     }
 
-    /// 关掉开关时设成谁：记下的应用还在就是它，否则系统默认（D4、DF-05）
+    /// 关掉开关时设成谁：一律交给系统默认（图片是预览，视频是 QuickTime Player）。
+    /// 不还原成“之前的应用”：之前的应用不一定合理（例如终端应用也声明能打开 SVG），结果也不好预料。
     func restoreTarget(_ format: HandlerFormat) -> (app: AppRef, usedSystemDefault: Bool)? {
-        if let prev = previous[format.typeIdentifier], prev.bundleID != selfApp.bundleID,
-           let app = system.app(bundleID: prev.bundleID) {
-            return (app, false)
-        }
-        return system.app(bundleID: format.group.systemDefaultBundleID).map { ($0, true) }
+        system.app(bundleID: format.group.systemDefaultBundleID).map { ($0, true) }
     }
 
     // MARK: - 单个开关
@@ -269,22 +257,7 @@ final class DefaultHandlers {
     func setSwitch(_ format: HandlerFormat, on: Bool) async {
         guard !isBusy, isYilan(format) != on else { return }
         clearBanner()
-        // 之前的应用不一定是用户想要的（例如终端应用也声明能打开 SVG），和系统默认不同时让用户自己选
-        if !on, let restore = restoreTarget(format), !restore.usedSystemDefault,
-           let fallback = system.app(bundleID: format.group.systemDefaultBundleID),
-           fallback.bundleID != restore.app.bundleID {
-            pendingRestoreChoice = RestoreChoice(format: format, previous: restore.app, systemDefault: fallback)
-            return
-        }
         await perform(format, on: on, restoreTo: nil)
-    }
-
-    /// 用户在「交给谁」里选了一个应用；nil = 取消
-    func chooseRestore(_ app: AppRef?) async {
-        guard let choice = pendingRestoreChoice else { return }
-        pendingRestoreChoice = nil
-        guard let app, !isBusy, isYilan(choice.format) else { return }
-        await perform(choice.format, on: false, restoreTo: app)
     }
 
     private func perform(_ format: HandlerFormat, on: Bool, restoreTo: AppRef?) async {
@@ -371,10 +344,8 @@ final class DefaultHandlers {
             text = String(localized: "已改 \(changed) 种，\(failed) 种 macOS 没有接受，仍由原来的应用打开。")
         } else if plan.turnOn {
             text = String(localized: "已把 \(changed) 种格式设为用一览打开。")
-        } else if systemDefaults > 0 {
-            text = String(localized: "已还原 \(changed) 种格式。其中 \(systemDefaults) 种不知道原来是谁，已恢复成系统默认（预览 / QuickTime Player）。")
         } else {
-            text = String(localized: "已还原 \(changed) 种格式。")
+            text = String(localized: "已把 \(changed) 种格式交还给系统默认应用（预览 / QuickTime Player）。")
         }
         showBanner(Banner(kind: !declined && !userStopped && failed == 0 ? .ok : .warn, text: text))
     }

@@ -20,11 +20,11 @@ struct FormatsPane: View {
                 groupView(group)
             }
             HStack(spacing: 8) {
-                Text("一览不会自己修改这些设置。")
+                Text("关掉开关后交还给系统默认应用（预览 / QuickTime Player）。")
                     .font(.system(size: 11.5))
                     .foregroundStyle(Theme.text3)
                 Spacer(minLength: 0)
-                Button("全部还原") { model.requestAll(on: false) }
+                Button("全部关闭") { model.requestAll(on: false) }
                     .buttonStyle(GrayButtonStyle(enabled: !model.isBusy && model.anyOn))
                     .disabled(model.isBusy || !model.anyOn)
                 Button("全部设为一览") { model.requestAll(on: true) }
@@ -149,54 +149,6 @@ struct FormatsPane: View {
     }
 }
 
-/// 关掉一个开关、之前的应用和系统默认不同时：让用户选交给谁
-struct FormatsRestoreChoiceSheet: View {
-    let choice: DefaultHandlers.RestoreChoice
-    let model: DefaultHandlers
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("\(choice.format.name) 以后交给谁打开？", comment: "关掉开关时的选择框标题")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white)
-            Text("macOS 要求每种格式都有一个默认应用，所以关掉开关时需要指定一个。接下来 macOS 还会再向你确认一次。")
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.text2)
-                .fixedSize(horizontal: false, vertical: true)
-            VStack(spacing: 8) {
-                option(choice.systemDefault, note: Text("系统默认"))
-                option(choice.previous, note: Text("打开开关之前的应用"))
-            }
-            HStack {
-                Spacer()
-                Button("取消") { Task { await model.chooseRestore(nil) } }
-                    .buttonStyle(GrayButtonStyle(height: 28, fontSize: 12.5))
-                    .keyboardShortcut(.cancelAction)
-            }
-            .padding(.top, 2)
-        }
-        .padding(22)
-        .frame(width: 400)
-        .thickGlass(RoundedRectangle(cornerRadius: 26, style: .continuous))
-    }
-
-    private func option(_ app: AppRef, note: Text) -> some View {
-        Button { Task { await model.chooseRestore(app) } } label: {
-            HStack(spacing: 10) {
-                Image(nsImage: NSWorkspace.shared.icon(forFile: app.path)).resizable().frame(width: 26, height: 26)
-                Text(verbatim: app.name).font(.system(size: 13, weight: .medium)).foregroundStyle(.white)
-                Spacer(minLength: 0)
-                note.font(.system(size: 11.5)).foregroundStyle(Theme.text3)
-            }
-            .padding(.horizontal, 12)
-            .frame(height: 44)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.white.opacity(0.08)))
-            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 /// 应用图标 14 × 14
 private struct AppIcon: View {
     let app: AppRef?
@@ -294,12 +246,12 @@ struct FormatsPlanSheet: View {
     var body: some View {
         let n = plan.formats.count
         VStack(alignment: .leading, spacing: 12) {
-            Text(plan.turnOn ? "把 \(n) 种格式改成用一览打开？" : "把 \(n) 种格式还原成原来的应用？")
+            Text(plan.turnOn ? "把 \(n) 种格式改成用一览打开？" : "把 \(n) 种格式交还给系统默认应用？")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white)
             Text(plan.turnOn
                  ? "这 \(n) 种格式现在由 \(appList) 打开。只改「用哪个应用打开」，不动文件本身，之后可以在这里随时还原。"
-                 : "每种格式还原成打开开关之前的应用；不知道之前是谁的，恢复成系统默认（预览 / QuickTime Player）。")
+                 : "图片和 RAW 交给“预览”，视频交给“QuickTime Player”。想用别的应用打开，可以之后在访达的「显示简介」里设置。")
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.text2)
                 .fixedSize(horizontal: false, vertical: true)

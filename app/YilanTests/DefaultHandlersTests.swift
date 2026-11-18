@@ -68,7 +68,7 @@ struct DefaultHandlersTests {
         }
     }
 
-    @Test("打开：先记下原来的应用，再设成一览；关掉：还原成它，记录删掉（D4）")
+    @Test("打开：先记下原来的应用，再设成一览；关掉：交给系统默认，记录删掉")
     func onThenRestore() async {
         let env = make([.png: Self.photoshop])
         await env.model.setSwitch(.png, on: true)
@@ -77,32 +77,11 @@ struct DefaultHandlersTests {
         #expect(env.model.notes[.png] == .justSet)
         #expect(env.system.calls.map(\.bundleID) == ["com.yilan.viewer"])
 
-        // 之前的应用（Photoshop）和系统默认（预览）不同：先问交给谁，没选之前什么都不改
+        // 关掉：一律交给系统默认（预览），不回到之前的 Photoshop
         await env.model.setSwitch(.png, on: false)
-        #expect(env.model.pendingRestoreChoice?.previous == Self.photoshop)
-        #expect(env.model.pendingRestoreChoice?.systemDefault == Self.preview)
-        #expect(env.model.isYilan(.png))
-        await env.model.chooseRestore(Self.photoshop)
-        #expect(env.model.pendingRestoreChoice == nil)
-        #expect(env.model.current[.png] == Self.photoshop)
-        #expect(env.model.previous[HandlerFormat.png.typeIdentifier] == nil)
-        #expect(env.model.notes[.png] == .restored)
-    }
-
-    @Test("关掉时改选系统默认：交给预览，记录删掉；取消：什么都不改")
-    func restoreChoice() async {
-        let env = make([.png: Self.photoshop])
-        await env.model.setSwitch(.png, on: true)
-        await env.model.setSwitch(.png, on: false)
-        await env.model.chooseRestore(nil)
-        #expect(env.model.isYilan(.png))
-        #expect(env.model.pendingRestoreChoice == nil)
-        #expect(env.system.calls.count == 1)
-
-        await env.model.setSwitch(.png, on: false)
-        await env.model.chooseRestore(Self.preview)
         #expect(env.model.current[.png] == Self.preview)
         #expect(env.model.previous[HandlerFormat.png.typeIdentifier] == nil)
+        #expect(env.model.notes[.png] == .restored)
     }
 
     @Test("已经是一览的格式再打开不调用系统、不记录")
@@ -185,7 +164,7 @@ struct DefaultHandlersTests {
         #expect(env.model.banner?.kind == .ok)
     }
 
-    @Test("组头：全开 → 全关；各自还原成原来的应用")
+    @Test("组头：全开 → 全关；都交给系统默认")
     func groupOff() async {
         let env = make([.mp4: Self.movist])
         env.model.requestGroup(.videos)
@@ -194,7 +173,7 @@ struct DefaultHandlersTests {
         env.model.requestGroup(.videos)
         #expect(env.model.pendingPlan?.turnOn == false)
         await env.model.runPlan()
-        #expect(env.model.current[.mp4] == Self.movist)
+        #expect(env.model.current[.mp4] == Self.quickTime)
         #expect(env.model.current[.mov] == Self.quickTime)
     }
 
@@ -225,7 +204,7 @@ struct DefaultHandlersTests {
         #expect(env.model.banner?.kind == .warn)
     }
 
-    @Test("全部还原：不知道原来是谁的算进系统默认的数量")
+    @Test("全部关闭：都交给系统默认，记录清空")
     func restoreAll() async {
         let env = make([.png: Self.photoshop])
         env.model.requestAll(on: true)
@@ -234,9 +213,8 @@ struct DefaultHandlersTests {
         env.model.requestAll(on: false)
         await env.model.runPlan()
         #expect(!env.model.anyOn)
-        #expect(env.model.current[.png] == Self.photoshop)
-        // 记下的是预览 / QuickTime（原来就是它们），所以不算「不知道」
-        #expect(env.model.banner?.text.contains("系统默认") == false)
+        #expect(env.model.current[.png] == Self.preview)
+        #expect(env.model.banner?.text.contains("系统默认") == true)
         #expect(env.model.previous.isEmpty)
     }
 
@@ -263,8 +241,8 @@ struct DefaultHandlersTests {
         let env = make([.png: Self.photoshop])
         await env.model.setSwitch(.png, on: true)
         let again = DefaultHandlers(system: env.system, store: env.store, selfApp: Self.me)
-        #expect(again.restoreTarget(.png)?.app == Self.photoshop)
-        #expect(again.restoreTarget(.png)?.usedSystemDefault == false)
-        #expect(again.restoreTarget(.jpeg)?.usedSystemDefault == true)
+        #expect(again.previous[HandlerFormat.png.typeIdentifier] == Self.photoshop)
+        // 记录只留作参考；关掉时一律交给系统默认
+        #expect(again.restoreTarget(.png)?.app == Self.preview)
     }
 }
