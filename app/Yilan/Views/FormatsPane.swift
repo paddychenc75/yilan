@@ -184,33 +184,6 @@ private struct TightLabelStyle: LabelStyle {
     }
 }
 
-/// 组头三态复选框 16 × 16：空 / 「−」 / 勾；点空或混合 = 全开，点勾 = 全关
-struct TriStateBox: View {
-    let on: Int
-    let total: Int
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .fill(on > 0 ? Theme.accent : .clear)
-                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .strokeBorder(on > 0 ? Theme.accent : Color.white.opacity(0.4), lineWidth: 1.5)
-                if on == total {
-                    Image(systemName: "checkmark").font(.system(size: 9, weight: .black)).foregroundStyle(.white)
-                } else if on > 0 {
-                    Image(systemName: "minus").font(.system(size: 9, weight: .black)).foregroundStyle(.white)
-                }
-            }
-            .frame(width: 16, height: 16)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityValue(Text(on == total ? "全部打开" : on == 0 ? "全部关闭" : "部分打开"))
-    }
-}
-
 /// 说明条：黄色（失败）、绿色（结果）、灰色（进行中，带「停止」）
 private struct FormatsBanner: View {
     let banner: DefaultHandlers.Banner
@@ -266,7 +239,7 @@ struct FormatsPlanSheet: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.white)
             Text(plan.turnOn
-                 ? "这 \(n) 种格式现在由 \(appList) 打开。只改「用哪个应用打开」，不动文件本身，之后可以在这里随时还原。"
+                 ? "这 \(n) 种格式现在的默认应用是 \(appList)。只改「用哪个应用打开」，不动文件本身。"
                  : "图片和 RAW 交给“预览”，SVG 交给“Safari”，视频交给“QuickTime Player”。想用别的应用打开，可以之后在访达的「显示简介」里设置。")
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.text2)

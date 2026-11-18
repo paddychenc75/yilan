@@ -183,6 +183,16 @@
         }
       }
     },
+    "%lld 种默认用一览打开" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld open with Yilan"
+          }
+        }
+      }
+    },
     "%lld 秒" : {
       "comment" : "隐藏延迟的秒数",
       "localizations" : {
@@ -672,6 +682,16 @@
         }
       }
     },
+    "全部交还给系统自带应用…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hand all back to built-in apps…"
+          }
+        }
+      }
+    },
     "全部关闭" : {
       "localizations" : {
         "en" : {
@@ -698,6 +718,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Set All to Yilan"
+          }
+        }
+      }
+    },
+    "全部设为默认" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set All as Default"
           }
         }
       }
@@ -1314,6 +1344,16 @@
         }
       }
     },
+    "图片和 RAW 交给“预览”，SVG 交给“Safari”，视频交给“QuickTime Player”。想用别的应用打开，可以之后在访达的「显示简介」里设置。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Images and RAW go to Preview, SVG to Safari, and videos to QuickTime Player. To use another app, set it later in Finder’s Get Info."
+          }
+        }
+      }
+    },
     "图片（⌘2）" : {
       "localizations" : {
         "en" : {
@@ -1458,6 +1498,16 @@
         }
       }
     },
+    "已交给" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Handed to"
+          }
+        }
+      }
+    },
     "已停止。已改 %lld 种，%lld 种没有改。" : {
       "localizations" : {
         "en" : {
@@ -1484,6 +1534,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$lld of %2$lld on"
+          }
+        }
+      }
+    },
+    "已把 %lld 种格式交还给系统默认应用（预览 / QuickTime Player）。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Handed %lld formats back to the built-in apps (Preview / QuickTime Player)."
           }
         }
       }
@@ -1812,6 +1872,16 @@
         }
       }
     },
+    "想改回别的应用：在访达里选中文件，「显示简介」›「打开方式」。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To use another app: select a file in Finder, then Get Info › Open with."
+          }
+        }
+      }
+    },
     "截图和导出的图片通常不带相机数据" : {
       "localizations" : {
         "en" : {
@@ -2105,6 +2175,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Go to Next After Rating"
+          }
+        }
+      }
+    },
+    "把 %lld 种格式交还给系统默认应用？" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hand %lld formats back to the built-in apps?"
           }
         }
       }
@@ -2908,6 +2988,16 @@
         }
       }
     },
+    "未改动" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not changed"
+          }
+        }
+      }
+    },
     "未改动 · 由 %@ 打开" : {
       "localizations" : {
         "en" : {
@@ -2944,6 +3034,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Off"
+          }
+        }
+      }
+    },
+    "本组全部设为默认" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set Group as Default"
+          }
+        }
+      }
+    },
+    "本组已全部设为默认" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All set as default"
           }
         }
       }
@@ -3332,6 +3442,16 @@
         }
       }
     },
+    "相机 RAW" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera RAW"
+          }
+        }
+      }
+    },
     "知道了" : {
       "localizations" : {
         "en" : {
@@ -3512,6 +3632,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sony"
+          }
+        }
+      }
+    },
+    "索尼、佳能、尼康、富士等 %lld 种" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld camera formats"
           }
         }
       }
@@ -3802,6 +3932,26 @@
         }
       }
     },
+    "设为默认" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set as Default"
+          }
+        }
+      }
+    },
+    "设为默认后，双击这种格式的文件就用一览打开。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Once set as default, double-clicking a file of that format opens it in Yilan."
+          }
+        }
+      }
+    },
     "设置" : {
       "comment" : "设置窗口的标题（窗口菜单里显示）",
       "localizations" : {
@@ -3913,12 +4063,12 @@
         }
       }
     },
-    "这 %lld 种格式现在由 %@ 打开。只改「用哪个应用打开」，不动文件本身，之后可以在这里随时还原。" : {
+    "这 %lld 种格式现在的默认应用是 %@。只改「用哪个应用打开」，不动文件本身。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "These %1$lld formats currently open in %2$@. Only the app that opens them changes; the files stay untouched. You can restore them here at any time."
+            "value" : "These %1$lld formats currently open in %2$@. Only the app that opens them changes; the files stay untouched."
           }
         }
       }
@@ -4189,6 +4339,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Default view"
+          }
+        }
+      }
+    },
+    "默认用一览打开" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens with Yilan"
           }
         }
       }
