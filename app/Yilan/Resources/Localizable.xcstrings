@@ -416,6 +416,22 @@
         }
       }
     },
+    "resize.mode.pixels" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pixels"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "像素"
+          }
+        }
+      }
+    },
     "≥%lld 星" : {
       "localizations" : {
         "en" : {

@@ -472,7 +472,7 @@ struct ResizePanel: View {
 
     private var segmented: some View {
         HStack(spacing: 2) {
-            segment(String(localized: "像素"), on: !percentMode) { switchMode(percent: false) }
+            segment(String(localized: "resize.mode.pixels", defaultValue: "像素", comment: "调整尺寸面板的分段按钮：按像素输入（英文写全称 Pixels，输入框里的单位才缩写成 px）"), on: !percentMode) { switchMode(percent: false) }
             segment(String(localized: "百分比"), on: percentMode) { switchMode(percent: true) }
         }
         .padding(2)
