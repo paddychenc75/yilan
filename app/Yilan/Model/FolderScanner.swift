@@ -73,7 +73,10 @@ enum FolderScanner {
         items.sorted { naturalLess($0.name, $1.name) }
     }
 
+    /// 先比去掉扩展名的名字：「IMG_1.jpg」排在「IMG_1 编辑.jpg」前面，编辑出的副本紧跟原图（技术方案 13.3）
     static func naturalLess(_ a: String, _ b: String) -> Bool {
+        let stem = (a as NSString).deletingPathExtension.localizedStandardCompare((b as NSString).deletingPathExtension)
+        if stem != .orderedSame { return stem == .orderedAscending }
         let r = a.localizedStandardCompare(b)
         if r == .orderedSame { return a < b }   // 保证排序稳定
         return r == .orderedAscending
