@@ -4278,7 +4278,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ match"
+            "value" : "%@ matching"
           }
         }
       }

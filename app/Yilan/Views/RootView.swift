@@ -300,10 +300,11 @@ struct RootView: View {
 
             if model.hasOpenedFolder {
                 centerGroup(tier: tier)
+                    // 悬停要写在撑大尺寸的 padding / frame / position 之前：macOS 15 上，写在后面会让撑出来的整片空白都吃掉点击
+                    .onHover { model.setHovering("filter", $0) }
                     .padding(.top, 10)
                     .frame(maxWidth: .infinity, alignment: tier.leftAligned ? .leading : .center)
                     .padding(.leading, tier.leftAligned ? TopBarTier.leftEdge : 0)
-                    .onHover { model.setHovering("filter", $0) }
             }
             // 浏览时转过：工具组下方 4pt 的「保存旋转」胶囊（spec ED-41）
             if model.showsSaveRotation, let item = model.current {
@@ -478,8 +479,8 @@ struct RootView: View {
                 Group {
                     if showsVideoGlyph {
                         VideoPosterOverlay { model.video.play() }
-                            .position(x: size.width / 2, y: imageAreaCenterY(layout))
                             .onHover { model.setHovering("bigplay", $0) }
+                            .position(x: size.width / 2, y: imageAreaCenterY(layout))
                     }
                 }
                 .opacity(model.chromeVisible || layout.fullScreen ? 1 : 0)
@@ -594,10 +595,10 @@ struct RootView: View {
                     canRate: model.canRateCurrent,
                     onRate: { model.rateCurrent($0, fromKeyboard: false) }
                 )
+                .onHover { model.setHovering("info", $0) }
                 .padding(.top, top)
                 .padding(.trailing, InfoPanel.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
-                .onHover { model.setHovering("info", $0) }
                 .transition(.opacity.combined(with: .offset(x: 24)))
             }
 
@@ -607,19 +608,19 @@ struct RootView: View {
                     if hint == .shortcutsChanged { SettingsWindow.shared.show(pane: .shortcuts) }
                     model.dismissHint()
                 }, onClose: { model.dismissHint() })
+                .onHover { model.setHovering("hint", $0) }
                 .padding(.top, toastTop)
                 .transition(.opacity.combined(with: .offset(y: -8)))
-                .onHover { model.setHovering("hint", $0) }
             }
 
             // 新版本提示（spec U2-01、U2-02）：一次只显示一个卡片，快捷键 / .xmp 卡片优先
             if updater.noticeVisible, model.hint == nil, let release = updater.available {
                 UpdateNoticeCard(version: "v" + release.version, current: updater.current.display, narrow: size.width < 760,
                                  onOpen: { updater.showNotes() }, onClose: { updater.dismissNotice() })
+                    .onHover { model.setHovering("update", $0) }
                     .padding(.horizontal, size.width < 760 ? 16 : 0)
                     .padding(.top, size.width < 760 ? (layout.fullScreen ? toastTop - 6 : 60) : toastTop)
                     .transition(.opacity.combined(with: .offset(y: -8)))
-                    .onHover { model.setHovering("update", $0) }
             }
             if updater.checking {
                 UpdateCheckingChip().padding(.top, toastTop).transition(.opacity)
