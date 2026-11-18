@@ -228,7 +228,7 @@ struct DefaultHandlersTests {
         await env.model.runPlan()
         #expect(!env.model.anyOn)
         #expect(env.model.current[.png] == Self.preview)
-        #expect(env.model.banner?.text.contains("系统默认") == true)
+        #expect(env.model.banner?.kind == .ok)   // 不比文字：界面语言是英文时文字不同
         #expect(env.model.previous.isEmpty)
     }
 
