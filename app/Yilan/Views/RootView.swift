@@ -392,7 +392,6 @@ struct RootView: View {
     }
 
     /// 筛选面板：从按钮下方 8 展开，左缘对齐按钮；窗口窄时往左挪，不出窗口（spec R5-06、E1-13）。
-    /// 下面铺一层透明的点击区：点面板外关闭（spec R5-07）
     @ViewBuilder
     private func filterPanel(size: CGSize, tier: TopBarTier, widths: TopBarWidths) -> some View {
         let center = tier.centerWidth(widths)
@@ -401,19 +400,22 @@ struct RootView: View {
         let computed = max(8, min(buttonLeft, size.width - FilterPanel.width - 8))
         // 打开期间位置不动：按钮上的摘要变长变短会让按钮挪动，面板仍留在打开时的位置（窗口变窄时仍不出界）
         let left = min(panelAnchor ?? computed, max(8, size.width - FilterPanel.width - 8))
-        Color.black.opacity(0.001)
-            .frame(width: size.width, height: size.height)
-            .onTapGesture { model.closeFilterPanel() }
         FilterPanel(filter: model.browseFilter, type: model.filter, facets: model.filterFacets,
                     loadingRatings: !model.ratingsLoaded && model.browseFilter.rating.isActive,
                     onRating: { model.setRatingCriterion($0) },
                     onComparison: { model.setRatingComparison($0) },
                     onToggleFormat: { model.toggleFormat($0) },
                     onClear: { model.clearBrowseFilter() })
+            // 面板自己吃掉落在它身上的点击，不让下面“点面板外关闭”收到
+            .onTapGesture {}
+            .onHover { model.setHovering("filterPanel", $0) }
             .padding(.top, 10 + 36 + 8)
             .padding(.leading, left)
             .frame(width: size.width, height: size.height, alignment: .topLeading)
-            .onHover { model.setHovering("filterPanel", $0) }
+            // 点面板外关闭（spec R5-07）。点击区就是这一整层自己：macOS 15 上，
+            // 单独垫在下面的透明点击层会被这一层挡住，收不到点击
+            .contentShape(Rectangle())
+            .onTapGesture { model.closeFilterPanel() }
             // 面板出现后先等布局稳定；之后按钮因摘要变化而挪动时，面板留在原处
             .task { try? await Task.sleep(for: .milliseconds(400)); panelSettled = true }
             .onChange(of: computed) { old, _ in if panelSettled, panelAnchor == nil { panelAnchor = old } }

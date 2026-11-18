@@ -172,7 +172,7 @@ struct ToolButton: View {
     }
 }
 
-/// 顶部工具组里的「编辑」入口：带圆圈的铅笔，和旁边 ⓘ 的线条、外形一致（单独一支铅笔是一根斜线，显得不成套）。
+/// 顶部工具组里的「编辑」入口：方框加铅笔。带圆圈的铅笔在非视网膜屏（1 倍）上会糊成“⊘”禁止符号，所以不用。
 /// 不用裁切图标：编辑模式里不只有裁切，裁切图标看不出是“进入编辑”。
 /// 不支持编辑的文件上不用 disabled，好让悬停提示照常出现
 struct EditEntryButton: View {
@@ -180,7 +180,7 @@ struct EditEntryButton: View {
     let action: () -> Void
 
     var body: some View {
-        ToolButton(symbol: "pencil.circle", help: unsupported ? "此类文件不支持编辑" : "编辑（E）") {
+        ToolButton(symbol: "square.and.pencil", help: unsupported ? "此类文件不支持编辑" : "编辑（E）") {
             if !unsupported { action() }
         }
         .opacity(unsupported ? 0.3 : 1)

@@ -107,7 +107,7 @@ struct UpdateSheet: View {
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { notesHeight = $0 }
             }
             .frame(height: bodyHeight)
-            .scrollIndicators(.automatic)
+            .scrollIndicators(.never)
             .mask {
                 VStack(spacing: 0) {
                     LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom).frame(height: 10)

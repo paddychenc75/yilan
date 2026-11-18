@@ -45,8 +45,8 @@ struct InfoPanel: View {
                 // 内容放不下时：底部渐隐 + 打开时闪一下滚动条，告诉人下面还有内容（设计稿 .ipb 的做法）。
                 // 以前这里没有任何提示，下面的“位置”组被生硬地截掉，看起来像是空的
                 ScrollView(.vertical) { sections.padding(.trailing, 2) }
-                    .scrollIndicators(.automatic)
-                    .scrollIndicatorsFlash(onAppear: true)
+                    // 不显示滚动条：接了鼠标的电脑上系统会画一条又宽又亮的常驻滚动条，和深色玻璃面板不搭
+                    .scrollIndicators(.never)
                     .onScrollGeometryChange(for: Bool.self) { geo in
                         geo.contentOffset.y + geo.containerSize.height < geo.contentSize.height - 1
                     } action: { _, more in

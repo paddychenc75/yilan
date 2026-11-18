@@ -96,6 +96,7 @@ struct FilterPanel: View {
                 }
             }
             .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.never)
             .frame(maxHeight: 420)
             .fixedSize(horizontal: false, vertical: true)
             footer
