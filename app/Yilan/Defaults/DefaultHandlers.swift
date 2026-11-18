@@ -175,6 +175,13 @@ final class DefaultHandlers {
         var isAll: Bool
     }
 
+    /// 关掉开关时让用户选：交还给之前的应用，还是交给系统默认
+    struct RestoreChoice: Equatable {
+        var format: HandlerFormat
+        var previous: AppRef
+        var systemDefault: AppRef
+    }
+
     /// 一个格式改完的结果
     enum Outcome: Equatable {
         case changed
@@ -195,6 +202,8 @@ final class DefaultHandlers {
     private(set) var isBusy = false
     /// 等用户确认的批量操作
     var pendingPlan: Plan?
+    /// 关掉一个开关时，之前的应用和系统默认不是同一个：先让用户选交给谁
+    var pendingRestoreChoice: RestoreChoice?
     private var stopRequested = false
     private var noteTokens: [HandlerFormat: UUID] = [:]
     private var bannerToken = UUID()
@@ -260,16 +269,35 @@ final class DefaultHandlers {
     func setSwitch(_ format: HandlerFormat, on: Bool) async {
         guard !isBusy, isYilan(format) != on else { return }
         clearBanner()
+        // 之前的应用不一定是用户想要的（例如终端应用也声明能打开 SVG），和系统默认不同时让用户自己选
+        if !on, let restore = restoreTarget(format), !restore.usedSystemDefault,
+           let fallback = system.app(bundleID: format.group.systemDefaultBundleID),
+           fallback.bundleID != restore.app.bundleID {
+            pendingRestoreChoice = RestoreChoice(format: format, previous: restore.app, systemDefault: fallback)
+            return
+        }
+        await perform(format, on: on, restoreTo: nil)
+    }
+
+    /// 用户在「交给谁」里选了一个应用；nil = 取消
+    func chooseRestore(_ app: AppRef?) async {
+        guard let choice = pendingRestoreChoice else { return }
+        pendingRestoreChoice = nil
+        guard let app, !isBusy, isYilan(choice.format) else { return }
+        await perform(choice.format, on: false, restoreTo: app)
+    }
+
+    private func perform(_ format: HandlerFormat, on: Bool, restoreTo: AppRef?) async {
         isBusy = true
         defer { isBusy = false }
-        let outcome = await apply(format, on: on, inBatch: false).outcome
+        let outcome = await apply(format, on: on, inBatch: false, restoreTo: restoreTo).outcome
         switch outcome {
         case .changed: break
         case .declined:
             show(.unchanged, for: format, temporary: false)
             showBanner(.init(kind: .warn, text: on
-                ? String(localized: "没有把 \(format.name) 设为默认：你在系统确认框里选择了保留原来的应用，\(format.name) 仍由 \(appName(format)) 打开。")
-                : String(localized: "没有还原 \(format.name)：你在系统确认框里选择了保留原来的应用，\(format.name) 仍由 \(appName(format)) 打开。")))
+                ? String(localized: "\(format.name) 没有改动：你在系统确认框里选择了继续使用 \(appName(format))。")
+                : String(localized: "\(format.name) 没有改动：你在系统确认框里选择了继续使用一览。")))
         case .failed:
             show(.unchanged, for: format, temporary: false)
             showBanner(.init(kind: .warn, text: String(localized: "macOS 没有接受这次更改，\(format.name) 仍由 \(appName(format)) 打开。请稍后再试。")))
@@ -353,7 +381,7 @@ final class DefaultHandlers {
 
     // MARK: - 改一个
 
-    private func apply(_ format: HandlerFormat, on: Bool, inBatch: Bool) async -> (outcome: Outcome, usedSystemDefault: Bool) {
+    private func apply(_ format: HandlerFormat, on: Bool, inBatch: Bool, restoreTo: AppRef? = nil) async -> (outcome: Outcome, usedSystemDefault: Bool) {
         let target: AppRef
         var usedSystemDefault = false
         if on {
@@ -364,6 +392,8 @@ final class DefaultHandlers {
                 previous = map
             }
             target = selfApp
+        } else if let restoreTo {
+            target = restoreTo
         } else {
             guard let restore = restoreTarget(format) else { return (.failed, false) }
             target = restore.app

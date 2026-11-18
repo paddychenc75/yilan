@@ -77,10 +77,32 @@ struct DefaultHandlersTests {
         #expect(env.model.notes[.png] == .justSet)
         #expect(env.system.calls.map(\.bundleID) == ["com.yilan.viewer"])
 
+        // 之前的应用（Photoshop）和系统默认（预览）不同：先问交给谁，没选之前什么都不改
         await env.model.setSwitch(.png, on: false)
+        #expect(env.model.pendingRestoreChoice?.previous == Self.photoshop)
+        #expect(env.model.pendingRestoreChoice?.systemDefault == Self.preview)
+        #expect(env.model.isYilan(.png))
+        await env.model.chooseRestore(Self.photoshop)
+        #expect(env.model.pendingRestoreChoice == nil)
         #expect(env.model.current[.png] == Self.photoshop)
         #expect(env.model.previous[HandlerFormat.png.typeIdentifier] == nil)
         #expect(env.model.notes[.png] == .restored)
+    }
+
+    @Test("关掉时改选系统默认：交给预览，记录删掉；取消：什么都不改")
+    func restoreChoice() async {
+        let env = make([.png: Self.photoshop])
+        await env.model.setSwitch(.png, on: true)
+        await env.model.setSwitch(.png, on: false)
+        await env.model.chooseRestore(nil)
+        #expect(env.model.isYilan(.png))
+        #expect(env.model.pendingRestoreChoice == nil)
+        #expect(env.system.calls.count == 1)
+
+        await env.model.setSwitch(.png, on: false)
+        await env.model.chooseRestore(Self.preview)
+        #expect(env.model.current[.png] == Self.preview)
+        #expect(env.model.previous[HandlerFormat.png.typeIdentifier] == nil)
     }
 
     @Test("已经是一览的格式再打开不调用系统、不记录")

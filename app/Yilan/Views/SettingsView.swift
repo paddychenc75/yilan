@@ -74,6 +74,14 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(.leading, 236)
             }
+            if let choice = handlers.pendingRestoreChoice {
+                Color.black.opacity(0.38).ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture {}
+                FormatsRestoreChoiceSheet(choice: choice, model: handlers)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.leading, 236)
+            }
         }
         .frame(width: Self.size.width)
         .frame(maxHeight: .infinity)

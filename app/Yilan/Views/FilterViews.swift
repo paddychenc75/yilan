@@ -157,7 +157,7 @@ struct FilterPanel: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 28)
                 .background(Capsule().fill(Color.white.opacity(0.07)))
-                FilterChip(title: Text("未评星"), count: Formatting.count(facets.unratedCount),
+                FilterChip(title: Text("未评星"), count: Formatting.count(facets.unratedCount), countMinWidth: 20,
                            selected: filter.rating.mode == .unrated, enabled: true) {
                     onRating(filter.rating.mode == .unrated ? .any : .unrated)
                 }
@@ -225,6 +225,8 @@ struct FilterPanel: View {
 struct FilterChip: View {
     let title: Text
     let count: String?
+    /// 数量至少占这么宽（靠右）：数量位数变化时胶囊宽度不变，旁边的控件不跟着动
+    var countMinWidth: CGFloat? = nil
     let selected: Bool
     let enabled: Bool
     let action: () -> Void
@@ -235,6 +237,7 @@ struct FilterChip: View {
                 title.font(.system(size: 12, weight: .medium)).foregroundStyle(.white)
                 if let count {
                     Text(verbatim: count).font(Theme.mono(10.5)).foregroundStyle(selected ? Color.white.opacity(0.8) : Theme.text3)
+                        .frame(minWidth: countMinWidth, alignment: .trailing)
                 }
             }
             .padding(.horizontal, 10)
