@@ -287,10 +287,8 @@ final class DefaultHandlers {
         switch outcome {
         case .changed: break
         case .declined:
-            show(.unchanged, for: format, temporary: false)
-            showBanner(.init(kind: .warn, text: on
-                ? String(localized: "\(format.name) 没有改动：你在系统确认框里选择了继续使用 \(appName(format))。")
-                : String(localized: "\(format.name) 没有改动：你在系统确认框里选择了继续使用一览。")))
+            // 用户在系统确认框里选了保持原样：这是他自己的决定，等于取消。开关留在原位，不出警告、不出提示条
+            break
         case .failed:
             show(.unchanged, for: format, temporary: false)
             showBanner(.init(kind: .warn, text: String(localized: "macOS 没有接受这次更改，\(format.name) 仍由 \(appName(format)) 打开。请稍后再试。")))

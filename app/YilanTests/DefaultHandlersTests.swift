@@ -125,15 +125,14 @@ struct DefaultHandlersTests {
         #expect(env.model.current[.mp4] == Self.quickTime)
     }
 
-    @Test("用户在系统确认框里拒绝（-128 包在 256 里）：开关不变，格子写未改动，说明条说原因（D6）")
+    @Test("用户在系统确认框里拒绝（-128 包在 256 里）：等于取消，开关不变，不出警告也不出提示条")
     func declined() async {
         let env = make([.png: Self.photoshop])
         env.system.declines = [HandlerFormat.png.typeIdentifier]
         await env.model.setSwitch(.png, on: true)
         #expect(!env.model.isYilan(.png))
-        #expect(env.model.notes[.png] == .unchanged)
-        #expect(env.model.banner?.kind == .warn)
-        #expect(env.model.banner?.text.contains("Photoshop") == true)
+        #expect(env.model.notes[.png] == nil)
+        #expect(env.model.banner == nil)
         #expect(!env.model.isBusy)
     }
 
