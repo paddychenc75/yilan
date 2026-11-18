@@ -145,19 +145,21 @@ final class LanguageSettings {
         return result
     }
 
-    /// 打开一个新的一览，然后退出现在这个
+    /// 先退出现在这个，再由一个小脚本等它退干净后重新打开。
+    /// 不能用“新开一个实例”的方式：程序坞会把新实例当成另一个应用，在固定的图标旁边再多出一个图标。
     static func relaunch() {
-        let configuration = NSWorkspace.OpenConfiguration()
-        configuration.createsNewApplicationInstance = true
-        configuration.arguments = relaunchArguments(Array(CommandLine.arguments.dropFirst()))
-        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, error in
-            Task { @MainActor in
-                if let error {
-                    Log.app.error("重新打开失败：\(error.localizedDescription, privacy: .public)")
-                } else {
-                    NSApp.terminate(nil)
-                }
-            }
+        let pid = ProcessInfo.processInfo.processIdentifier
+        let arguments = relaunchArguments(Array(CommandLine.arguments.dropFirst()))
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        // $0 = 应用路径，其余是原来的启动参数；最多等 10 秒
+        let script = #"i=0; while kill -0 \#(pid) 2>/dev/null && [ $i -lt 100 ]; do sleep 0.1; i=$((i+1)); done; app="$0"; if [ $# -gt 0 ]; then /usr/bin/open "$app" --args "$@"; else /usr/bin/open "$app"; fi"#
+        process.arguments = ["-c", script, Bundle.main.bundlePath] + arguments
+        do {
+            try process.run()
+            NSApp.terminate(nil)
+        } catch {
+            Log.app.error("重新打开失败：\(error.localizedDescription, privacy: .public)")
         }
     }
 }
