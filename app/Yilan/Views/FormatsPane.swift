@@ -67,6 +67,9 @@ struct FormatsPane: View {
                         .font(.system(size: 12))
                         .foregroundStyle(model.isBusy ? Theme.text3 : Theme.link)
                         .disabled(model.isBusy)
+                } else {
+                    // 全设好后不消失，留一句灰字，让人知道这里有按组设置的入口
+                    Text("本组已全部设为默认").font(.system(size: 12)).foregroundStyle(Theme.text3)
                 }
             }
             .padding(.horizontal, 4)
