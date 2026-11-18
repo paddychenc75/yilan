@@ -27,3 +27,6 @@ build/
 /design.html
 /prd.html
 
+
+# 宣传流程技能只在本机用，不放进仓库
+.claude/skills/yilan-promo/
