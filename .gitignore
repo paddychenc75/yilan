@@ -28,5 +28,5 @@ build/
 /prd.html
 
 
-# 宣传流程技能只在本机用，不放进仓库
-.claude/skills/yilan-promo/
+# .claude 目录（技能等助手配置）只在本机用，不放进仓库
+.claude/
