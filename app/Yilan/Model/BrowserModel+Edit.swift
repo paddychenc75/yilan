@@ -188,7 +188,8 @@ extension BrowserModel {
                         if rating > 0, let fresh = FolderScanner.item(at: url) {
                             let index = SidecarIndex(folder: url.deletingLastPathComponent(), sidecars: sameFolder ? sidecarList : [],
                                                      media: (sameFolder ? media : []) + [fresh])
-                            write = try? RatingFileIO.write(rating, for: fresh, mode: mode2, sidecars: index)
+                            do { write = try RatingFileIO.write(rating, for: fresh, mode: mode2, sidecars: index) }
+                            catch { Log.app.error("编辑后的文件写星级失败：\(error.localizedDescription, privacy: .public)") }
                         }
                         return .success(EditSaveOutcome(url: url, item: FolderScanner.item(at: url), rating: write, trash: nil))
                     case .replace:
@@ -197,7 +198,8 @@ extension BrowserModel {
                         var write: RatingFileIO.WriteResult?
                         if rating > 0, !ratingFromSidecar, let fresh = FolderScanner.item(at: item.url) {
                             let index = SidecarIndex(folder: folder, sidecars: sidecarList, media: media)
-                            write = try? RatingFileIO.write(rating, for: fresh, mode: mode2, sidecars: index)
+                            do { write = try RatingFileIO.write(rating, for: fresh, mode: mode2, sidecars: index) }
+                            catch { Log.app.error("编辑后的文件写星级失败：\(error.localizedDescription, privacy: .public)") }
                         }
                         return .success(EditSaveOutcome(url: item.url, item: FolderScanner.item(at: item.url), rating: write, trash: entry))
                     }

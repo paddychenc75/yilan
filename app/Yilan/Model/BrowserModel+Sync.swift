@@ -66,6 +66,18 @@ extension BrowserModel {
         guard !diff.isEmpty else { return }
         forgetCaches(for: diff.changedURLs)
 
+        // 正在编辑的文件被别的程序删除、移走、改名或改了内容：退出编辑，否则裁切框会盖在另一张图上，
+        // 或者存出和看到的不一样的结果。保存进行中的变化是一览自己造成的，不处理。
+        if let session = edit, !session.saving {
+            let stillThere = scanned.contains { $0.url == session.item.url }
+            let changed = diff.modified.contains { $0.url == session.item.url }
+            if !stillThere || changed {
+                edit = nil
+                rotation = session.startTurns
+                showToast(symbol: "info.circle", text: String(localized: "文件已被其他程序改动，已退出编辑"), duration: 4)
+            }
+        }
+
         var target = current
         var replacement: (item: MediaItem, isNext: Bool)?
         var currentGone = false

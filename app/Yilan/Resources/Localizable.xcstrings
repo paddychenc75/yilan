@@ -3132,6 +3132,16 @@
         }
       }
     },
+    "文件已被其他程序改动，已退出编辑" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The file was changed by another app. Editing ended."
+          }
+        }
+      }
+    },
     "文件已被移走或删除。" : {
       "localizations" : {
         "en" : {

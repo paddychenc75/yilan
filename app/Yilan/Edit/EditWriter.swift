@@ -13,11 +13,25 @@ enum EditNaming {
             : String(localized: "\(base) 编辑 \(n)", comment: "编辑后另存的副本文件名，重名时带序号；%1$@ 是原文件名，%2$lld 是序号")
     }
 
+    /// 已经是副本的名字（“X 编辑”“X 编辑 3”）去掉后缀，再编辑时得到“X 编辑 2”，而不是“X 编辑 编辑”
+    static func strippingCopySuffix(_ base: String) -> String {
+        let suffix = baseName("", attempt: 1)          // “ 编辑” / “ edited”
+        guard !suffix.isEmpty else { return base }
+        var name = base
+        // 去掉末尾的“ 数字”
+        if let space = name.lastIndex(of: " "), name[name.index(after: space)...].allSatisfy(\.isNumber),
+           name.index(after: space) < name.endIndex, name[..<space].hasSuffix(suffix) {
+            name = String(name[..<space])
+        }
+        if name.hasSuffix(suffix), name.count > suffix.count { return String(name.dropLast(suffix.count)) }
+        return base
+    }
+
     /// 文件夹里第一个不重名的副本位置。ext 为 nil 时沿用原扩展名（大小写不变）
     static func copyURL(for original: URL, in folder: URL? = nil, ext: String? = nil,
                         exists: (URL) -> Bool = { FileManager.default.fileExists(atPath: $0.path) }) -> URL {
         let dir = folder ?? original.deletingLastPathComponent()
-        let base = original.deletingPathExtension().lastPathComponent
+        let base = strippingCopySuffix(original.deletingPathExtension().lastPathComponent)
         let e = ext ?? original.pathExtension
         var n = 1
         while true {

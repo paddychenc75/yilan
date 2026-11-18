@@ -229,6 +229,19 @@ struct EditNamingTests {
         #expect(EditNaming.copyURL(for: original, ext: "jpg", exists: { _ in false }).pathExtension == "jpg")
     }
 
+    @Test("对副本再编辑：得到“X 编辑 2”，不是“X 编辑 编辑”")
+    func renamingCopies() {
+        let first = EditNaming.baseName("IMG", attempt: 1)
+        let second = EditNaming.baseName("IMG", attempt: 2)
+        #expect(EditNaming.strippingCopySuffix(first) == "IMG")
+        #expect(EditNaming.strippingCopySuffix(second) == "IMG")
+        #expect(EditNaming.strippingCopySuffix("IMG 2") == "IMG 2")
+        #expect(EditNaming.strippingCopySuffix("IMG") == "IMG")
+        let copy = URL(fileURLWithPath: "/tmp/a/\(first).jpg")
+        let next = EditNaming.copyURL(for: copy, exists: { $0.lastPathComponent == first + ".jpg" })
+        #expect(next.lastPathComponent == second + ".jpg")
+    }
+
     @Test("输出格式：原格式、WebP 改 JPEG（带透明改 PNG）、RAW 存 JPEG 或 HEIF")
     func targets() {
         func item(_ name: String) -> MediaItem {
