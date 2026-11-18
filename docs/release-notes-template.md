@@ -36,11 +36,11 @@
 
 ## 安装 / Install
 
-**系统要求**：macOS 26（Tahoe）或更高版本，Apple 芯片和 Intel 芯片都可以。
+**系统要求**：macOS 15（Sequoia）或更高版本，Apple 芯片和 Intel 芯片都可以。
 
 **首次打开**：这个版本只做了 ad-hoc 签名。第一次打开被拦下后，到「系统设置 › 隐私与安全性」点「仍要打开」，或在终端执行 `xattr -dr com.apple.quarantine /Applications/Yilan.app`。
 
-**Requirements**: macOS 26 (Tahoe) or later, Apple silicon or Intel.
+**Requirements**: macOS 15 (Sequoia) or later, Apple silicon or Intel.
 
 **First launch**: this build is ad-hoc signed only. After it is blocked once, click "Open Anyway" in System Settings › Privacy & Security, or run `xattr -dr com.apple.quarantine /Applications/Yilan.app`.
 

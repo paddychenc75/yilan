@@ -27,11 +27,12 @@
 - MP4, M4V and MOV playback (including iPhone HEVC video) with a floating control bar
 - Zoom, pan, double-click to toggle fit-to-window and actual size, rotate
 - New in v0.2: info panel (press I: file info and EXIF), move to Trash with ⌘Z undo, full screen (press F), live folder sync (new files are highlighted), and a keyboard shortcuts page in Settings
+- New in v0.3: star ratings (press 1 to 5; stored in a small `.xmp` file next to the photo, the photo is never changed), filter by rating and format (⌘F), basic editing (press E: crop, rotate, resize; saved as a copy by default), save rotation, a zoom control in the top bar, update reminders, and setting Yilan as the default app from Settings
 - UI languages: Simplified Chinese and English
 
 ## Requirements
 
-- macOS 26 (Tahoe) or later
+- macOS 15 (Sequoia) or later; on macOS 26 (Tahoe) the app uses the Liquid Glass look
 - Apple silicon and Intel Macs (the release build is a universal binary)
 
 ## Download and install
