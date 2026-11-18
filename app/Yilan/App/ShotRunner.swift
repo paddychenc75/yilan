@@ -156,7 +156,7 @@ enum ShotRunner {
                 if mods.contains(.command) { prefix += "⌘" }
             }
             let shortcut = key.isEmpty ? "" : "  [\(prefix)\(key)]"
-            out += "\(pad)\(item.title)\(shortcut)\(item.isEnabled ? "" : "  (disabled)")\n"
+            out += "\(pad)\(item.title)\(shortcut)\(item.isEnabled ? "" : "  (disabled)")\(item.isHidden ? "  (hidden)" : "")\n"
             if let sub = item.submenu { out += describe(sub, depth: depth + 1) }
         }
         return out
