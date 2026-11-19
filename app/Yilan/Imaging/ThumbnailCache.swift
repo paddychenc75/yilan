@@ -216,13 +216,34 @@ actor AsyncLimiter {
     }
 }
 
-/// 主线程上的缩略图内存缓存，缩略图格子可以同步读取，避免闪一下占位格
+/// 主线程上的缩略图内存缓存，缩略图格子可以同步读取，避免闪一下占位格。
+/// 按路径存，同时记下生成时文件的修改时间和大小：文件在原地被改写（保存旋转、替换原图、撤销）后，
+/// 旧的缩略图不会再被当成新的用（F2-02）
 @MainActor
 final class ThumbnailStore {
     static let shared = ThumbnailStore()
 
-    private let memory = NSCache<NSURL, Thumbnail>()
-    private var inFlight: [URL: Task<Thumbnail?, Never>] = [:]
+    /// 文件的哪个版本：路径相同、修改时间或大小不同就是另一个版本
+    struct Version: Hashable {
+        let modificationDate: Date
+        let fileSize: Int64
+        init(_ item: MediaItem) {
+            modificationDate = item.modificationDate
+            fileSize = item.fileSize
+        }
+    }
+
+    private final class Entry {
+        let thumb: Thumbnail
+        let version: Version
+        init(_ thumb: Thumbnail, _ version: Version) {
+            self.thumb = thumb
+            self.version = version
+        }
+    }
+
+    private let memory = NSCache<NSURL, Entry>()
+    private var inFlight: [URL: (version: Version, task: Task<Thumbnail?, Never>)] = [:]
     private let limiter = AsyncLimiter(limit: max(2, ProcessInfo.processInfo.activeProcessorCount / 2))
 
     init() {
@@ -230,11 +251,13 @@ final class ThumbnailStore {
         memory.totalCostLimit = 400 * 1024 * 1024
     }
 
+    /// 内存里这个文件、这个版本的缩略图
     func cached(_ item: MediaItem) -> Thumbnail? {
-        memory.object(forKey: item.url as NSURL)
+        guard let entry = memory.object(forKey: item.url as NSURL), entry.version == Version(item) else { return nil }
+        return entry.thumb
     }
 
-    /// 这些文件变了：内存里的缩略图按路径存，要删掉（磁盘缓存按修改时间区分，不用管）
+    /// 这些文件变了：内存里的缩略图删掉（磁盘缓存按修改时间、大小区分，变了自然用不上）
     func forget(_ urls: Set<URL>) {
         for url in urls { memory.removeObject(forKey: url as NSURL) }
     }
@@ -247,9 +270,11 @@ final class ThumbnailStore {
     /// 取缩略图；调用方被取消（格子滚出可见区域）时返回 nil，还没开始的生成也随之取消
     func thumbnail(for item: MediaItem) async -> Thumbnail? {
         if let hit = cached(item) { return hit }
+        let version = Version(item)
         let task: Task<Thumbnail?, Never>
-        if let running = inFlight[item.url] {
-            task = running
+        // 正在生成的是同一个版本才合用；文件改过了就重新生成
+        if let running = inFlight[item.url], running.version == version {
+            task = running.task
         } else {
             let limiter = self.limiter
             task = Task.detached(priority: .utility) {
@@ -262,17 +287,17 @@ final class ThumbnailStore {
                 await limiter.release()
                 return Task.isCancelled && result.failed ? nil : result
             }
-            inFlight[item.url] = task
+            inFlight[item.url] = (version, task)
         }
         let result = await withTaskCancellationHandler {
             await task.value
         } onCancel: {
             task.cancel()
         }
-        if inFlight[item.url] == task { inFlight[item.url] = nil }
+        if inFlight[item.url]?.task == task { inFlight[item.url] = nil }
         guard let result else { return nil }
         let cost = result.image.map { $0.bytesPerRow * $0.height } ?? 1
-        memory.setObject(result, forKey: item.url as NSURL, cost: cost)
+        memory.setObject(Entry(result, version), forKey: item.url as NSURL, cost: cost)
         return result
     }
 }

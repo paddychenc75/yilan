@@ -590,6 +590,79 @@ struct EditModelTests {
         #expect(orientation(url) == 1)
     }
 
+    /// 缩略图是不是竖的
+    private func portrait(_ t: Thumbnail?) -> Bool? { t?.image.map { $0.height > $0.width } }
+
+    @Test("保存旋转后缩略图换成新方向，撤销后变回去；重开文件夹也是对的（F2-02）",
+          arguments: ["IMG_2052.jpg", "IMG_2031.heic", "scan_003.tif"])
+    func saveRotationThumbnail(_ name: String) async throws {
+        let dir = try MetaFixtures.copy([name])
+        let url = dir.appendingPathComponent(name)
+        let m = try await ready(dir, name)
+        let before = try #require(m.current)
+        let wasPortrait = try #require(portrait(await ThumbnailStore.shared.thumbnail(for: before)))
+        m.rotate(1)
+        m.saveRotation()
+        #expect(await waitFor { orientation(url) == 6 && m.rotation == 0 && !m.trashBusy })
+        let after = try #require(m.current)
+        // 同一个路径，换了版本：内存里的旧缩略图不再被当成新的，磁盘缓存的键也变了
+        #expect(after.url == before.url && after != before)
+        #expect(ThumbnailCacheKey.make(for: after) != ThumbnailCacheKey.make(for: before))
+        #expect(m.items.first { $0.url == before.url } == after)
+        #expect(portrait(await ThumbnailStore.shared.thumbnail(for: after)) == !wasPortrait)
+        // 重开文件夹（重新扫描、读磁盘缓存）
+        let rescanned = try #require(FolderScanner.item(at: url))
+        #expect(portrait(await ThumbnailGenerator.thumbnail(for: rescanned)) == !wasPortrait)
+        // 撤销
+        await m.undoLast()
+        let undone = try #require(m.current)
+        #expect(orientation(url) == 1)
+        #expect(portrait(await ThumbnailStore.shared.thumbnail(for: undone)) == wasPortrait)
+        let rescanned2 = try #require(FolderScanner.item(at: url))
+        #expect(portrait(await ThumbnailGenerator.thumbnail(for: rescanned2)) == wasPortrait)
+    }
+
+    @Test("替换原图后缩略图是新图（F2-02）")
+    func replaceThumbnail() async throws {
+        let dir = try MetaFixtures.copy(["IMG_2034.jpg"])
+        let url = dir.appendingPathComponent("IMG_2034.jpg")
+        let m = try await ready(dir, "IMG_2034.jpg")
+        let before = try #require(m.current)
+        let wasPortrait = try #require(portrait(await ThumbnailStore.shared.thumbnail(for: before)))
+        m.enterEdit()
+        let s = try #require(m.edit)
+        await waitFor { s.source != nil }
+        s.rotate(clockwise: true)
+        #expect(m.handleKey(try key(36, "\r", .option)))
+        #expect(s.confirmReplace)
+        #expect(m.handleKey(try key(36, "\r")))
+        #expect(await waitFor { m.edit == nil && !m.trashBusy })
+        let after = try #require(m.current)
+        #expect(after.url == before.url && after != before)
+        #expect(portrait(await ThumbnailStore.shared.thumbnail(for: after)) == !wasPortrait)
+        await m.undoLast()
+        let undone = try #require(m.current)
+        #expect(portrait(await ThumbnailStore.shared.thumbnail(for: undone)) == wasPortrait)
+    }
+
+    @Test("缩略图内存缓存按文件版本区分：同一路径、修改时间或大小变了就不算命中（F2-02）")
+    func thumbnailStoreVersion() async throws {
+        let dir = try MetaFixtures.copy(["IMG_2052.jpg"])
+        let url = dir.appendingPathComponent("IMG_2052.jpg")
+        let item = try #require(FolderScanner.item(at: url))
+        let store = ThumbnailStore()
+        #expect(await store.thumbnail(for: item) != nil)
+        #expect(store.cached(item) != nil)
+        let changed = MediaItem(url: url, format: item.format, fileSize: item.fileSize,
+                                modificationDate: item.modificationDate.addingTimeInterval(1), fileID: item.fileID)
+        #expect(store.cached(changed) == nil)
+        let resized = MediaItem(url: url, format: item.format, fileSize: item.fileSize + 1,
+                                modificationDate: item.modificationDate, fileID: item.fileID)
+        #expect(store.cached(resized) == nil)
+        store.forget([url])
+        #expect(store.cached(item) == nil)
+    }
+
     @Test("浏览时保存旋转（PNG）：做不到只改方向，另存副本，原图不变")
     func saveRotationCopy() async throws {
         let dir = try MetaFixtures.copy(["harbor_night.png"])

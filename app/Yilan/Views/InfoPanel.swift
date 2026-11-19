@@ -345,7 +345,8 @@ private struct InfoThumbnail: View {
         }
         .frame(width: 44, height: 44)
         .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-        .task(id: item?.url) {
+        // 按整个条目：文件在原地被改写（保存旋转等）后也换新的缩略图
+        .task(id: item) {
             guard let item else { image = nil; return }
             image = ThumbnailStore.shared.cached(item)?.image
             if image == nil { image = await ThumbnailStore.shared.thumbnail(for: item)?.image }

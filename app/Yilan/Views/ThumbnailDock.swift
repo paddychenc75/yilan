@@ -221,6 +221,8 @@ struct ThumbnailCell: View {
     var badgeZone: ClosedRange<CGFloat> = -CGFloat.infinity...CGFloat.infinity
 
     @State private var thumb: Thumbnail?
+    /// thumb 是文件哪个版本的缩略图：文件在原地被改写（保存旋转等）后要换成新的（F2-02）
+    @State private var thumbVersion: ThumbnailStore.Version?
     @State private var hovering = false
     @State private var fullyVisible = true
 
@@ -232,7 +234,9 @@ struct ThumbnailCell: View {
         self.rating = rating
         self.badgeZone = badgeZone
         // 内存里有就同步拿到，避免闪一下占位格
-        _thumb = State(initialValue: ThumbnailStore.shared.cached(item))
+        let hit = ThumbnailStore.shared.cached(item)
+        _thumb = State(initialValue: hit)
+        _thumbVersion = State(initialValue: hit == nil ? nil : ThumbnailStore.Version(item))
     }
 
     var body: some View {
@@ -285,9 +289,18 @@ struct ThumbnailCell: View {
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: selected)
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
-        .task(id: item.id) {
-            if thumb == nil || thumb?.image == nil && ThumbnailStore.shared.cached(item) == nil {
-                if let t = await ThumbnailStore.shared.thumbnail(for: item) { thumb = t }
+        // 路径不变、内容变了（修改时间或大小变了）也重新取；取到之前先留着旧图，不闪占位格
+        .task(id: item) {
+            let version = ThumbnailStore.Version(item)
+            if let hit = ThumbnailStore.shared.cached(item) {
+                thumb = hit
+                thumbVersion = version
+                return
+            }
+            if thumbVersion == version, thumb?.image != nil { return }
+            if let t = await ThumbnailStore.shared.thumbnail(for: item) {
+                thumb = t
+                thumbVersion = version
             }
         }
         .help(item.name)

@@ -56,6 +56,10 @@ enum FolderScanner {
     /// 一个文件对应的 MediaItem；不支持的格式、文件夹返回 nil
     static func item(at url: URL) -> MediaItem? {
         guard let format = SupportedFormats.format(forExtension: url.pathExtension) else { return nil }
+        // URL 会缓存读过的属性（扫描文件夹时预取的大小、修改时间）：文件在原地被改写后（保存旋转、替换原图、撤销）
+        // 不清掉就会读回旧值，列表里还是旧条目，缩略图不更新（F2-02）
+        var url = url
+        url.removeAllCachedResourceValues()
         let v = try? url.resourceValues(forKeys: Set(keys))
         // 只要普通文件（符号链接会被解析为目标文件的属性）
         if v?.isDirectory == true { return nil }
