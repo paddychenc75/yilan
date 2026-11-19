@@ -383,6 +383,37 @@ struct EditWriterTests {
         #expect(!names(dir).contains { SafeReplace.isOwnTemp($0) })
     }
 
+    @Test("保存旋转的自检（F1-06）：JPEG 只比画面数据就能判断；重新压缩过的判为不同；HEIC、TIFF 逐个比像素摘要")
+    func samePixelsCheck() throws {
+        let dir = try MetaFixtures.copy(["IMG_2052.jpg", "IMG_2034.jpg", "IMG_2031.heic", "scan_003.tif"])
+        let jpg = dir.appendingPathComponent("IMG_2052.jpg")
+        let rotated = dir.appendingPathComponent("rotated.jpg")
+        try EditWriter.copy(jpg, orientation: 6, to: rotated)
+        // 只改了方向：画面数据逐字节相同，不用解码
+        #expect(JPEGImageData.sameImageData(jpg, rotated))
+        #expect(try EditWriter.samePixels(jpg, rotated))
+        // 和直接比较像素的结论一致
+        #expect(try EditWriter.storedPixels(jpg) == EditWriter.storedPixels(rotated))
+        // 另一张照片、重新压缩过的同一张：不同
+        #expect(try !EditWriter.samePixels(jpg, dir.appendingPathComponent("IMG_2034.jpg")))
+        let image = try #require(CGImageSourceCreateWithURL(jpg as CFURL, nil).flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) })
+        let recompressed = dir.appendingPathComponent("recompressed.jpg")
+        let dest = try #require(CGImageDestinationCreateWithURL(recompressed as CFURL, "public.jpeg" as CFString, 1, nil))
+        CGImageDestinationAddImage(dest, image, [kCGImageDestinationLossyCompressionQuality: 0.5] as CFDictionary)
+        #expect(CGImageDestinationFinalize(dest))
+        #expect(!JPEGImageData.sameImageData(jpg, recompressed))
+        #expect(try !EditWriter.samePixels(jpg, recompressed))
+        // 文件不完整：看不懂，交给像素比较
+        let data = try Data(contentsOf: jpg)
+        #expect(JPEGImageData.segments(data.prefix(data.count / 2)) == nil)
+        #expect(JPEGImageData.segments(Data([0x89, 0x50, 0x4E, 0x47])) == nil)
+        // HEIC、TIFF：同一个文件和自己相同
+        for name in ["IMG_2031.heic", "scan_003.tif"] {
+            let url = dir.appendingPathComponent(name)
+            #expect(try EditWriter.samePixels(url, url))
+        }
+    }
+
     @Test("BMP 不能只改方向：拒绝，原图不变")
     func bmpRotateRefused() throws {
         let dir = try MetaFixtures.copy(["old_scan.bmp"])

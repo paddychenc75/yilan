@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		005E9055331EC93407F8155B /* TopBarLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 320D7094499930163E8B085F /* TopBarLayout.swift */; };
+		0176510A9DA9656FE959BC7B /* JPEGImageData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D6F91FD3FC0D60119B1586 /* JPEGImageData.swift */; };
 		03070AB5A4FA212FFF0413E8 /* WelcomeAndDrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = D62076F6C5CE4A6077C1A114 /* WelcomeAndDrop.swift */; };
 		030A1BF83CDB4290569570BD /* StateCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = F34DE521450A6CD17C0EDB4D /* StateCards.swift */; };
 		096ED0AFEB6E7F4C58CFAC72 /* SafeReplace.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0817947A7A77693BC284C90 /* SafeReplace.swift */; };
@@ -203,6 +204,7 @@
 		EDEA87917D1B9C2EABBE900B /* InfoRowLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoRowLayoutTests.swift; sourceTree = "<group>"; };
 		EFDD40D71B92E1D928592021 /* RecentFolders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentFolders.swift; sourceTree = "<group>"; };
 		F064FFA657357F2A2F98C548 /* ShotHooks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotHooks.swift; sourceTree = "<group>"; };
+		F1D6F91FD3FC0D60119B1586 /* JPEGImageData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JPEGImageData.swift; sourceTree = "<group>"; };
 		F30CCB6AB3706E74252971F9 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		F34DE521450A6CD17C0EDB4D /* StateCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateCards.swift; sourceTree = "<group>"; };
 		F6AF79606F8709710CB74CEA /* VideoControlBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoControlBar.swift; sourceTree = "<group>"; };
@@ -326,6 +328,7 @@
 				375ED7DE790FEE057B9EFA44 /* EditGeometry.swift */,
 				55B0F5671AF7605CF8492DB6 /* EditSession.swift */,
 				B84BC4DE88B6E8471D22AD4E /* EditWriter.swift */,
+				F1D6F91FD3FC0D60119B1586 /* JPEGImageData.swift */,
 			);
 			path = Edit;
 			sourceTree = "<group>";
@@ -547,6 +550,7 @@
 				9C5B03B2314CC487F14C0BFD /* ImageStageView.swift in Sources */,
 				9B553687F20B97F5479931BE /* InfoContent.swift in Sources */,
 				259B598EDBF63068A228CE7F /* InfoPanel.swift in Sources */,
+				0176510A9DA9656FE959BC7B /* JPEGImageData.swift in Sources */,
 				CF0CAC216DF4C6D501583AE5 /* JPEGXMPWriter.swift in Sources */,
 				77AA25E36FC42694330B6258 /* MediaFilter.swift in Sources */,
 				DECDDFA40CF6C0B1125F26DB /* MediaItem.swift in Sources */,

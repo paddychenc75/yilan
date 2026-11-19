@@ -1,4 +1,5 @@
 import CoreImage
+import CryptoKit
 import Foundation
 import ImageIO
 
@@ -264,7 +265,7 @@ enum EditWriter {
                 guard sourceInfo(temp).orientation == value,
                       let a = ImageIOMetadata.facts(at: url), let b = ImageIOMetadata.facts(at: temp),
                       a.width == b.width, a.height == b.height, a.count == b.count, a.auxiliary == b.auxiliary,
-                      try storedPixels(url) == storedPixels(temp)
+                      try samePixels(url, temp)
                 else { throw RatingWriteError.other(String(localized: "检查没有通过，原图没有改动。")) }
             }
         } catch {
@@ -399,6 +400,26 @@ enum EditWriter {
               let w = p[kCGImagePropertyPixelWidth] as? Int, let h = p[kCGImagePropertyPixelHeight] as? Int else { return nil }
         let o = p[kCGImagePropertyOrientation] as? Int ?? 1
         return o >= 5 ? PixelSize(width: h, height: w) : PixelSize(width: w, height: h)
+    }
+
+    /// 两个文件的画面完全相同（没有被重新压缩）。
+    /// JPEG 先比压缩后的画面数据（不用解码，几乎不占内存）；不同或者不是 JPEG 时，再逐个解码比较像素的摘要
+    /// （一次只解一张，比同时解两张省一半内存）。结论和直接比较两份像素数据一致
+    static func samePixels(_ a: URL, _ b: URL) throws -> Bool {
+        if JPEGImageData.sameImageData(a, b) { return true }
+        return try pixelDigest(a) == pixelDigest(b)
+    }
+
+    /// 未转正的像素数据的摘要（解码完立即释放）
+    static func pixelDigest(_ url: URL) throws -> SHA256.Digest {
+        try autoreleasepool {
+            guard let src = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
+                  let image = CGImageSourceCreateImageAtIndex(src, 0, nil),
+                  let data = image.dataProvider?.data else {
+                throw EditSaveError.other(String(localized: "无法读取原图。"))
+            }
+            return SHA256.hash(data: UnsafeRawBufferPointer(start: CFDataGetBytePtr(data), count: CFDataGetLength(data)))
+        }
     }
 
     /// 未转正的像素数据（判断画面有没有被重新压缩）
