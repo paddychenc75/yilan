@@ -133,6 +133,10 @@ final class BrowserModel {
     @ObservationIgnored var screenMaxPixel: Int?
     /// 播放器报告放不了的视频：它的静帧解码好了也不显示，保持出错卡片
     @ObservationIgnored private var unplayable: MediaItem?
+    /// 每次加载当前项加 1：排队解码时，新的一轮排在旧的前面
+    @ObservationIgnored private var loadGeneration = 0
+    /// 最近一次翻页的方向（1 = 往后，-1 = 往前）：RAW 的高清版只往这个方向预加载
+    @ObservationIgnored private(set) var browseDirection = 1
 
     // MARK: 信息面板（BrowserModel+Info）
 
@@ -425,6 +429,7 @@ final class BrowserModel {
         guard edit == nil, let i = currentIndex,
               let target = Navigation.target(from: i, delta: delta > 0 ? 1 : -1, count: items.count, wrap: settings.wrapAround)
         else { return }
+        browseDirection = delta > 0 ? 1 : -1
         select(target)
     }
 
@@ -493,6 +498,8 @@ final class BrowserModel {
         }
         updateAmbient(for: item)
         let variant = displayVariant(for: item)
+        loadGeneration += 1
+        let generation = loadGeneration
         loadTask = Task {
             if let hit = await pipeline.cached(item, variant) {
                 show(hit, for: item)
@@ -506,15 +513,20 @@ final class BrowserModel {
                 displayedItem = item
                 placeholder = ThumbnailStore.shared.cached(item)?.image
             }
+            // RAW：先取内嵌预览（不排队，立即开始）；显示出来以后，高清解码排队进行，
+            // 和前后几张的预加载共用有限的名额，不会同时堆起很多个完整解码抢走 CPU
+            var queuedOrder: Int?
             if item.format == .raw {
                 if let preview = try? await pipeline.image(item, .rawPreview), !Task.isCancelled {
                     show(preview, for: item)
                     isDecodingRaw = true
+                    queuedOrder = PreloadOrder.currentFull(generation)
                 }
-                preloadNeighbors()
+                // 这时只预加载前后几张的预览，它们的高清版等当前这张解完再排
+                preloadNeighbors(includeFull: false)
             }
             do {
-                let image = try await decodeCurrent(item, variant)
+                let image = try await decodeCurrent(item, variant, order: queuedOrder)
                 guard !Task.isCancelled else { return }
                 show(image, for: item)
             } catch let decodeFailure as DecodeFailure {
@@ -532,11 +544,11 @@ final class BrowserModel {
 
     /// 解码当前项。解码被过期的取消误伤（自己没被取消、它仍是当前项）时再试一次，
     /// 否则会一直停在模糊的占位缩略图上
-    private func decodeCurrent(_ item: MediaItem, _ variant: ImageDecoder.Variant) async throws -> DecodedImage {
+    private func decodeCurrent(_ item: MediaItem, _ variant: ImageDecoder.Variant, order: Int? = nil) async throws -> DecodedImage {
         do {
-            return try await pipeline.image(item, variant)
+            return try await pipeline.image(item, variant, order: order)
         } catch is CancellationError where !Task.isCancelled && item == current {
-            return try await pipeline.image(item, variant)
+            return try await pipeline.image(item, variant, order: order)
         }
     }
 
@@ -550,23 +562,26 @@ final class BrowserModel {
         failure = nil
     }
 
-    /// 预加载前后各 2 张；离开这个范围的进行中解码会被取消
-    private func preloadNeighbors() {
+    /// 预加载前后各 2 张；离开这个范围的进行中解码会被取消。
+    /// 能最先显示的版本（RAW 的内嵌预览、其他图片的屏幕尺寸版）很快，前后各 2 张都立即开始，翻页方向上的在前；
+    /// RAW 的高清版（完整解码，几百毫秒、几十 MB）只预加载翻页方向上的 2 张，经过排队口，
+    /// 和当前这张的高清解码共用有限的名额。includeFull 为 false（当前这张的 RAW 还在解高清）时先不排
+    private func preloadNeighbors(includeFull: Bool = true) {
         guard let i = currentIndex else { return }
+        let d = browseDirection
         // 动图解码很占内存，不预加载；视频只预加载静帧
-        let neighbors = [i + 1, i - 1, i + 2, i - 2].filter { items.indices.contains($0) }.map { items[$0] }
-        let variants = neighbors.filter { $0.format != .gif }.map { ($0, displayVariant(for: $0)) }
+        let ahead = [i + d, i + 2 * d].filter { items.indices.contains($0) }.map { items[$0] }
+        let behind = [i - d, i - 2 * d].filter { items.indices.contains($0) }.map { items[$0] }
+        let jobs = PreloadOrder.jobs(ahead: ahead.filter { $0.format != .gif }, behind: behind.filter { $0.format != .gif },
+                                     generation: loadGeneration, includeFull: includeFull, display: displayVariant(for:))
         let pipeline = self.pipeline
         Task {
             // 要保留的范围在真正执行时按最新位置算，并且总是包含当前项：
             // 否则快速跳转时，按旧位置算出的取消会误杀当前图片的解码
             await pipeline.cancelAll(except: keepSet())
-            for (item, variant) in variants {
-                if item.format == .raw { await pipeline.preload(item, .rawPreview) }
-                await pipeline.preload(item, variant)
-            }
+            for job in jobs { await pipeline.preload(job.item, job.variant, order: job.order) }
         }
-        for item in neighbors { prefetchAmbient(for: item) }
+        for item in ahead + behind { prefetchAmbient(for: item) }
     }
 
     /// 当前项和前后各 2 张
@@ -881,6 +896,40 @@ extension BrowserModel {
         case 23, 87: 5
         default: nil
         }
+    }
+}
+
+/// 预加载哪些、按什么先后（技术方案 v0.3.1）。
+/// - 能最先显示的版本（RAW 的内嵌预览、其他图片的屏幕尺寸版）：前后各 2 张，不排队（order 为 nil），
+///   翻页方向上近的在前。预览只要几十毫秒，提前备好，方向键才跟手。
+/// - RAW 的高清版：只要翻页方向上的 2 张，排队（数字大的先开始）。新一轮（切换后）整体排在旧一轮前面；
+///   同一轮里当前这张的高清版最先，然后是下一张、下下张
+enum PreloadOrder {
+    struct Job: Equatable {
+        let item: MediaItem
+        let variant: ImageDecoder.Variant
+        /// nil：立即开始，不排队
+        let order: Int?
+    }
+
+    private static let step = 100
+
+    static func currentFull(_ generation: Int) -> Int { generation * step + 90 }
+
+    /// ahead：翻页方向上的（下一张、下下张）；behind：反方向的（上一张、上上张）
+    static func jobs(ahead: [MediaItem], behind: [MediaItem], generation: Int, includeFull: Bool,
+                     display: (MediaItem) -> ImageDecoder.Variant) -> [Job] {
+        // 近的在前：下一张、上一张、下下张、上上张
+        var near: [MediaItem] = []
+        for n in 0..<max(ahead.count, behind.count) {
+            if n < ahead.count { near.append(ahead[n]) }
+            if n < behind.count { near.append(behind[n]) }
+        }
+        let first = near.map { Job(item: $0, variant: $0.format == .raw ? .rawPreview : display($0), order: nil) }
+        guard includeFull else { return first }
+        let full = ahead.enumerated().filter { $0.element.format == .raw }
+            .map { Job(item: $0.element, variant: display($0.element), order: generation * step + 50 - $0.offset) }
+        return first + full
     }
 }
 

@@ -42,6 +42,8 @@ private func waitUntil(timeout: Duration = .seconds(5), isolation: isolated (any
 /// 可控的假解码：按 URL 挡住、统计调用和取消次数
 private actor FakeDecoder {
     private(set) var calls: [URL: Int] = [:]
+    /// 开始解码的先后（文件名、版本）
+    private(set) var log: [(name: String, variant: ImageDecoder.Variant)] = []
     private(set) var cancellations = 0
     /// 这些 URL 的解码会一直等，直到 release
     private var blocked: Set<URL> = []
@@ -56,6 +58,7 @@ private actor FakeDecoder {
 
     func decode(_ item: MediaItem, _ variant: ImageDecoder.Variant) async throws -> DecodedImage {
         calls[item.url, default: 0] += 1
+        log.append((item.url.lastPathComponent, variant))
         do {
             if delay > .zero { try await Task.sleep(for: delay) }
             while blocked.contains(item.url) { try await Task.sleep(for: .milliseconds(2)) }
@@ -68,8 +71,8 @@ private actor FakeDecoder {
     }
 }
 
-private func pipeline(_ fake: FakeDecoder) -> ImagePipeline {
-    ImagePipeline { item, variant in try await fake.decode(item, variant) }
+private func pipeline(_ fake: FakeDecoder, queuedLimit: Int = ImagePipeline.queuedLimit) -> ImagePipeline {
+    ImagePipeline(queuedLimit: queuedLimit) { item, variant in try await fake.decode(item, variant) }
 }
 
 // MARK: - 管线
@@ -184,6 +187,152 @@ struct PipelineTests {
         await fake.setFailure(nil)
         #expect((try? await p.image(a, variant)) != nil)
         #expect(await fake.callCount(a.url) == 4)
+    }
+}
+
+// MARK: - 排队解码
+
+@Suite("排队解码：名额、先后、插队、取消")
+struct DecodeQueueTests {
+    let variant = ImageDecoder.Variant.display(maxPixel: 1000)
+
+    @Test("排队口：名额用完后排队，按 order 大的先、一样大先来先走")
+    func gateOrder() async throws {
+        let gate = DecodeGate(limit: 1)
+        gate.register(1, order: 0)
+        gate.register(2, order: 5)
+        gate.register(3, order: 9)
+        gate.register(4, order: 5)
+        #expect(gate.runningCount == 1)
+        #expect(gate.waitingCount == 3)
+        var admitted: [Int] = []
+        var ticket = try await gate.enter(1)
+        for _ in 0..<3 {
+            gate.leave(ticket)
+            let next = [2, 3, 4].first { !admitted.contains($0) && !gate.isWaiting($0) }!
+            admitted.append(next)
+            ticket = try await gate.enter(next)
+        }
+        gate.leave(ticket)
+        #expect(admitted == [3, 2, 4])
+        #expect(gate.runningCount == 0)
+    }
+
+    @Test("排队口：排队中被取消不占名额；插队的不占名额")
+    func gateCancelAndPromote() async throws {
+        let gate = DecodeGate(limit: 1)
+        gate.register(1, order: 0)
+        gate.register(2, order: 0)
+        gate.register(3, order: 0)
+        let first = try await gate.enter(1)
+        // 2 在排队时被取消：enter 抛出，不再占位置
+        let waiting = Task { try await gate.enter(2) }
+        try await Task.sleep(for: .milliseconds(10))
+        waiting.cancel()
+        await #expect(throws: CancellationError.self) { try await waiting.value }
+        // 3 插队：名额还被 1 占着也立即放行
+        gate.promote(3)
+        let promoted = try await gate.enter(3)
+        #expect(!promoted.counted)
+        #expect(gate.runningCount == 1)
+        gate.leave(promoted)
+        gate.leave(first)
+        #expect(gate.runningCount == 0)
+        #expect(gate.waitingCount == 0)
+    }
+
+    @Test("预加载同时只解 queuedLimit 个；排队时被取消的根本不解码")
+    func preloadLimitAndCancel() async throws {
+        let fake = FakeDecoder()
+        let p = pipeline(fake, queuedLimit: 1)
+        let (a, b, c) = (fakeItem("a.jpg"), fakeItem("b.jpg"), fakeItem("c.jpg"))
+        await fake.block(a.url)
+        await p.preload(a, variant)
+        await p.preload(b, variant)
+        await p.preload(c, variant)
+        #expect(await waitUntil { await fake.callCount(a.url) == 1 })
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(await fake.callCount(b.url) == 0)
+        #expect(await p.isQueued(b, variant))
+        // 切走了：b、c 不再需要
+        await p.cancelAll(except: [a.url])
+        await fake.release(a.url)
+        #expect(await waitUntil { await p.cached(a, variant) != nil })
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(await fake.callCount(b.url) == 0)
+        #expect(await fake.callCount(c.url) == 0)
+        #expect(await !p.isInFlight(b, variant))
+        #expect(p.gate.runningCount == 0)
+    }
+
+    @Test("排队中的预加载变成当前要看的：立即开始，不等前面的")
+    func currentJumpsQueue() async throws {
+        let fake = FakeDecoder()
+        let p = pipeline(fake, queuedLimit: 1)
+        let (a, b) = (fakeItem("a.jpg"), fakeItem("b.jpg"))
+        await fake.block(a.url)
+        await p.preload(a, variant)
+        await p.preload(b, variant)
+        #expect(await waitUntil { await fake.callCount(a.url) == 1 })
+        #expect(await p.isQueued(b, variant))
+        // a 还挡着，b 也能解出来
+        let image = try await p.image(b, variant)
+        #expect(image.pixelSize.width == 1)
+        #expect(await fake.callCount(b.url) == 1)
+        await fake.release(a.url)
+        #expect(await waitUntil { await p.cached(a, variant) != nil })
+        #expect(p.gate.runningCount == 0)
+    }
+
+    @Test("RAW 的高清版进了缓存，内嵌预览就从缓存里去掉（省内存）")
+    func previewDroppedAfterFull() async throws {
+        let fake = FakeDecoder()
+        let p = pipeline(fake)
+        let raw = fakeItem("a.arw")
+        _ = try await p.image(raw, .rawPreview)
+        #expect(await p.cached(raw, .rawPreview) != nil)
+        _ = try await p.image(raw, variant)
+        #expect(await p.cached(raw, variant) != nil)
+        #expect(await p.cached(raw, .rawPreview) == nil)
+    }
+
+    @Test("排队的按 order 先后开始；后来的 order 更大可以排到前面")
+    func preloadOrder() async throws {
+        let fake = FakeDecoder()
+        let p = pipeline(fake, queuedLimit: 1)
+        let items = ["a", "b", "c", "d"].map { fakeItem("\($0).jpg") }
+        await fake.block(items[0].url)
+        await p.preload(items[0], variant, order: 0)
+        await p.preload(items[1], variant, order: 1)
+        await p.preload(items[2], variant, order: 5)
+        await p.preload(items[3], variant, order: 3)
+        // b 被再次要求，排到最前
+        await p.preload(items[1], variant, order: 9)
+        await fake.release(items[0].url)
+        #expect(await waitUntil { await fake.log.count == 4 })
+        #expect(await fake.log.map(\.name) == ["a.jpg", "b.jpg", "c.jpg", "d.jpg"])
+    }
+
+    @Test("预加载：预览前后各 2 张立即开始、近的在前；RAW 高清版只排翻页方向上的，新一轮排在旧一轮前面")
+    func neighborJobs() throws {
+        let n1 = fakeItem("n1.arw"), n2 = fakeItem("n2.jpg"), p1 = fakeItem("p1.arw"), p2 = fakeItem("p2.arw")
+        let display = ImageDecoder.Variant.display(maxPixel: 3000)
+        let jobs = PreloadOrder.jobs(ahead: [n1, n2], behind: [p1, p2], generation: 7, includeFull: true) { _ in display }
+        #expect(jobs.map(\.item.url.lastPathComponent) == ["n1.arw", "p1.arw", "n2.jpg", "p2.arw", "n1.arw"])
+        #expect(jobs.map(\.variant) == [.rawPreview, .rawPreview, display, .rawPreview, display])
+        // 预览和普通图片不排队；只有 RAW 高清版排队，而且排在当前这张的高清版后面
+        #expect(jobs.prefix(4).allSatisfy { $0.order == nil })
+        let full = try #require(jobs.last?.order)
+        #expect(full < PreloadOrder.currentFull(7))
+        // 当前这张还在解高清：只预加载预览
+        let previewsOnly = PreloadOrder.jobs(ahead: [n1], behind: [p1], generation: 7, includeFull: false) { _ in display }
+        #expect(previewsOnly.allSatisfy { $0.variant == .rawPreview })
+        // 往前翻（ahead 是前面的）：高清版跟着方向走
+        let back = PreloadOrder.jobs(ahead: [p1, p2], behind: [n1], generation: 7, includeFull: true) { _ in display }
+        #expect(back.filter { $0.order != nil }.map(\.item.url.lastPathComponent) == ["p1.arw", "p2.arw"])
+        #expect(back.filter { $0.order != nil }.map { $0.order! } == [750, 749])
+        // 新一轮的排在旧一轮的任何一项之前
+        #expect(PreloadOrder.currentFull(6) < full)
     }
 }
 
