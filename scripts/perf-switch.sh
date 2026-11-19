@@ -3,6 +3,7 @@
 #
 # 用法：scripts/perf-switch.sh <Yilan.app> [场景] [次数] [间隔毫秒] [每次跳几张]
 #   场景：raw（默认，5 个品牌的 RAW 各 40 份，共 200 个）/ mixed（RAW 和 JPEG、HEIC 交替，共 180 个）
+#         raf / nef（只放最大的单个文件：56 MB 的 RAF 或 47 MB 的 NEF，各 60 份）
 #   例：scripts/perf-switch.sh app/build/release/Build/Products/Release/Yilan.app raw 25 1500 7
 #       （每 1.5 秒往后跳 7 张：跳出预加载范围，量“没有预加载到”的单次切换）
 #       scripts/perf-switch.sh app/build/release/Build/Products/Release/Yilan.app raw 20 100 1
@@ -46,7 +47,9 @@ case $SCENE in
   raw) make_folder "$DEST/raw200" 40 "${raws[@]}"; FOLDER="$DEST/raw200" ;;
   mixed) make_folder "$DEST/mixed" 20 "${raws[@]}" "$FIX/sample/aurora.jpg" "$FIX/sample/IMG_2034.jpg" \
            "$FIX/sample/IMG_2052.jpg" "$FIX/sample/IMG_2031.heic"; FOLDER="$DEST/mixed" ;;
-  *) echo "场景只能是 raw 或 mixed" >&2; exit 1 ;;
+  raf) make_folder "$DEST/raf60" 60 "$FIX"/raw/*.RAF; FOLDER="$DEST/raf60" ;;
+  nef) make_folder "$DEST/nef60" 60 "$FIX"/raw/*.NEF; FOLDER="$DEST/nef60" ;;
+  *) echo "场景只能是 raw、mixed、raf、nef" >&2; exit 1 ;;
 esac
 
 FIRST=$(ls "$FOLDER" | head -1)
@@ -62,8 +65,11 @@ for _ in {1..50}; do
 done
 [[ -n $PID ]] || { echo "程序没有启动" >&2; exit 1; }
 [[ -n ${SLOW:-} ]] && taskpolicy -b -p $PID
-# 等统计打印出来（程序打印后自己退出）；最多 3 分钟
+# 等统计打印出来（程序打印后自己退出）；最多 3 分钟。期间记下内存占用（RSS）的最大值
+peak=0
 for _ in {1..360}; do
+  rss=$(ps -o rss= -p $PID 2>/dev/null | tr -d ' ' || true)
+  [[ -n $rss ]] && (( rss > peak )) && peak=$rss
   grep -q "\[perf\] burst\|no switch measured" "$LOG" 2>/dev/null && break
   kill -0 $PID 2>/dev/null || break
   sleep 0.5
@@ -72,4 +78,5 @@ sleep 0.5
 kill -0 $PID 2>/dev/null && kill $PID
 echo "文件夹：$FOLDER  次数：$COUNT  间隔：${INTERVAL}ms  每次跳：$STEP  解码尺寸：${DECODE_SIZE}px  慢速：${SLOW:-否}"
 grep -E "^\[perf\] (switches=|  [a-z0-9]+=|burst|no switch)" "$LOG" || cat "$LOG"
+echo "[perf] peak RSS: $(( peak / 1024 )) MB"
 rm -f "$LOG"

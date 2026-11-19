@@ -41,6 +41,7 @@ enum Perf {
     private static var burstStart: CFTimeInterval?
     private static var lastTarget: URL?
     private static var lastShownAt: CFTimeInterval?
+    private static var lastPressAt: CFTimeInterval?
     /// 最近一次选中的文件和时间（RAW 预览 / 完整解码各自计时用）
     private static var selected: (url: URL, start: CFTimeInterval)?
 
@@ -119,7 +120,10 @@ enum Perf {
                 } else if let i = model.currentIndex, !model.items.isEmpty {
                     model.select((i + switchStep) % model.items.count)
                 }
-                if n == autoSwitches - 1 { lastTarget = model.current?.url }
+                if n == autoSwitches - 1 {
+                    lastTarget = model.current?.url
+                    lastPressAt = CACurrentMediaTime()
+                }
                 try? await Task.sleep(for: .milliseconds(switchIntervalMs))
             }
             // 等最后一张上屏（最多 10 秒）
@@ -130,8 +134,8 @@ enum Perf {
                 report(ext, samples.filter { $0.ext == ext }.map(\.ms))
             }
             if let start = burstStart, let end = lastShownAt {
-                out(String(format: "[perf] burst: %d switches, first switch → last image on stage: %.0f ms",
-                           autoSwitches, (end - start) * 1000))
+                out(String(format: "[perf] burst: %d switches, first switch → last image on stage: %.0f ms; last switch → its image: %.0f ms",
+                           autoSwitches, (end - start) * 1000, (end - (lastPressAt ?? end)) * 1000))
             }
             NSApp.terminate(nil)
         }
