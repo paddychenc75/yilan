@@ -26,72 +26,69 @@ struct InfoPanel: View {
 
     /// 滚动区下面还有没显示的内容
     @State private var hasMoreBelow = false
-    /// 内容全部展开时面板的高度（隐藏的一份量出来）
-    @State private var naturalHeight: CGFloat = 0
+    /// 各分组全部展开时的高度、顶部和底部按钮区的高度（量出来）
+    @State private var contentHeight: CGFloat = 0
+    @State private var headerHeight: CGFloat = 0
+    @State private var footerHeight: CGFloat = 0
 
-    /// 以前用 ViewThatFits 在「不滚动」「滚动」两份面板里挑：内容变化（换文件、信息读完变长）时
-    /// 两份之间切换，macOS 15 上切换后有的元素不画（v0.3.1 F1-07：第 5 颗星、「创建时间」标签不见了）。
-    /// 现在只放一份面板：放不放得下由隐藏的一份量出来决定；切换时、换文件时整份重建，不在两种布局之间搬动视图
+    /// 面板上下内边距 16 + 14，三段之间的间距 14 + 14
+    nonisolated static let chromeSpacing: CGFloat = 16 + 14 + 14 + 14
+
+    /// 中间的分组永远放在 ScrollView 里：放得下时 ScrollView 的高度就是内容的高度，不能滚、看起来和不滚动一样；
+    /// 放不下时高度到面板上限为止，可以滚，底部渐隐。
+    /// 为什么不按放不放得下换两种写法（以前用 ViewThatFits）：macOS 15 上不滚动的那种写法里，个别视图不绘制
+    /// （v0.3.1 F1-07：第 5 颗星、「创建时间」的文字，视图在、位置对，就是没画出来；放进 ScrollView 后正常）。
+    /// 在 macOS 15.7 上排除过：毛玻璃材质、量高度的隐藏副本 / ViewThatFits、悬停提示 .help 都不是原因；
+    /// 把「没有拍摄信息」卡换成一行字后，丢的变成第 3 颗星和「格式」标签——不是哪个元素有问题，
+    /// 而是系统在这种布局下按某种序号丢掉个别绘制项，丢哪个随内容多少变化。系统绘制问题，放进 ScrollView 规避
     var body: some View {
-        let scrolls = Self.scrolls(naturalHeight: naturalHeight, maxHeight: maxHeight)
-        panel(scrolls: scrolls)
-            .id(PanelIdentity(file: item?.url, scrolls: scrolls))
-            .frame(width: Self.width)
-            .frame(maxHeight: maxHeight, alignment: .top)
-            .fixedSize(horizontal: false, vertical: true)
-            .background(alignment: .top) {
-                panel(scrolls: false)
-                    .frame(width: Self.width)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .hidden()
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
-                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { naturalHeight = $0 }
+        let natural = contentHeight + headerHeight + footerHeight + Self.chromeSpacing
+        let scrolls = Self.scrolls(naturalHeight: natural, maxHeight: maxHeight)
+        let scrollHeight = Self.sectionsHeight(content: contentHeight, header: headerHeight, footer: footerHeight,
+                                               maxHeight: maxHeight)
+        VStack(alignment: .leading, spacing: 14) {
+            header
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { headerHeight = $0 }
+            ScrollView(.vertical) {
+                sections
+                    .padding(.trailing, scrolls ? 2 : 0)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
             }
-            .thickGlass(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            // 不显示滚动条：接了鼠标的电脑上系统会画一条又宽又亮的常驻滚动条，和深色玻璃面板不搭
+            .scrollIndicators(.never)
+            .scrollDisabled(!scrolls)
+            .onScrollGeometryChange(for: Bool.self) { geo in
+                geo.contentOffset.y + geo.containerSize.height < geo.contentSize.height - 1
+            } action: { _, more in
+                hasMoreBelow = more
+            }
+            // 内容放不下时：底部渐隐，告诉人下面还有内容（设计稿 .ipb 的做法）
+            .mask(alignment: .top) {
+                VStack(spacing: 0) {
+                    Rectangle()
+                    LinearGradient(colors: [.black, scrolls && hasMoreBelow ? .clear : .black],
+                                   startPoint: .top, endPoint: .bottom)
+                        .frame(height: 28)
+                }
+            }
+            .frame(height: scrollHeight)
+            footer
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footerHeight = $0 }
+        }
+        .padding(EdgeInsets(top: 16, leading: 16, bottom: 14, trailing: 16))
+        .frame(width: Self.width)
+        .thickGlass(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 
-    /// 面板内容的身份：换了文件或换了滚动方式就整份重建
-    private struct PanelIdentity: Hashable {
-        let file: URL?
-        let scrolls: Bool
-    }
-
-    /// 内容全部展开时放不放得下（测试用）
+    /// 内容全部展开时放不放得下
     nonisolated static func scrolls(naturalHeight: CGFloat, maxHeight: CGFloat) -> Bool {
         naturalHeight > maxHeight + 0.5
     }
 
-    private func panel(scrolls: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            header
-            if scrolls {
-                // 内容放不下时：底部渐隐 + 打开时闪一下滚动条，告诉人下面还有内容（设计稿 .ipb 的做法）。
-                // 以前这里没有任何提示，下面的“位置”组被生硬地截掉，看起来像是空的
-                ScrollView(.vertical) { sections.padding(.trailing, 2) }
-                    // 不显示滚动条：接了鼠标的电脑上系统会画一条又宽又亮的常驻滚动条，和深色玻璃面板不搭
-                    .scrollIndicators(.never)
-                    .onScrollGeometryChange(for: Bool.self) { geo in
-                        geo.contentOffset.y + geo.containerSize.height < geo.contentSize.height - 1
-                    } action: { _, more in
-                        hasMoreBelow = more
-                    }
-                    .mask(alignment: .top) {
-                        VStack(spacing: 0) {
-                            Rectangle()
-                            LinearGradient(colors: [.black, hasMoreBelow ? .clear : .black],
-                                           startPoint: .top, endPoint: .bottom)
-                                .frame(height: 28)
-                        }
-                    }
-                    .frame(maxHeight: .infinity)
-            } else {
-                sections
-            }
-            footer
-        }
-        .padding(EdgeInsets(top: 16, leading: 16, bottom: 14, trailing: 16))
-        .frame(maxHeight: scrolls ? maxHeight : nil, alignment: .top)
+    /// 中间分组区（ScrollView）的高度：放得下就是内容高度，放不下就是面板上限减去顶部、底部和间距
+    nonisolated static func sectionsHeight(content: CGFloat, header: CGFloat, footer: CGFloat, maxHeight: CGFloat) -> CGFloat {
+        let room = max(0, maxHeight - header - footer - chromeSpacing)
+        return min(content, room)
     }
 
     // MARK: - 顶部：缩略图、文件名、类型，关闭按钮

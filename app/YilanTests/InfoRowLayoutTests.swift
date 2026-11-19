@@ -64,10 +64,13 @@ struct InfoPanelStarsTests {
         }
     }
 
-    @Test("信息面板只放一份：内容全部展开放得下就不滚动，放不下才滚动（F1-07 不再用 ViewThatFits 在两份之间切换）")
+    @Test("信息面板中间分组区的高度：放得下取内容高度（不滚动），放不下取到面板上限为止（F1-07）")
     func scrollDecision() {
         #expect(!InfoPanel.scrolls(naturalHeight: 500, maxHeight: 600))
-        #expect(!InfoPanel.scrolls(naturalHeight: 600.3, maxHeight: 600))
         #expect(InfoPanel.scrolls(naturalHeight: 640, maxHeight: 600))
+        // 顶部 44、底部 28、间距 58：上限 600 时分组区最多 470
+        #expect(InfoPanel.sectionsHeight(content: 300, header: 44, footer: 28, maxHeight: 600) == 300)
+        #expect(InfoPanel.sectionsHeight(content: 800, header: 44, footer: 28, maxHeight: 600) == 470)
+        #expect(InfoPanel.sectionsHeight(content: 800, header: 44, footer: 28, maxHeight: 100) == 0)
     }
 }
