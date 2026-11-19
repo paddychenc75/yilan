@@ -375,6 +375,8 @@ struct RootView: View {
             onInfo: model.toggleInfo,
             onReveal: model.revealCurrentInFinder,
             onCopyPath: model.copyCurrentPath,
+            canTrash: model.canDelete,
+            onTrash: { model.requestDelete() },
             onOpen: model.showOpenPanel,
             zoomState: model.zoomState,
             zoomInMenu: zoomInMenu,

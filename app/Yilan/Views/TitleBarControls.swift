@@ -100,6 +100,9 @@ struct ToolGroup: View {
     let onInfo: () -> Void
     let onReveal: () -> Void
     let onCopyPath: () -> Void
+    /// 移到废纸篓（和按 ⌫ 一样，走删除前确认和 ⌘Z 撤销）；没有当前文件时置灰
+    var canTrash = false
+    var onTrash: () -> Void = {}
     let onOpen: () -> Void
     /// 窗口很窄时缩放控件收进这里（spec E1-10 ⑤）
     var zoomState: ZoomState? = nil
@@ -131,6 +134,9 @@ struct ToolGroup: View {
                 }
                 Button("在访达中显示", action: onReveal).disabled(!enabled)
                 Button("拷贝文件路径", action: onCopyPath).disabled(!enabled)
+                Divider()
+                // 不加 ⌫ 快捷键：菜单栏「文件 › 移到废纸篓」已经注册了 ⌫，这里再注册会按一次删两次
+                Button("移到废纸篓", action: onTrash).disabled(!canTrash)
                 Divider()
                 Button("打开…", action: onOpen)
             } label: {
