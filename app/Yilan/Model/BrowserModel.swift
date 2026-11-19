@@ -152,7 +152,12 @@ final class BrowserModel {
     var pendingDelete: MediaItem?
     /// 确认对话框里“不再询问”的勾选
     var deleteDontAsk = false
-    var undoHistory = UndoHistory()
+    var undoHistory = UndoHistory() {
+        // 撤销记录里去掉的保存旋转（换文件夹、超过 100 条）：它的原文件副本删掉（F2-03）
+        didSet { discardDroppedBackups(old: oldValue) }
+    }
+    /// 正在撤销的那条保存旋转的副本：记录先去掉、副本用完再删
+    @ObservationIgnored var backupInUse: RotationBackup?
     /// 一览自己改动文件夹（删除、撤销）的次数：文件夹同步据此丢弃过期的扫描结果
     @ObservationIgnored var localChangeSerial = 0
     /// 正在移到废纸篓或放回：期间再按 ⌫ / ⌘Z 不重复执行

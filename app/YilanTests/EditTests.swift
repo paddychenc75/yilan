@@ -663,6 +663,143 @@ struct EditModelTests {
         #expect(store.cached(item) == nil)
     }
 
+    // MARK: F2-03 撤销保存旋转逐字节还原
+
+    /// 保存旋转一次，返回这条撤销记录里的副本
+    private func saveRotationOnce(_ m: BrowserModel, turns: Int = 1) async throws -> RotationBackup? {
+        let count = m.undoHistory.entries.count
+        m.rotate(turns)
+        m.saveRotation()
+        #expect(await waitFor { m.undoHistory.entries.count == count + 1 && !m.trashBusy && m.rotation == 0 })
+        guard case .edit(.rotation(_, _, _, let backup))? = m.undoHistory.last else { return nil }
+        return backup
+    }
+
+    @Test("保存旋转 → ⌘Z：JPEG（有、没有方向标记）、HEIC、TIFF 撤销后与原文件逐字节相同；副本随后删掉（F2-03）",
+          arguments: ["IMG_2052.jpg", "IMG_2034.jpg", "IMG_2031.heic", "scan_003.tif"])
+    func undoRotationByteIdentical(_ name: String) async throws {
+        let dir = try MetaFixtures.copy([name])
+        let url = dir.appendingPathComponent(name)
+        let sha = try MetaFixtures.sha(url)
+        let size = try Data(contentsOf: url).count
+        let m = try await ready(dir, name)
+        let backup = try #require(try await saveRotationOnce(m))
+        #expect(orientation(url) == 6)
+        #expect(FileManager.default.fileExists(atPath: backup.copy.path))
+        await m.undoLast()
+        #expect(orientation(url) == 1)
+        #expect(try Data(contentsOf: url).count == size)
+        #expect(try MetaFixtures.sha(url) == sha)
+        #expect(!FileManager.default.fileExists(atPath: backup.copy.path))
+        #expect(names(dir) == [name])
+        #expect(m.toast?.tone != .warning)
+    }
+
+    @Test("连续保存两次旋转，撤销两次：逐字节回到最初（F2-03）")
+    func undoTwoRotations() async throws {
+        let dir = try MetaFixtures.copy(["scan_003.tif"])
+        let url = dir.appendingPathComponent("scan_003.tif")
+        let sha = try MetaFixtures.sha(url)
+        let m = try await ready(dir, "scan_003.tif")
+        _ = try await saveRotationOnce(m)
+        let shaOnce = try MetaFixtures.sha(url)
+        #expect(await waitFor { m.canEditCurrent })
+        _ = try await saveRotationOnce(m)
+        #expect(orientation(url) == 3)
+        await m.undoLast()
+        #expect(try MetaFixtures.sha(url) == shaOnce)
+        await waitFor { !m.trashBusy }
+        await m.undoLast()
+        #expect(try MetaFixtures.sha(url) == sha)
+    }
+
+    @Test("撤销前文件被其他程序换了内容：放弃撤销、给提示，新内容原样保留，副本删掉（F2-03）")
+    func undoRotationRefusedWhenChanged() async throws {
+        let dir = try MetaFixtures.copy(["IMG_2052.jpg", "IMG_2034.jpg"])
+        let url = dir.appendingPathComponent("IMG_2052.jpg")
+        let m = try await ready(dir, "IMG_2052.jpg")
+        let backup = try #require(try await saveRotationOnce(m))
+        // 其他程序把文件换成了另一张图
+        let other = try Data(contentsOf: dir.appendingPathComponent("IMG_2034.jpg"))
+        try other.write(to: url)
+        await m.undoLast()
+        #expect(try Data(contentsOf: url) == other)
+        #expect(m.toast?.tone == .warning)
+        #expect(!FileManager.default.fileExists(atPath: backup.copy.path))
+        #expect(!names(dir).contains { SafeReplace.isOwnTemp($0) })
+        #expect(!m.undoHistory.canUndo)
+    }
+
+    @Test("撤销前文件被其他程序旋转过：放弃撤销，文件不动（F2-03）")
+    func undoRotationRefusedWhenRotatedElsewhere() async throws {
+        let dir = try MetaFixtures.copy(["IMG_2031.heic"])
+        let url = dir.appendingPathComponent("IMG_2031.heic")
+        let m = try await ready(dir, "IMG_2031.heic")
+        _ = try #require(try await saveRotationOnce(m))
+        try EditWriter.setOrientation(url, to: 3)
+        let sha = try MetaFixtures.sha(url)
+        await m.undoLast()
+        #expect(try MetaFixtures.sha(url) == sha)
+        #expect(orientation(url) == 3)
+        #expect(m.toast?.tone == .warning)
+    }
+
+    @Test("撤销前只改了附加信息（比如写进文件的星级）：只把方向改回去，保留那些改动（F2-03）")
+    func undoRotationKeepsMetadataChange() async throws {
+        let dir = try MetaFixtures.copy(["IMG_2052.jpg"])
+        let url = dir.appendingPathComponent("IMG_2052.jpg")
+        let pixels = try EditWriter.storedPixels(url)
+        let m = try await ready(dir, "IMG_2052.jpg")
+        _ = try #require(try await saveRotationOnce(m))
+        // 别的软件改了附加信息、画面没动：这里用写星级模拟（会改大小）
+        let item = try #require(FolderScanner.item(at: url))
+        _ = try RatingFileIO.write(3, for: item, mode: .embedded, sidecars: SidecarIndex(folder: dir, sidecars: [], media: [item]))
+        await m.undoLast()
+        #expect(orientation(url) == 1)
+        #expect(try EditWriter.storedPixels(url) == pixels)
+        let fresh = try #require(FolderScanner.item(at: url))
+        #expect(RatingFileIO.read(fresh, sidecars: SidecarIndex(folder: dir, sidecars: [], media: [fresh])).embedded == 3)
+        #expect(m.toast?.tone != .warning)
+    }
+
+    @Test("副本丢了（超过总量被删）：退回只改方向标记，方向复原、画面不变（F2-03）")
+    func undoRotationWithoutBackup() async throws {
+        let dir = try MetaFixtures.copy(["scan_003.tif"])
+        let url = dir.appendingPathComponent("scan_003.tif")
+        let pixels = try EditWriter.storedPixels(url)
+        let m = try await ready(dir, "scan_003.tif")
+        let backup = try #require(try await saveRotationOnce(m))
+        try FileManager.default.removeItem(at: backup.copy)
+        await m.undoLast()
+        #expect(orientation(url) == 1)
+        #expect(try EditWriter.storedPixels(url) == pixels)
+    }
+
+    @Test("撤销前文件被移走：给提示，原位置不会凭空出现文件（F2-03）")
+    func undoRotationVanished() async throws {
+        let dir = try MetaFixtures.copy(["IMG_2052.jpg"])
+        let url = dir.appendingPathComponent("IMG_2052.jpg")
+        let m = try await ready(dir, "IMG_2052.jpg")
+        let backup = try #require(try await saveRotationOnce(m))
+        let moved = dir.appendingPathComponent("moved.jpg")
+        try FileManager.default.moveItem(at: url, to: moved)
+        await m.undoLast()
+        #expect(!FileManager.default.fileExists(atPath: url.path))
+        #expect(orientation(moved) == 6)
+        #expect(m.toast?.tone == .warning)
+        #expect(!FileManager.default.fileExists(atPath: backup.copy.path))
+    }
+
+    @Test("撤销记录清掉（换文件夹）时副本跟着删（F2-03）")
+    func backupDiscardedWithHistory() async throws {
+        let dir = try MetaFixtures.copy(["IMG_2052.jpg"])
+        let m = try await ready(dir, "IMG_2052.jpg")
+        let backup = try #require(try await saveRotationOnce(m))
+        #expect(FileManager.default.fileExists(atPath: backup.copy.path))
+        m.undoHistory.removeAll()
+        #expect(await waitFor { !FileManager.default.fileExists(atPath: backup.copy.path) })
+    }
+
     @Test("浏览时保存旋转（PNG）：做不到只改方向，另存副本，原图不变")
     func saveRotationCopy() async throws {
         let dir = try MetaFixtures.copy(["harbor_night.png"])
@@ -676,5 +813,32 @@ struct EditModelTests {
         #expect(await waitFor { m.current?.name == copy.lastPathComponent })
         #expect(EditWriter.orientedSize(copy) == PixelSize(width: 1200, height: 1600))
         #expect(try MetaFixtures.sha(url) == sha)
+    }
+}
+
+@Suite("编辑：保存旋转的原文件副本（F2-03）")
+struct RotationBackupStoreTests {
+    @Test("总量上限：太大的不做副本；超过时先删最早的")
+    func limit() throws {
+        let dir = try MetaFixtures.copy(["IMG_2052.jpg", "IMG_2034.jpg"])
+        let store = dir.appendingPathComponent("backups")
+        let a = dir.appendingPathComponent("IMG_2052.jpg"), b = dir.appendingPathComponent("IMG_2034.jpg")
+        let sizeA = Int64(try Data(contentsOf: a).count), sizeB = Int64(try Data(contentsOf: b).count)
+        #expect(RotationBackupStore.make(for: a, in: store, limit: sizeA - 1) == nil)
+        let first = try #require(RotationBackupStore.make(for: a, in: store, limit: sizeA + sizeB - 1))
+        #expect(try MetaFixtures.sha(first) == MetaFixtures.sha(a))
+        let second = try #require(RotationBackupStore.make(for: b, in: store, limit: sizeA + sizeB - 1))
+        #expect(!FileManager.default.fileExists(atPath: first.path))
+        #expect(FileManager.default.fileExists(atPath: second.path))
+    }
+
+    @Test("启动时只删已经不在运行的进程留下的副本")
+    func stale() throws {
+        let root = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("yilan-backup-\(UUID().uuidString)")
+        let mine = root.appendingPathComponent(String(getpid())), dead = root.appendingPathComponent("999999")
+        for d in [mine, dead] { try FileManager.default.createDirectory(at: d, withIntermediateDirectories: true) }
+        RotationBackupStore.removeStale(root: root)
+        #expect(FileManager.default.fileExists(atPath: mine.path))
+        #expect(!FileManager.default.fileExists(atPath: dead.path))
     }
 }

@@ -47,6 +47,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         BrowserModel.shared.saveRecentCover()
         UpdateChecker.shared.stopPeriodicChecks()
+        // 保存旋转留着撤销用的原文件副本：退出后用不上了（F2-03）
+        RotationBackupStore.removeAll()
     }
 
     /// 还有没写完的星级时先等一等（最多 3 秒，spec S-20）
@@ -63,7 +65,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Perf.mark("didFinishLaunching")
         MemoryPressureMonitor.start()
         // 缩略图磁盘缓存：后台清理太旧的、超出上限的
-        Task.detached(priority: .background) { ThumbnailGenerator.prune() }
+        Task.detached(priority: .background) {
+            ThumbnailGenerator.prune()
+            // 上次没正常退出时留下的保存旋转副本
+            RotationBackupStore.removeStale()
+        }
         // 调试用：命令行参数里的路径（`Yilan.app/Contents/MacOS/Yilan /path/to/file`）
         let args = CommandLine.arguments.dropFirst().filter { !$0.hasPrefix("-") }
         if let path = args.first, FileManager.default.fileExists(atPath: path), !BrowserModel.shared.hasOpenedFolder {

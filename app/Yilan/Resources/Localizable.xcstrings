@@ -3148,6 +3148,16 @@
         }
       }
     },
+    "文件已被其他程序改动。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The file was changed by another app."
+          }
+        }
+      }
+    },
     "文件已被其他程序改动，已退出编辑" : {
       "localizations" : {
         "en" : {

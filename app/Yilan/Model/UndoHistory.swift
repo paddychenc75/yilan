@@ -13,8 +13,8 @@ enum EditUndo: Equatable, Sendable {
     case copy(original: MediaItem, created: URL, sidecar: URL?)
     /// 替换原图：撤销 = 编辑后的文件进废纸篓，原图从废纸篓放回
     case replace(TrashEntry)
-    /// 保存旋转改了原图的方向标记：撤销 = 改回 old
-    case rotation(url: URL, old: Int, new: Int)
+    /// 保存旋转改了原图的方向标记：撤销 = 放回保存前的原文件（backup，F2-03）；没有副本时把方向标记改回 old
+    case rotation(url: URL, old: Int, new: Int, backup: RotationBackup?)
 }
 
 /// 删除、评星和编辑共用的撤销记录（spec R7-01）：按时间先后，⌘Z 撤销最近的一条，最多 100 条
@@ -40,6 +40,11 @@ struct UndoHistory: Equatable {
     mutating func pop() -> Entry? { entries.popLast() }
 
     mutating func removeAll() { entries.removeAll() }
+
+    /// 记录里保存旋转留着的原文件副本
+    var rotationBackups: [RotationBackup] {
+        entries.compactMap { if case .edit(.rotation(_, _, _, let b?)) = $0 { b } else { nil } }
+    }
 
     /// 写盘失败时：去掉这个文件最近一条评星记录（spec S-14：失败的操作不进撤销记录）
     mutating func removeLastRating(for url: URL) {

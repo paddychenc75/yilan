@@ -291,6 +291,7 @@ extension BrowserModel {
             trashBusy = false
             localChangeSerial += 1
         }
+        if case .rotation(_, _, _, let backup) = entry { backupInUse = backup }
         undoHistory.pop()
         hideToast()
         switch entry {
@@ -327,14 +328,32 @@ extension BrowserModel {
                 replaceItems(allItems.map { $0.url == url ? restored : $0 }, showing: restored)
                 rereadRatings([restored])
             }
-        case .rotation(let url, let old, _):
+        case .rotation(let url, let old, let new, let backup):
             let result = await Task.detached(priority: .userInitiated) { () -> Result<MediaItem?, Error> in
-                Result { try EditWriter.setOrientation(url, to: old); return FolderScanner.item(at: url) }
+                Result {
+                    // 成功、失败都用完了：这条记录已经去掉
+                    defer { if let backup { RotationBackupStore.discard(backup) } }
+                    if let backup {
+                        try RotationBackupStore.restore(url, from: backup, old: old, new: new)
+                    } else {
+                        try EditWriter.setOrientation(url, to: old)
+                    }
+                    return FolderScanner.item(at: url)
+                }
             }.value
+            backupInUse = nil
             switch result {
             case .failure(let error): return showUndoFailure(error)
             case .success(let fresh): refreshAfterRewrite(url, fresh: fresh)
             }
+        }
+    }
+
+    /// 撤销记录里已经没有的保存旋转：删掉它的原文件副本（正在撤销的那条除外）
+    func discardDroppedBackups(old: UndoHistory) {
+        let kept = undoHistory.rotationBackups
+        for b in old.rotationBackups where !kept.contains(b) && b != backupInUse {
+            Task.detached(priority: .utility) { RotationBackupStore.discard(b) }
         }
     }
 
@@ -382,17 +401,22 @@ extension BrowserModel {
                     localChangeSerial += 1
                 }
                 let url = item.url
-                let result = await Task.detached(priority: .userInitiated) { () -> Result<(Int, Int, MediaItem?), EditSaveError> in
+                let result = await Task.detached(priority: .userInitiated) { () -> Result<(Int, Int, MediaItem?, RotationBackup?), EditSaveError> in
+                    // 先留一份原文件：撤销时原样放回，逐字节相同（F2-03）
+                    let copy = RotationBackupStore.make(for: url)
                     do {
                         let (old, new) = try EditWriter.rotateInPlace(url, quarterTurns: turns)
-                        return .success((old, new, FolderScanner.item(at: url)))
+                        let backup = copy.flatMap { c in DiskStamp(url).map { RotationBackup(copy: c, written: $0) } }
+                        if backup == nil, let copy { try? FileManager.default.removeItem(at: copy) }
+                        return .success((old, new, FolderScanner.item(at: url), backup))
                     } catch {
+                        if let copy { try? FileManager.default.removeItem(at: copy) }
                         return .failure(EditSaveError.from(error, folder: url.deletingLastPathComponent()))
                     }
                 }.value
                 switch result {
-                case .success(let (old, new, fresh)):
-                    undoHistory.push(.edit(.rotation(url: url, old: old, new: new)))
+                case .success(let (old, new, fresh, backup)):
+                    undoHistory.push(.edit(.rotation(url: url, old: old, new: new, backup: backup)))
                     refreshAfterRewrite(url, fresh: fresh)
                     rotation = 0
                     showToast(symbol: "checkmark.circle", text: String(localized: "已保存旋转，画质不变"),
