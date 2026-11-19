@@ -58,6 +58,69 @@ struct TrafficLightTests {
         w.close()
     }
 
+    @Test("系统每次都把标题栏改回 28 高：不无限循环，最后按钮在 28 高的标题栏里居中、完整可见、间距不变（F1-02）")
+    func systemKeepsRevertingHeight() async throws {
+        let w = makeWindow()
+        let close = try #require(w.standardWindowButton(.closeButton))
+        let titlebar = try #require(close.superview)
+        let container = try #require(titlebar.superview)
+        // 模拟系统：标题栏容器一被改成别的高度，立刻（在通知里）改回 28
+        container.postsFrameChangedNotifications = true
+        var reverts = 0
+        let observer = NotificationCenter.default.addObserver(forName: NSView.frameDidChangeNotification, object: container, queue: nil) { _ in
+            MainActor.assumeIsolated {
+                guard container.frame.height != 28 else { return }
+                reverts += 1
+                var f = container.frame
+                f.size.height = 28
+                f.origin.y = w.frame.height - 28
+                container.frame = f
+            }
+        }
+        defer { NotificationCenter.default.removeObserver(observer) }
+        let keeper = TrafficLightKeeper(window: w)
+        // 限定时间内安静下来：之后不再有改动
+        var last = -1
+        for _ in 0..<100 where keeper.placements != last {
+            last = keeper.placements
+            await spin(5)
+        }
+        #expect(keeper.placements == last, "两秒内还没停下")
+        #expect(keeper.yielded)
+        #expect(reverts < 100)
+        // 三个按钮都完整落在标题栏里面，垂直居中，间距 20
+        let buttons = [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton].compactMap(w.standardWindowButton)
+        #expect(buttons.count == 3)
+        for b in buttons {
+            #expect(titlebar.bounds.contains(b.frame), "\(b.frame) 不在 \(titlebar.bounds) 里")
+            #expect(abs(b.frame.midY - titlebar.bounds.height / 2) < 0.01)
+        }
+        #expect(buttons[1].frame.minX - buttons[0].frame.minX == 20)
+        #expect(buttons[2].frame.minX - buttons[1].frame.minX == 20)
+        w.close()
+    }
+
+    @Test("按钮的位置永远按标题栏的实际高度算，并且整个按钮在标题栏里面（F1-02）")
+    func clampedToActualHeight() async throws {
+        let w = makeWindow()
+        WindowStyler.positionTrafficLights(w, insistHeight: false)
+        let close = try #require(w.standardWindowButton(.closeButton))
+        let titlebar = try #require(close.superview)
+        #expect(titlebar.bounds.contains(close.frame))
+        // 先按 56 摆好，再像系统那样只把高度改回 28：重新摆放后按钮回到 28 里面
+        WindowStyler.positionTrafficLights(w)
+        let container = try #require(titlebar.superview)
+        var f = container.frame
+        f.size.height = 28
+        f.origin.y = w.frame.height - 28
+        container.frame = f
+        #expect(WindowStyler.trafficLightsNeedPlacing(w, insistHeight: false))
+        WindowStyler.positionTrafficLights(w, insistHeight: false)
+        #expect(titlebar.bounds.contains(close.frame))
+        #expect(!WindowStyler.trafficLightsNeedPlacing(w, insistHeight: false))
+        w.close()
+    }
+
     @Test("窗口大小变化后仍在原位")
     func resize() async throws {
         let w = makeWindow()

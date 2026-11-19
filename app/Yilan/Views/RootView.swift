@@ -926,40 +926,44 @@ enum WindowStyler {
     /// 设计稿标题栏高 56，红绿灯（12pt，间距 8）距左 20、垂直居中。
     /// 系统默认标题栏只有约 28pt，这里把标题栏容器加高到 56，再把三个按钮摆到中线上
     /// left：第一个按钮（12pt）左边距；height：标题栏高，按钮在里面垂直居中
-    static func positionTrafficLights(_ window: NSWindow, left: CGFloat = 20, height: CGFloat = 56) {
+    static func positionTrafficLights(_ window: NSWindow, left: CGFloat = 20, height: CGFloat = 56, insistHeight: Bool = true) {
         guard !window.styleMask.contains(.fullScreen),
               let close = window.standardWindowButton(.closeButton),
               let titlebar = close.superview,
               let container = titlebar.superview else { return }
-        var frame = container.frame
-        if frame.height != height || frame.origin.y != window.frame.height - height {
-            frame.size.height = height
-            frame.origin.y = window.frame.height - height
-            container.frame = frame
+        if insistHeight {
+            var frame = container.frame
+            if frame.height != height || frame.origin.y != window.frame.height - height {
+                frame.size.height = height
+                frame.origin.y = window.frame.height - height
+                container.frame = frame
+            }
         }
+        // 按此刻标题栏的实际高度算（设置之后再读；系统可能已经改回 28），不用想要的 56
         for (button, origin) in buttonOrigins(window, titlebar: titlebar, left: left)
         where button.frame.origin != origin {
             button.setFrameOrigin(origin)
         }
     }
 
-    /// 三个按钮应在的位置（标题栏坐标）
+    /// 三个按钮应在的位置（标题栏坐标）：在标题栏的实际高度里垂直居中，并且整个按钮一定在标题栏里面（不会被裁掉）
     private static func buttonOrigins(_ window: NSWindow, titlebar: NSView, left: CGFloat) -> [(NSButton, NSPoint)] {
         let buttons = [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton].compactMap(window.standardWindowButton)
+        let barHeight = titlebar.bounds.height
         return buttons.enumerated().map { i, button in
             let size = button.frame.size
-            return (button, NSPoint(x: left + CGFloat(i) * 20 - (size.width - 12) / 2,
-                                    y: (titlebar.frame.height - size.height) / 2))
+            let y = min(max(0, (barHeight - size.height) / 2), max(0, barHeight - size.height))
+            return (button, NSPoint(x: left + CGFloat(i) * 20 - (size.width - 12) / 2, y: y))
         }
     }
 
-    /// 红绿灯不在设计的位置上（标题栏容器高度、位置或按钮位置不对）
-    static func trafficLightsNeedPlacing(_ window: NSWindow, left: CGFloat = 20, height: CGFloat = 56) -> Bool {
+    /// 红绿灯不在应在的位置上（insistHeight 时还要求标题栏容器是设计的高度）
+    static func trafficLightsNeedPlacing(_ window: NSWindow, left: CGFloat = 20, height: CGFloat = 56, insistHeight: Bool = true) -> Bool {
         guard !window.styleMask.contains(.fullScreen),
               let close = window.standardWindowButton(.closeButton),
               let titlebar = close.superview,
               let container = titlebar.superview else { return false }
-        if container.frame.height != height || container.frame.origin.y != window.frame.height - height { return true }
+        if insistHeight, container.frame.height != height || container.frame.origin.y != window.frame.height - height { return true }
         return buttonOrigins(window, titlebar: titlebar, left: left).contains { $0.0.frame.origin != $0.1 }
     }
 }
@@ -982,6 +986,9 @@ final class TrafficLightKeeper {
     private var transitioning = false
     private var transitionSerial = 0
     private var corrections: [Date] = []
+    /// 系统反复把标题栏改回默认高度时退让：不再加高，只在系统给的高度里居中（下一次窗口事件再试）
+    private(set) var yielded = false
+    private var gaveUp = false
     /// 测试用：摆正（真的改了位置）的次数
     private(set) var placements = 0
 
@@ -1044,6 +1051,8 @@ final class TrafficLightKeeper {
     /// 窗口事件：重新开始计数，立即摆一次，下一轮再看一次（有的系统调整在通知之后才发生）
     private func windowEvent() {
         corrections.removeAll()
+        yielded = false
+        gaveUp = false
         place()
         placeSoon()
     }
@@ -1063,11 +1072,25 @@ final class TrafficLightKeeper {
     func place() {
         guard let window, !transitioning, !window.styleMask.contains(.fullScreen) else { return }
         watchFrames(window)
-        guard WindowStyler.trafficLightsNeedPlacing(window, left: left, height: height) else { return }
+        // 退让后不再加高标题栏，只在系统给的高度里居中
+        let insist = !yielded
+        guard WindowStyler.trafficLightsNeedPlacing(window, left: left, height: height, insistHeight: insist) else { return }
         let now = Date()
         corrections = corrections.filter { now.timeIntervalSince($0) < 1 } + [now]
-        guard corrections.count <= 30 else { return }
-        WindowStyler.positionTrafficLights(window, left: left, height: height)
+        if corrections.count > 30 {
+            guard !gaveUp else { return }
+            if insist {
+                // 系统一直把标题栏改回去：不再坚持 56，按系统给的实际高度把按钮居中摆好（完整可见），再计一轮
+                yielded = true
+                corrections.removeAll()
+                WindowStyler.positionTrafficLights(window, left: left, height: height, insistHeight: false)
+                placements += 1
+            } else {
+                gaveUp = true   // 连居中都在争：先停下，等下一次窗口事件
+            }
+            return
+        }
+        WindowStyler.positionTrafficLights(window, left: left, height: height, insistHeight: insist)
         placements += 1
     }
 
