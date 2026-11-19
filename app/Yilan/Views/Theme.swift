@@ -39,6 +39,9 @@ enum Theme {
     static let dockMaxWidth: CGFloat = 900
     static let dockFullScreenWidth: CGFloat = 960      // 全屏时的缩略图栏宽度
 
+    /// macOS 15 替代玻璃上加的黑色底（不透明度）
+    static let legacyGlassTint: Double = 0.32
+
     static func mono(_ size: CGFloat, _ weight: Font.Weight = .medium) -> Font {
         .system(size: size, weight: weight, design: .monospaced)
     }
@@ -57,8 +60,22 @@ extension View {
         if #available(macOS 26.0, *) {
             glassEffect(.regular.interactive(interactive), in: shape)
         } else {
-            background(shape.fill(.ultraThinMaterial))
-                .overlay(shape.stroke(Color.white.opacity(0.12), lineWidth: 1))
+            // 毛玻璃很透，压在很亮的照片上时白字和蓝字看不清（v0.3.1 F1-04）：材质上再铺一层黑 32%
+            background(ZStack {
+                shape.fill(.ultraThinMaterial)
+                shape.fill(Color.black.opacity(Theme.legacyGlassTint))
+            })
+            .overlay(shape.stroke(Color.white.opacity(0.12), lineWidth: 1))
+        }
+    }
+
+    /// 直接压在照片上的小字（标题栏的文件夹名）：macOS 15 上加一层阴影，亮照片上也看得清；macOS 26 不变
+    @ViewBuilder
+    func legacyLegibilityShadow() -> some View {
+        if #available(macOS 26.0, *) {
+            self
+        } else {
+            shadow(color: .black.opacity(0.6), radius: 3, y: 1)
         }
     }
 

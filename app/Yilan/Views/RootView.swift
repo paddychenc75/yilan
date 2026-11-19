@@ -271,6 +271,7 @@ struct RootView: View {
                         Text(subtitle)
                             .font(.system(size: 11))
                             .foregroundStyle(Theme.text2)
+                            .legacyLegibilityShadow()
                     }
                     .lineLimit(1)
                     .truncationMode(.middle)
