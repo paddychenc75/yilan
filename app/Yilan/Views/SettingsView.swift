@@ -595,6 +595,7 @@ struct SettingsRow<Control: View>: View {
 final class SettingsWindow: NSObject, NSWindowDelegate {
     static let shared = SettingsWindow()
     private var window: NSWindow?
+    private var trafficLights: TrafficLightKeeper?
 
     /// 打开设置并切到某一页
     func show(pane: SettingsView.Pane) {
@@ -616,6 +617,7 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
             w.backgroundColor = NSColor(red: 0x1e / 255, green: 0x1e / 255, blue: 0x21 / 255, alpha: 1)
             w.isMovableByWindowBackground = true
             w.isReleasedWhenClosed = false
+            w.tabbingMode = .disallowed
             // SwiftUI 视图套一层普通 NSView：窗口大小由这里定，SwiftUI 不会再按“内容区 + 标题栏”把窗口撑高
             let hosting = NSHostingView(rootView: SettingsView(settings: AppSettings.shared, language: LanguageSettings.shared))
             hosting.sizingOptions = []
@@ -629,12 +631,14 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
             w.setFrame(NSRect(origin: .zero, size: Self.clamped(size, on: NSScreen.main)), display: false)
             w.center()
             window = w
+            // 设计稿：红绿灯在侧边栏里，第一个距窗口左 24，中心距顶 28；系统挪动后自动摆回
+            trafficLights = TrafficLightKeeper(window: w, left: 24, height: 56)
         } else if let window {
             fit(to: SettingsNavigation.shared.pane)
             _ = window
         }
         guard let window else { return }
-        placeTrafficLights(window)
+        trafficLights?.place()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate()
     }
@@ -656,12 +660,5 @@ final class SettingsWindow: NSObject, NSWindowDelegate {
         return CGSize(width: size.width, height: min(size.height, visible.height - 40))
     }
 
-    /// 设计稿：红绿灯在侧边栏里，第一个距窗口左 24，中心距顶 28
-    private func placeTrafficLights(_ window: NSWindow) {
-        WindowStyler.positionTrafficLights(window, left: 24, height: 56)
-    }
 
-    func windowDidBecomeKey(_ notification: Notification) { if let window { placeTrafficLights(window) } }
-    func windowDidResignKey(_ notification: Notification) { if let window { placeTrafficLights(window) } }
-    func windowDidResize(_ notification: Notification) { if let window { placeTrafficLights(window) } }
 }

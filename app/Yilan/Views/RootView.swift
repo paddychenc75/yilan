@@ -872,25 +872,18 @@ struct WindowAccessor: NSViewRepresentable {
     final class WindowObservingView: NSView {
         var onWindow: ((NSWindow) -> Void)?
         private var observers: [NSObjectProtocol] = []
+        private var keeper: TrafficLightKeeper?
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             observers.forEach(NotificationCenter.default.removeObserver)
             observers.removeAll()
-            guard let window else { return }
+            guard let window else { keeper = nil; return }
             WindowStyler.configure(window)
-            WindowStyler.positionTrafficLights(window)
             onWindow?(window)
-            // 系统在缩放窗口、退出全屏时会把红绿灯放回原位，需要重新摆放
-            let names: [Notification.Name] = [NSWindow.didResizeNotification, NSWindow.didExitFullScreenNotification,
-                                              NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification]
-            for name in names {
-                observers.append(NotificationCenter.default.addObserver(forName: name, object: window, queue: .main) { [weak window] _ in
-                    MainActor.assumeIsolated {
-                        if let window { WindowStyler.positionTrafficLights(window) }
-                    }
-                })
-            }
+            // 系统在很多时候会把红绿灯放回默认位置（缩放、退出全屏、换屏幕、标题栏重新布局……），
+            // 由它在这些时候都重新摆正
+            keeper = TrafficLightKeeper(window: window)
             // 上次的位置可能在已经断开的显示器上：启动时（等系统恢复完窗口位置）和显示器变化时检查
             WindowPlacement.ensureOnScreen(window)
             DispatchQueue.main.async { [weak window] in
@@ -905,7 +898,7 @@ struct WindowAccessor: NSViewRepresentable {
 
         override func layout() {
             super.layout()
-            if let window { WindowStyler.positionTrafficLights(window) }
+            keeper?.place()
         }
     }
 }
@@ -922,6 +915,8 @@ enum WindowStyler {
         window.minSize = NSSize(width: 640, height: 440)
         window.isMovableByWindowBackground = false
         window.titlebarSeparatorStyle = .none
+        // 系统设置里选了「总是以标签页打开」时，窗口会带标签栏，标题栏结构跟着变，红绿灯位置就不对了
+        window.tabbingMode = .disallowed
     }
 
     /// 设计稿标题栏高 56，红绿灯（12pt，间距 8）距左 20、垂直居中。
@@ -938,12 +933,154 @@ enum WindowStyler {
             frame.origin.y = window.frame.height - height
             container.frame = frame
         }
+        for (button, origin) in buttonOrigins(window, titlebar: titlebar, left: left)
+        where button.frame.origin != origin {
+            button.setFrameOrigin(origin)
+        }
+    }
+
+    /// 三个按钮应在的位置（标题栏坐标）
+    private static func buttonOrigins(_ window: NSWindow, titlebar: NSView, left: CGFloat) -> [(NSButton, NSPoint)] {
         let buttons = [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton].compactMap(window.standardWindowButton)
-        for (i, button) in buttons.enumerated() {
+        return buttons.enumerated().map { i, button in
             let size = button.frame.size
-            let x = left + CGFloat(i) * 20 - (size.width - 12) / 2
-            let y = (titlebar.frame.height - size.height) / 2
-            if button.frame.origin != NSPoint(x: x, y: y) { button.setFrameOrigin(NSPoint(x: x, y: y)) }
+            return (button, NSPoint(x: left + CGFloat(i) * 20 - (size.width - 12) / 2,
+                                    y: (titlebar.frame.height - size.height) / 2))
+        }
+    }
+
+    /// 红绿灯不在设计的位置上（标题栏容器高度、位置或按钮位置不对）
+    static func trafficLightsNeedPlacing(_ window: NSWindow, left: CGFloat = 20, height: CGFloat = 56) -> Bool {
+        guard !window.styleMask.contains(.fullScreen),
+              let close = window.standardWindowButton(.closeButton),
+              let titlebar = close.superview,
+              let container = titlebar.superview else { return false }
+        if container.frame.height != height || container.frame.origin.y != window.frame.height - height { return true }
+        return buttonOrigins(window, titlebar: titlebar, left: left).contains { $0.0.frame.origin != $0.1 }
+    }
+}
+
+/// 让红绿灯一直待在设计的位置（spec F1-02）。
+/// 系统会在很多时候把标题栏容器和三个按钮放回默认位置：缩放、结束拖拽调整大小、成为 / 失去主窗口和键窗口、
+/// 退出全屏、换屏幕或缩放比例、标题栏自己重新布局等。这里在所有这些时候重新摆正，
+/// 并直接盯着标题栏容器和按钮的 frame：被别人改了就在下一轮摆回来。
+/// 摆正时只在位置真的不同时才设置 frame，自己引起的 frame 通知下一轮再看时已经一致，不会循环；
+/// 万一系统和这里反复争（1 秒内超过 30 次），先停下，等下一次窗口事件再摆。全屏和进出全屏的过程中不摆
+@MainActor
+final class TrafficLightKeeper {
+    private weak var window: NSWindow?
+    private let left: CGFloat
+    private let height: CGFloat
+    /// 只在主线程改；deinit 里移除
+    private nonisolated(unsafe) var observers: [NSObjectProtocol] = []
+    private var watchedViews: [ObjectIdentifier] = []
+    private var pending = false
+    private var transitioning = false
+    private var transitionSerial = 0
+    private var corrections: [Date] = []
+    /// 测试用：摆正（真的改了位置）的次数
+    private(set) var placements = 0
+
+    init(window: NSWindow, left: CGFloat = 20, height: CGFloat = 56) {
+        self.window = window
+        self.left = left
+        self.height = height
+        let center = NotificationCenter.default
+        let events: [Notification.Name] = [
+            NSWindow.didResizeNotification, NSWindow.didEndLiveResizeNotification,
+            NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification,
+            NSWindow.didBecomeMainNotification, NSWindow.didResignMainNotification,
+            NSWindow.didChangeScreenNotification, NSWindow.didChangeBackingPropertiesNotification,
+            NSWindow.didDeminiaturizeNotification, NSWindow.didChangeOcclusionStateNotification,
+        ]
+        for name in events {
+            observers.append(center.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.windowEvent() }
+            })
+        }
+        for name in [NSWindow.willEnterFullScreenNotification, NSWindow.willExitFullScreenNotification] {
+            observers.append(center.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.beginTransition() }
+            })
+        }
+        for name in [NSWindow.didEnterFullScreenNotification, NSWindow.didExitFullScreenNotification] {
+            observers.append(center.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    self?.transitioning = false
+                    self?.windowEvent()
+                }
+            })
+        }
+        observers.append(center.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.windowEvent() }
+        })
+        place()
+        // 启动时系统还会再布局一次标题栏（恢复窗口位置、第一次显示），之后再补一次
+        placeSoon()
+    }
+
+    deinit {
+        observers.forEach(NotificationCenter.default.removeObserver)
+    }
+
+    /// 进出全屏的动画中不摆；万一没收到结束通知（进出全屏失败），3 秒后恢复
+    private func beginTransition() {
+        transitioning = true
+        transitionSerial += 1
+        let serial = transitionSerial
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.transitioning, self.transitionSerial == serial else { return }
+                self.transitioning = false
+                self.windowEvent()
+            }
+        }
+    }
+
+    /// 窗口事件：重新开始计数，立即摆一次，下一轮再看一次（有的系统调整在通知之后才发生）
+    private func windowEvent() {
+        corrections.removeAll()
+        place()
+        placeSoon()
+    }
+
+    /// 下一轮再摆（合并多次请求）
+    func placeSoon() {
+        guard !pending else { return }
+        pending = true
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated {
+                self?.pending = false
+                self?.place()
+            }
+        }
+    }
+
+    func place() {
+        guard let window, !transitioning, !window.styleMask.contains(.fullScreen) else { return }
+        watchFrames(window)
+        guard WindowStyler.trafficLightsNeedPlacing(window, left: left, height: height) else { return }
+        let now = Date()
+        corrections = corrections.filter { now.timeIntervalSince($0) < 1 } + [now]
+        guard corrections.count <= 30 else { return }
+        WindowStyler.positionTrafficLights(window, left: left, height: height)
+        placements += 1
+    }
+
+    /// 标题栏容器、标题栏和三个按钮的 frame 被改动时（系统重新布局）下一轮摆回来
+    private func watchFrames(_ window: NSWindow) {
+        guard let close = window.standardWindowButton(.closeButton), let titlebar = close.superview,
+              let container = titlebar.superview else { return }
+        let views = [container, titlebar] + [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton]
+            .compactMap(window.standardWindowButton)
+        let ids = views.map(ObjectIdentifier.init)
+        guard ids != watchedViews else { return }
+        watchedViews = ids
+        for view in views {
+            view.postsFrameChangedNotifications = true
+            observers.append(NotificationCenter.default.addObserver(forName: NSView.frameDidChangeNotification, object: view, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.placeSoon() }
+            })
         }
     }
 }
