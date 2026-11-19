@@ -44,7 +44,8 @@ extension BrowserModel {
         items = resultList()
         if items.isEmpty, let previous { emptyResultAnchor = previous }
         let index = FilterSelection.indexAfterFilterChange(keeping: previous, in: allItems, newList: items)
-        if let index, items[index] == previous {
+        // 当前文件还在、大图也还是它：原地不动。结果为 0 后恢复到记下的那张时大图已经清空，要重新加载
+        if let index, items[index] == previous, displayedItem == previous, currentIndex != nil {
             currentIndex = index
         } else {
             select(index)

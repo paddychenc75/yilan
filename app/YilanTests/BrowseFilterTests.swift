@@ -135,6 +135,33 @@ struct BrowseFilterBrowserTests {
         #expect(m.current?.name == "c.jpg")
     }
 
+    @Test("结果为 0 时清除筛选：回到那张后大图重新加载，不留空白（F1-03 回归）")
+    func clearAfterEmptyLoadsStage() async {
+        let m = model(["a.jpg", "b.jpg", "c.jpg", "d.jpg"], ratings: [1, 2, 3, 4])
+        m.select(2)
+        m.setRatingCriterion(.stars(5))
+        #expect(m.current == nil)
+        #expect(await stageShows(m, "c.jpg") == false)   // 结果为 0 时大图区是空的
+        m.clearBrowseFilter()
+        #expect(m.current?.name == "c.jpg")
+        // 发起了加载：大图区归到这张（测试里文件不存在，显示出错卡片也算有内容）
+        #expect(await stageShows(m, "c.jpg"))
+        // 改成另一个有结果的条件也一样
+        m.setRatingCriterion(.stars(5))
+        m.setRatingCriterion(.stars(4))
+        #expect(m.current?.name == "d.jpg")
+        #expect(await stageShows(m, "d.jpg"))
+    }
+
+    /// 大图区归到了这个文件（图、缩略图占位或出错卡片），最多等 2 秒
+    private func stageShows(_ m: BrowserModel, _ name: String) async -> Bool {
+        for _ in 0..<200 {
+            if m.displayedItem?.name == name && (m.displayed != nil || m.placeholder != nil || m.failure != nil) { return true }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        return false
+    }
+
     @Test("结果为 0 后改成另一个有结果的条件：按变空前那张的位置选（F1-03）")
     func relaxAfterEmpty() {
         let m = model(["a.jpg", "b.jpg", "c.jpg", "d.jpg"], ratings: [4, 1, 1, 4])
