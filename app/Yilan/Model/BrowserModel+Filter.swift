@@ -37,10 +37,12 @@ extension BrowserModel {
     /// 改筛选条件：立即生效（spec R5-08）。当前文件还在就不动，不在就按 F-03 选
     func setBrowseFilter(_ newFilter: BrowseFilter) {
         guard newFilter != browseFilter else { return }
-        let previous = current
+        // 结果为 0 时没有当前文件：按变空之前在看的那张来选（spec F1-03）
+        let previous = current ?? emptyResultAnchor.flatMap { anchor in allItems.first { $0.url == anchor.url } }
         browseFilter = newFilter
         stickyURL = nil
         items = resultList()
+        if items.isEmpty, let previous { emptyResultAnchor = previous }
         let index = FilterSelection.indexAfterFilterChange(keeping: previous, in: allItems, newList: items)
         if let index, items[index] == previous {
             currentIndex = index
@@ -91,6 +93,7 @@ extension BrowserModel {
         browseFilter = BrowseFilter()
         stickyURL = nil
         filterPanelOpen = false
+        emptyResultAnchor = nil
     }
 
     // MARK: - 面板

@@ -173,6 +173,8 @@ final class BrowserModel {
     var filterPanelOpen = false
     /// 暂留：当前文件已经不符合条件，但留在结果里直到切走（spec F-01）
     @ObservationIgnored var stickyURL: URL?
+    /// 结果变空前最后在看的文件：清除或放宽筛选后回到它（spec F1-03）
+    @ObservationIgnored var emptyResultAnchor: MediaItem?
 
     // MARK: 评星（BrowserModel+Rating）
 
@@ -403,10 +405,13 @@ final class BrowserModel {
             }
         }
         guard let index, items.indices.contains(index) else {
+            // 结果变空（例如筛选结果为 0）：记住刚才在看的那张，清除筛选后回到它（spec F1-03）
+            if let current { emptyResultAnchor = current }
             currentIndex = nil
             loadCurrent()
             return
         }
+        emptyResultAnchor = nil
         guard index != currentIndex || displayedItem != items[index] else { return }
         Perf.beginSwitch(to: items[index].url)
         currentIndex = index

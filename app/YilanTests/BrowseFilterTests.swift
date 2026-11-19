@@ -123,6 +123,38 @@ struct BrowseFilterBrowserTests {
         #expect(m.current?.name == "c.jpg")
     }
 
+    @Test("结果为 0 时清除筛选：回到设筛选前在看的那张（F1-03）")
+    func clearAfterEmptyReturns() {
+        let m = model(["a.jpg", "b.jpg", "c.jpg", "d.jpg"], ratings: [1, 2, 3, 4])
+        m.select(2)                                      // 在看 c
+        m.setRatingCriterion(.stars(5))                  // 没有 5 星
+        #expect(m.items.isEmpty)
+        #expect(m.current == nil)
+        m.clearBrowseFilter()
+        #expect(m.items.count == 4)
+        #expect(m.current?.name == "c.jpg")
+    }
+
+    @Test("结果为 0 后改成另一个有结果的条件：按变空前那张的位置选（F1-03）")
+    func relaxAfterEmpty() {
+        let m = model(["a.jpg", "b.jpg", "c.jpg", "d.jpg"], ratings: [4, 1, 1, 4])
+        m.select(2)                                      // 在看 c（1 星）
+        m.setRatingCriterion(.stars(5))
+        #expect(m.items.isEmpty)
+        m.setRatingCriterion(.stars(4))                  // a、d：c 不在里面，显示它后面的第一个
+        #expect(m.current?.name == "d.jpg")
+    }
+
+    @Test("结果不为 0 时清除筛选：和以前一样停在当前这张（F1-03）")
+    func clearNonEmptyUnchanged() {
+        let m = model(["a.jpg", "b.jpg", "c.jpg", "d.jpg"], ratings: [5, 1, 4, 0])
+        m.select(1)                                      // b
+        m.setRatingCriterion(.stars(4))                  // a、c：b 不在，显示 c
+        #expect(m.current?.name == "c.jpg")
+        m.clearBrowseFilter()
+        #expect(m.current?.name == "c.jpg")
+    }
+
     @Test("给当前文件改星导致不符合：暂留到切走（F-01、F-02）")
     func sticky() {
         let m = model(["a.jpg", "b.jpg", "c.jpg"], ratings: [5, 5, 5])
