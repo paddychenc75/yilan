@@ -32,6 +32,7 @@ struct TrafficLightTests {
         #expect(close.frame.midY == titlebar.frame.height / 2)
         #expect(close.frame.minX + (close.frame.width - 12) / 2 == 20)
         _ = keeper
+        w.close()
     }
 
     @Test("按钮或标题栏容器被挪回默认位置：下一轮自动摆回来，而且不会来回循环")
@@ -54,6 +55,7 @@ struct TrafficLightTests {
         let count = keeper.placements
         await spin(10)
         #expect(keeper.placements == count)
+        w.close()
     }
 
     @Test("窗口大小变化后仍在原位")
@@ -64,10 +66,30 @@ struct TrafficLightTests {
         await spin()
         #expect(!WindowStyler.trafficLightsNeedPlacing(w))
         _ = keeper
+        w.close()
+    }
+
+    @Test("不持有窗口：窗口关掉释放后，摆正的帮手什么也不做，也不留下计时")
+    func doesNotRetainWindow() async {
+        weak var weakWindow: NSWindow?
+        var keeper: TrafficLightKeeper?
+        do {
+            let w = makeWindow()
+            weakWindow = w
+            keeper = TrafficLightKeeper(window: w)
+            await spin()
+            w.close()
+        }
+        await spin()
+        #expect(weakWindow == nil)
+        keeper?.place()
+        keeper = nil
     }
 
     @Test("窗口不用标签页（系统设置「总是以标签页打开」不影响标题栏）")
     func noTabs() {
-        #expect(makeWindow().tabbingMode == .disallowed)
+        let w = makeWindow()
+        #expect(w.tabbingMode == .disallowed)
+        w.close()
     }
 }

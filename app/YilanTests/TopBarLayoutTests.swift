@@ -66,6 +66,7 @@ struct ZoomStateTests {
 }
 
 @Suite("设置：显示的页")
+@MainActor
 struct SettingsPanesTests {
     @Test("「缓存与性能」还没有选项：不在侧边栏里（F1-05），其余各页都在")
     func cacheHidden() {
