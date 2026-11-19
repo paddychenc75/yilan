@@ -432,6 +432,7 @@ final class BrowserModel {
 
     /// 解码尺寸：所在屏幕的长边像素（Retina 按物理像素）
     private var displayMaxPixel: Int {
+        if let forced = Perf.forcedDecodeSize { return forced }   // 只在性能测量时（启动参数）
         if let screenMaxPixel { return screenMaxPixel }
         guard let screen = NSApp.keyWindow?.screen ?? NSScreen.main else { return 3072 }
         return Self.maxPixel(for: screen)
