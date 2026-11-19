@@ -327,3 +327,25 @@ struct RatingModelTests {
         await idle(model)
     }
 }
+
+@Suite("读星级的先后")
+struct RatingLoadOrderTests {
+    private func item(_ n: Int) -> MediaItem {
+        MediaItem(url: URL(fileURLWithPath: "/tmp/yilan-order/\(n).jpg"), format: .standard,
+                  fileSize: 1, modificationDate: Date(timeIntervalSince1970: 0))
+    }
+
+    @Test("离当前位置近的先读；几千个文件也很快")
+    func nearestFirst() {
+        let all = (0..<10).map(item)
+        let order = BrowserModel.nearestFirst([all[0], all[9], all[4], all[6], all[5]], in: all, center: 5)
+        #expect(order.first == all[5])
+        #expect(Set(order.prefix(3)) == [all[5], all[4], all[6]])
+        #expect(order.last == all[0])
+        let many = (0..<5000).map(item)
+        let start = ContinuousClock.now
+        let sorted = BrowserModel.nearestFirst(many, in: many, center: 2500)
+        #expect(sorted.count == 5000 && sorted.first == many[2500])
+        #expect(ContinuousClock.now - start < .milliseconds(200))
+    }
+}

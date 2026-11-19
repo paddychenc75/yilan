@@ -210,9 +210,8 @@ extension BrowserModel {
             for _ in 0..<15 where displayed == nil && current != nil {
                 try? await Task.sleep(for: .milliseconds(20))
             }
-            let ordered = missing.enumerated()
-                .sorted { abs(all.firstIndex(of: $0.element).map { $0 - center } ?? 0) < abs(all.firstIndex(of: $1.element).map { $0 - center } ?? 0) }
-                .map(\.element)
+            // 先算好每个文件的位置再排序（以前在比较里逐个查位置，几千个文件时主线程会卡上好几秒）
+            let ordered = Self.nearestFirst(missing, in: all, center: center)
             var start = 0
             while start < ordered.count {
                 guard !Task.isCancelled else { return }
@@ -224,6 +223,14 @@ extension BrowserModel {
             }
             ratingsLoaded = true
         }
+    }
+
+    /// 按离 center（在 all 里的位置）的远近排好；不在 all 里的算在 center 上
+    nonisolated static func nearestFirst(_ items: [MediaItem], in all: [MediaItem], center: Int) -> [MediaItem] {
+        let position = Dictionary(all.enumerated().map { ($1.url, $0) }, uniquingKeysWith: { first, _ in first })
+        return items.map { ($0, abs((position[$0.url] ?? center) - center)) }
+            .sorted { $0.1 < $1.1 }
+            .map(\.0)
     }
 
     /// 读一批：4 路并行
