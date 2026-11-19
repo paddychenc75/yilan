@@ -64,3 +64,12 @@ struct ZoomStateTests {
         #expect(ZoomPercentLabel.text(200).contains("200"))
     }
 }
+
+@Suite("设置：显示的页")
+struct SettingsPanesTests {
+    @Test("「缓存与性能」还没有选项：不在侧边栏里（F1-05），其余各页都在")
+    func cacheHidden() {
+        #expect(!SettingsView.shownPanes.contains(.cache))
+        #expect(SettingsView.shownPanes == [.general, .browsing, .video, .formats, .shortcuts])
+    }
+}

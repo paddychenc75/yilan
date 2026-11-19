@@ -41,6 +41,9 @@ struct SettingsView: View {
         }
     }
 
+    /// 侧边栏和搜索里出现的页。「缓存与性能」还没有选项，先不显示（v0.3.1 F1-05，代码保留，有内容后加回来）
+    static let shownPanes: [Pane] = Pane.allCases.filter { $0 != .cache }
+
     static let size = CGSize(width: 820, height: 700)
     /// 文件格式页 20 个格式要一屏放下，窗口加高（屏幕不够高时内容区滚动）
     static func size(for pane: Pane) -> CGSize {
@@ -87,7 +90,7 @@ struct SettingsView: View {
 
     private var visiblePanes: [Pane] {
         let q = search.trimmingCharacters(in: .whitespaces)
-        return q.isEmpty ? Pane.allCases : Pane.allCases.filter { String(localized: $0.title).localizedCaseInsensitiveContains(q) }
+        return q.isEmpty ? Self.shownPanes : Self.shownPanes.filter { String(localized: $0.title).localizedCaseInsensitiveContains(q) }
     }
 
     private var sidebar: some View {
@@ -505,7 +508,8 @@ struct SettingsRadioRow: View {
 @Observable
 final class SettingsNavigation {
     static let shared = SettingsNavigation()
-    var pane: SettingsView.Pane = ShotHooks.settingsPane.flatMap(SettingsView.Pane.init(rawValue:)) ?? .browsing
+    var pane: SettingsView.Pane = ShotHooks.settingsPane.flatMap(SettingsView.Pane.init(rawValue:))
+        .flatMap { SettingsView.shownPanes.contains($0) ? $0 : nil } ?? .browsing
 }
 
 /// 设计稿 .tg：38 × 22 的开关，打开时蓝色
