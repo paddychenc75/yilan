@@ -63,4 +63,11 @@ struct InfoPanelStarsTests {
             }
         }
     }
+
+    @Test("信息面板只放一份：内容全部展开放得下就不滚动，放不下才滚动（F1-07 不再用 ViewThatFits 在两份之间切换）")
+    func scrollDecision() {
+        #expect(!InfoPanel.scrolls(naturalHeight: 500, maxHeight: 600))
+        #expect(!InfoPanel.scrolls(naturalHeight: 600.3, maxHeight: 600))
+        #expect(InfoPanel.scrolls(naturalHeight: 640, maxHeight: 600))
+    }
 }

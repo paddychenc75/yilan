@@ -26,16 +26,40 @@ struct InfoPanel: View {
 
     /// 滚动区下面还有没显示的内容
     @State private var hasMoreBelow = false
+    /// 内容全部展开时面板的高度（隐藏的一份量出来）
+    @State private var naturalHeight: CGFloat = 0
 
+    /// 以前用 ViewThatFits 在「不滚动」「滚动」两份面板里挑：内容变化（换文件、信息读完变长）时
+    /// 两份之间切换，macOS 15 上切换后有的元素不画（v0.3.1 F1-07：第 5 颗星、「创建时间」标签不见了）。
+    /// 现在只放一份面板：放不放得下由隐藏的一份量出来决定；切换时、换文件时整份重建，不在两种布局之间搬动视图
     var body: some View {
-        ViewThatFits(in: .vertical) {
-            panel(scrolls: false)
-            panel(scrolls: true)
-        }
-        .frame(width: Self.width)
-        .frame(maxHeight: maxHeight, alignment: .top)
-        .fixedSize(horizontal: false, vertical: true)
-        .thickGlass(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        let scrolls = Self.scrolls(naturalHeight: naturalHeight, maxHeight: maxHeight)
+        panel(scrolls: scrolls)
+            .id(PanelIdentity(file: item?.url, scrolls: scrolls))
+            .frame(width: Self.width)
+            .frame(maxHeight: maxHeight, alignment: .top)
+            .fixedSize(horizontal: false, vertical: true)
+            .background(alignment: .top) {
+                panel(scrolls: false)
+                    .frame(width: Self.width)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .hidden()
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { naturalHeight = $0 }
+            }
+            .thickGlass(RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+
+    /// 面板内容的身份：换了文件或换了滚动方式就整份重建
+    private struct PanelIdentity: Hashable {
+        let file: URL?
+        let scrolls: Bool
+    }
+
+    /// 内容全部展开时放不放得下（测试用）
+    nonisolated static func scrolls(naturalHeight: CGFloat, maxHeight: CGFloat) -> Bool {
+        naturalHeight > maxHeight + 0.5
     }
 
     private func panel(scrolls: Bool) -> some View {
