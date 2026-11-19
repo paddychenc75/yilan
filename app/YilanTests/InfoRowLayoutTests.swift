@@ -1,4 +1,6 @@
+import AppKit
 import CoreGraphics
+import SwiftUI
 import Testing
 @testable import Yilan
 
@@ -45,5 +47,20 @@ struct InfoRowLayoutTests {
         // 信息行和缩略图栏间距 6，格子在 62 高的栏里上下各留 5，选中放大 1.12 → 上沿最多上移 2.9
         let thumbTop = 6 + 5 - 52 * 0.06
         #expect(InfoRowStars.hitBottom < thumbTop)
+    }
+}
+
+/// F1-07「信息面板 5 星只画 4 颗」：五颗星是固定 5 个、固定尺寸，宽度够用，不会被挤掉
+@Suite("信息面板的五颗星")
+@MainActor
+struct InfoPanelStarsTests {
+    @Test("五颗星一共 92 宽（16 × 5 + 3 × 4），任何星级、能不能评都一样")
+    func fiveStarsFit() {
+        for rating in 0...5 {
+            for enabled in [true, false] {
+                let view = NSHostingView(rootView: StarRow(rating: rating, size: 16, spacing: 3, enabled: enabled) { _ in })
+                #expect(view.fittingSize.width == 92)
+            }
+        }
     }
 }
