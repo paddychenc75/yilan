@@ -46,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         BrowserModel.shared.saveRecentCover()
+        UpdateChecker.shared.stopPeriodicChecks()
     }
 
     /// 还有没写完的星级时先等一等（最多 3 秒，spec S-20）
@@ -70,7 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         // 从 v0.2 升级后第一次启动：说明快捷键变化（spec K-10）
         BrowserModel.shared.showUpgradeNoticeIfNeeded()
-        // 更新检查：启动约 3 秒后在后台（spec U1-01）；跑测试和截图时不联网
+        // 更新检查：启动约 3 秒后在后台（spec U1-01，距上次自动检查不到 1 小时就不联网）；跑测试和截图时不联网
         let updater = UpdateChecker.shared
         updater.toast = { symbol, text, warning in
             BrowserModel.shared.showToast(symbol: symbol, text: text, tone: warning ? .warning : .normal, duration: 4)
@@ -81,6 +82,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 try? await Task.sleep(for: .seconds(3))
                 // 这次启动已经有快捷键变化提示：新版本提醒顺延到下次启动（spec U2-03）
                 await updater.launchCheck(deferNotice: BrowserModel.shared.upgradeNoticeShown)
+                // 一直开着时每 6 小时在后台再查一次，只出 ⋯ 上的小点（F2-01）
+                updater.startPeriodicChecks()
             }
         }
         // 访达“打开方式”的文件在这之前已经送到；稍等一下再决定要不要打开上次的文件夹

@@ -144,7 +144,7 @@ struct UpdatePolicyTests {
         return (u, t, d)
     }
 
-    @Test("发现新版本出提示；24 小时内再启动不联网但仍提醒（用保存的信息）")
+    @Test("发现新版本出提示；1 小时内再启动不联网但仍提醒（用保存的信息）")
     func remindAndThrottle() async {
         let (u, t, d) = make([.http(200, release("v0.3.1"))])
         await u.launchCheck(deferNotice: false)
@@ -217,7 +217,7 @@ struct UpdatePolicyTests {
         let next = UpdateChecker(settings: u.settings, defaults: d, transport: t2, current: AppVersion("0.3.0")!)
         await next.launchCheck(deferNotice: false)
         #expect(!next.noticeVisible)
-        d.removeObject(forKey: UpdateChecker.Key.lastCheck)   // 过了 24 小时
+        d.removeObject(forKey: UpdateChecker.Key.lastCheck)   // 过了 1 小时
         let later = UpdateChecker(settings: u.settings, defaults: d, transport: t2, current: AppVersion("0.3.0")!)
         await later.launchCheck(deferNotice: false)
         #expect(later.noticeVisible && later.available?.version == "0.3.2")
@@ -238,6 +238,144 @@ struct UpdatePolicyTests {
         #expect(toasts == [String(localized: "已是最新版本（\(AppVersion("0.3.0")!.display)）", comment: "手动检查更新：%@ 是当前版本号"),
                            String(localized: "无法检查更新，请检查网络")])
         #expect(u.lastCheck != nil)
+    }
+
+    // MARK: F2-01 检查频率
+
+    /// 时间可以拨动的钟
+    private final class Clock { var t = Date(timeIntervalSince1970: 1_800_000_000) }
+
+    @Test("启动检查：距上次自动检查不到 1 小时不联网，超过 1 小时联网")
+    func launchHourGap() async {
+        let (u, t, d) = make([.http(200, release("v0.3.0")), .http(200, release("v0.3.0"))])
+        let clock = Clock()
+        u.now = { clock.t }
+        await u.launchCheck(deferNotice: false)
+        #expect(t.count == 1 && u.lastCheck == clock.t)
+        // 59 分钟后再启动：不联网
+        clock.t = clock.t.addingTimeInterval(59 * 60)
+        let second = UpdateChecker(settings: u.settings, defaults: d, transport: t, current: AppVersion("0.3.0")!)
+        second.now = { clock.t }
+        await second.launchCheck(deferNotice: false)
+        #expect(t.count == 1)
+        // 过了 1 小时：联网
+        clock.t = clock.t.addingTimeInterval(2 * 60)
+        let third = UpdateChecker(settings: u.settings, defaults: d, transport: t, current: AppVersion("0.3.0")!)
+        third.now = { clock.t }
+        await third.launchCheck(deferNotice: false)
+        #expect(t.count == 2)
+        #expect(UpdateChecker.interval == 3600 && UpdateChecker.periodicInterval == 6 * 3600)
+    }
+
+    @Test("常开时的后台检查：满 6 小时才联网；发现新版本只出小点，不弹卡片、不弹表单")
+    func periodicOnlyDot() async {
+        let (u, t, _) = make([.http(200, release("v0.3.0")), .http(200, release("v0.3.1"))])
+        let clock = Clock()
+        u.now = { clock.t }
+        await u.launchCheck(deferNotice: false)
+        #expect(t.count == 1 && !u.noticeVisible && !u.dotVisible)
+        clock.t = clock.t.addingTimeInterval(5 * 3600 + 59 * 60)
+        await u.periodicCheck()
+        #expect(t.count == 1)                                 // 不到 6 小时
+        clock.t = clock.t.addingTimeInterval(2 * 60)
+        await u.periodicCheck()
+        #expect(t.count == 2)
+        #expect(u.dotVisible && !u.noticeVisible && u.sheetRelease == nil)
+        #expect(u.available?.version == "0.3.1")
+        #expect(u.lastCheck == clock.t)                       // 设置里的「上次检查」跟着更新
+        // 刚查过：马上再到点也不联网
+        await u.periodicCheck()
+        #expect(t.count == 2)
+    }
+
+    @Test("后台检查失败：不提示，1 小时内不重试；之后再试")
+    func periodicFailure() async {
+        let (u, t, _) = make([.error(.timedOut), .http(200, release("v0.3.1"))])
+        let clock = Clock()
+        u.now = { clock.t }
+        await u.periodicCheck()
+        #expect(t.count == 1 && !u.dotVisible && u.lastCheck == nil)
+        clock.t = clock.t.addingTimeInterval(30 * 60)
+        await u.periodicCheck()
+        #expect(t.count == 1)
+        clock.t = clock.t.addingTimeInterval(31 * 60)
+        await u.periodicCheck()
+        #expect(t.count == 2 && u.dotVisible)
+    }
+
+    @Test("后台再查到「稍后」过的同一版本：这次运行不再出小点；更高版本出小点；跳过的版本不提醒")
+    func periodicRespectsLaterAndSkip() async {
+        let (u, t, d) = make([.http(200, release("v0.3.1")), .http(200, release("v0.3.1")), .http(200, release("v0.3.2"))])
+        let clock = Clock()
+        u.now = { clock.t }
+        await u.launchCheck(deferNotice: false)
+        #expect(u.noticeVisible)
+        u.showNotes()
+        u.later()
+        #expect(!u.dotVisible)
+        clock.t = clock.t.addingTimeInterval(6 * 3600 + 1)
+        await u.periodicCheck()
+        #expect(t.count == 2 && !u.dotVisible && !u.noticeVisible && u.sheetRelease == nil)
+        clock.t = clock.t.addingTimeInterval(6 * 3600 + 1)
+        await u.periodicCheck()
+        #expect(t.count == 3 && u.dotVisible && u.available?.version == "0.3.2")
+
+        // 跳过的版本：后台查到也不出小点
+        let (v, t2, d2) = make([.http(200, release("v0.3.1"))])
+        d2.set("0.3.1", forKey: UpdateChecker.Key.skipped)
+        v.now = { clock.t }
+        await v.periodicCheck()
+        #expect(t2.count == 1 && !v.dotVisible && v.available == nil)
+        _ = d
+    }
+
+    @Test("关掉自动检查：后台检查不联网、计时器停掉；重新打开后恢复")
+    func periodicAutoOff() async throws {
+        let (u, t, _) = make([.http(200, release("v0.3.0")), .http(200, release("v0.3.0"))], auto: false)
+        await u.periodicCheck()
+        #expect(t.count == 0)
+        u.tickInterval = .milliseconds(20)
+        u.startPeriodicChecks()
+        #expect(!u.periodicRunning)                           // 设置关着：不启动
+        try await Task.sleep(for: .milliseconds(150))
+        #expect(t.count == 0)
+        // 重新打开：恢复，到点就检查（从没查过，立即到期）
+        u.settings.autoCheckUpdates = true
+        u.autoCheckChanged()
+        #expect(u.periodicRunning)
+        for _ in 0..<100 where t.count == 0 { try await Task.sleep(for: .milliseconds(20)) }
+        #expect(t.count == 1)
+        // 再关掉：停掉，不再联网
+        u.settings.autoCheckUpdates = false
+        u.autoCheckChanged()
+        #expect(!u.periodicRunning)
+        u.now = { Date().addingTimeInterval(7 * 24 * 3600) }
+        try await Task.sleep(for: .milliseconds(150))
+        #expect(t.count == 1)
+        u.stopPeriodicChecks()
+    }
+
+    @Test("周期计时器：到点调用检查；停掉后不再调用")
+    func periodicTimer() async throws {
+        let (u, t, _) = make([.http(200, release("v0.3.0")), .http(200, release("v0.3.0")), .http(200, release("v0.3.0"))])
+        let clock = Clock()
+        u.now = { clock.t }
+        u.tickInterval = .milliseconds(20)
+        u.startPeriodicChecks()
+        for _ in 0..<100 where t.count == 0 { try await Task.sleep(for: .milliseconds(20)) }
+        #expect(t.count == 1)
+        // 计时器继续跑，但没满 6 小时：不联网
+        try await Task.sleep(for: .milliseconds(150))
+        #expect(t.count == 1)
+        // 拨过 6 小时（相当于睡了一觉醒来）：只补一次，不连发
+        clock.t = clock.t.addingTimeInterval(6 * 3600 + 1)
+        for _ in 0..<100 where t.count == 1 { try await Task.sleep(for: .milliseconds(20)) }
+        try await Task.sleep(for: .milliseconds(150))
+        #expect(t.count == 2)
+        u.stopPeriodicChecks()
+        clock.t = clock.t.addingTimeInterval(7 * 3600)
+        try await Task.sleep(for: .milliseconds(150))
+        #expect(t.count == 2)
     }
 
     @Test("上次检查的写法")

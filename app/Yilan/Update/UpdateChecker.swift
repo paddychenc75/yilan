@@ -16,8 +16,10 @@ final class UpdateChecker {
         static let cached = "update.cachedRelease"
     }
 
-    /// 两次自动检查之间至少隔多久（spec U1-01）
-    static let interval: TimeInterval = 24 * 60 * 60
+    /// 两次自动检查之间至少隔多久（spec U1-01；v0.3.2 F2-01 从 24 小时改为 1 小时）
+    static let interval: TimeInterval = 60 * 60
+    /// 应用一直开着时，多久在后台再检查一次（F2-01）
+    static let periodicInterval: TimeInterval = 6 * 60 * 60
 
     // MARK: 界面状态
 
@@ -41,6 +43,19 @@ final class UpdateChecker {
     @ObservationIgnored var now: () -> Date = Date.init
     /// 打开发布页（测试里换掉）
     @ObservationIgnored var openURL: (URL) -> Void = { NSWorkspace.shared.open($0) }
+    /// 这次运行里点过「稍后」的版本：后台再查到同一个版本时不再出小点（F2-01，和 later() 的“这次不再打扰”一致）
+    @ObservationIgnored private var snoozedVersion: String?
+    /// 这次运行里最近一次自动联网的时间（成功或失败都算）：失败后不会每次计时器到点都重试
+    @ObservationIgnored private var lastAttempt: Date?
+    /// 后台周期检查的任务（应用开着、自动检查打开时才有）
+    @ObservationIgnored private var periodicTask: Task<Void, Never>?
+    /// 从睡眠醒来的通知
+    @ObservationIgnored private var wakeObserver: NSObjectProtocol?
+    /// 应用要求过周期检查（关掉设置再打开时据此恢复）
+    @ObservationIgnored private(set) var periodicWanted = false
+    /// 周期检查多久看一次“到没到时间”。到没到按墙上时间和上次检查的时间算，
+    /// 所以睡眠醒来后最多再过这么久就会补上一次，不会因为睡眠错过，也不会连发
+    @ObservationIgnored var tickInterval: Duration = .seconds(10 * 60)
     /// 显示提示条（由 BrowserModel 接上）
     @ObservationIgnored var toast: (_ symbol: String, _ text: String, _ warning: Bool) -> Void = { _, _, _ in }
 
@@ -78,6 +93,7 @@ final class UpdateChecker {
         let started = now()
         let due = lastCheck.map { now().timeIntervalSince($0) >= Self.interval } ?? true
         if due {
+            lastAttempt = started
             let result = await ReleaseClient.check(current: current, transport: transport)
             record(result)
         }
@@ -97,6 +113,67 @@ final class UpdateChecker {
             guard let self, self.noticeVisible else { return }
             self.dismissNotice()
         }
+    }
+
+    // MARK: - 常开时的后台检查（F2-01）
+
+    /// 开始周期检查（应用启动后调用一次；关掉自动检查时停，重新打开时恢复）
+    func startPeriodicChecks() {
+        periodicWanted = true
+        guard Self.isAvailable, settings.autoCheckUpdates, periodicTask == nil else { return }
+        let tick = tickInterval
+        periodicTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: tick)
+                guard !Task.isCancelled, let self else { return }
+                await self.periodicCheck()
+            }
+        }
+        // 醒来后网络要过一会儿才通：等 1 分钟再看要不要检查（计时器本身也会在醒来后补上）
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(60))
+                guard let self, self.periodicTask != nil else { return }
+                await self.periodicCheck()
+            }
+        }
+    }
+
+    /// 停掉周期检查（应用退出、关掉自动检查）
+    func stopPeriodicChecks() {
+        periodicTask?.cancel()
+        periodicTask = nil
+        if let wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver) }
+        wakeObserver = nil
+    }
+
+    var periodicRunning: Bool { periodicTask != nil }
+
+    /// 后台检查一次（计时器到点、从睡眠醒来时调用）：距上次成功检查满 6 小时才联网，
+    /// 这次运行里离上次自动联网不到 1 小时也不联网（失败后别一直重试）。
+    /// 发现新版本只出 ⋯ 上的小点和菜单项，不弹卡片、不弹表单
+    func periodicCheck() async {
+        guard Self.isAvailable, settings.autoCheckUpdates, !checking else { return }
+        let t = now()
+        if let lastCheck, t.timeIntervalSince(lastCheck) < Self.periodicInterval { return }
+        if let lastAttempt, t.timeIntervalSince(lastAttempt) < Self.interval { return }
+        lastAttempt = t
+        let result = await ReleaseClient.check(current: current, transport: transport)
+        record(result)
+        guard settings.autoCheckUpdates else { return }
+        guard let release = remindable(cachedRelease) else {
+            // 已是最新（比如新版本被撤回）、被跳过：收起小点
+            if case .failed = result { return }
+            if sheetRelease == nil && !noticeVisible { available = nil; dotVisible = false }
+            return
+        }
+        // 正在看提示卡片或说明表单：别打扰，内容换成新的就行
+        if noticeVisible || sheetRelease != nil { available = release; return }
+        available = release
+        // 「稍后」过的同一个版本：这次运行不再出小点
+        if release.version == snoozedVersion { return }
+        dotVisible = true
     }
 
     /// 启动后多久之内拿到结果才弹提示
@@ -161,6 +238,7 @@ final class UpdateChecker {
 
     /// 稍后（或 Esc）：这次不再打扰，下次启动再提醒（spec U5-01）
     func later() {
+        if let v = sheetRelease?.version ?? available?.version { snoozedVersion = v }
         sheetRelease = nil
         noticeVisible = false
         dotVisible = false
@@ -181,7 +259,12 @@ final class UpdateChecker {
 
     /// 关掉自动检查：已保存的新版本也不再主动提醒（spec U7-03）
     func autoCheckChanged() {
-        guard !settings.autoCheckUpdates else { return }
+        guard !settings.autoCheckUpdates else {
+            // 重新打开：恢复周期检查（应用启动时要过的才恢复；测试里不会自己跑起来）
+            if periodicWanted { startPeriodicChecks() }
+            return
+        }
+        stopPeriodicChecks()
         noticeVisible = false
         dotVisible = false
     }
