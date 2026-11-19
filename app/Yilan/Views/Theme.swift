@@ -79,6 +79,19 @@ extension View {
         }
     }
 
+    /// 标题栏第二行（文件夹名、计数）：macOS 26 是设计稿的白 68%；
+    /// macOS 15 上压在白色照片上太淡（F2-04），改成白 90%，阴影加深（黑 75% 半径 2.5 + 黑 50% 半径 8 的一圈晕）
+    @ViewBuilder
+    func titleSubtitleStyle() -> some View {
+        if #available(macOS 26.0, *) {
+            foregroundStyle(Theme.text2)
+        } else {
+            foregroundStyle(Color.white.opacity(0.9))
+                .shadow(color: .black.opacity(0.75), radius: 2.5, y: 1)
+                .shadow(color: .black.opacity(0.5), radius: 8)
+        }
+    }
+
     /// 厚玻璃：卡片、菜单（设计稿 .gt，深灰 78–82%）
     /// 系统玻璃本身很透，上面再铺设计稿的灰色渐变（58,58,64 @78% → 34,34,38 @82%），描边白 11%
     func thickGlass<S: Shape>(_ shape: S) -> some View {
