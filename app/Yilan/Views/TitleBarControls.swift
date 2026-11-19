@@ -161,11 +161,13 @@ struct ToolButton: View {
     let help: LocalizedStringKey
     /// 打开状态（信息面板显示时 ⓘ 高亮，白 24% 底）
     var selected = false
+    /// 图形的光学校正（只挪图形，不挪按钮）
+    var opticalOffset: CGSize = .zero
     let action: () -> Void
     @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
-        Button(action: action) { ToolButtonLabel(symbol: symbol, selected: selected) }
+        Button(action: action) { ToolButtonLabel(symbol: symbol, selected: selected, opticalOffset: opticalOffset) }
             .buttonStyle(.plain)
             .opacity(isEnabled ? 1 : 0.3)
             .help(help)
@@ -180,23 +182,31 @@ struct EditEntryButton: View {
     let action: () -> Void
 
     var body: some View {
-        ToolButton(symbol: "square.and.pencil", help: unsupported ? "此类文件不支持编辑" : "编辑（E）") {
+        ToolButton(symbol: "square.and.pencil", help: unsupported ? "此类文件不支持编辑" : "编辑（E）",
+                   opticalOffset: Self.opticalOffset) {
             if !unsupported { action() }
         }
         .opacity(unsupported ? 0.3 : 1)
         .accessibilityLabel(Text("编辑"))
     }
+
+    /// 光学居中（实测 14.5pt、30 × 30 格子）：这个图形整体墨迹中心比格子中心低 0.6 点、方框本体低 1.2 点，
+    /// 旁边的圆形图标只差 0.05 点，所以并排时显得往下坠；水平方向方框本体只差 0.05 点，不用挪。
+    /// 往上挪 0.75 点：墨迹中心和圆形图标对齐，方框本体只低 0.45 点
+    nonisolated static let opticalOffset = CGSize(width: 0, height: -0.75)
 }
 
 struct ToolButtonLabel: View {
     let symbol: String
     var selected = false
+    var opticalOffset: CGSize = .zero
     @State private var hovering = false
 
     var body: some View {
         Image(systemName: symbol)
             .font(.system(size: 14.5, weight: .medium))
             .foregroundStyle(.white)
+            .offset(opticalOffset)
             .frame(width: 30, height: 30)
             .background(Circle().fill(selected ? Theme.selectedFill : Color.white.opacity(hovering ? 0.12 : 0)))
             .contentShape(Circle())
