@@ -160,7 +160,7 @@ struct RootView: View {
                                  bottom: fs ? 0 : bottomInset,
                                  right: layout.imageSideInset),
             zoomCommand: model.zoomCommand,
-            rotation: model.edit?.turns ?? model.rotation,
+            rotation: model.edit?.turns ?? model.stageRotation,
             videoLayer: showsVideoLayer ? model.video.layer : nil,
             onNavigate: { model.step($0) },
             onZoomChanged: { model.zoomState = $0 },
@@ -687,8 +687,8 @@ struct RootView: View {
         }
         let decoded = model.displayedItem == item ? model.displayed : nil
         var dims: String?
-        // 像素尺寸按惯例不加千位分隔符（4032 × 3024）
-        if let s = decoded?.pixelSize, s.width > 0 { dims = "\(Int(s.width)) × \(Int(s.height))" }
+        // 像素尺寸按惯例不加千位分隔符（4032 × 3024）；原地改写后旧画面暂留时按新方向
+        if decoded != nil, let s = model.displayedPixelSize, s.width > 0 { dims = "\(Int(s.width)) × \(Int(s.height))" }
         var parts: [String] = []
         if let d = decoded?.duration { parts.append(Formatting.duration(d)) }
         parts.append(Formatting.fileSize(item.fileSize))

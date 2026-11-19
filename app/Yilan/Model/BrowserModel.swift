@@ -84,6 +84,11 @@ final class BrowserModel {
     private(set) var displayedItem: MediaItem?
     /// 大图还没解码好时先显示缩略图
     private(set) var placeholder: CGImage?
+    /// displayed 是这个文件在原地被改写（保存旋转、替换原图、撤销它们、被其他程序改动）之前的画面：
+    /// 新内容解码好之前继续显示它，不清空成模糊的占位图
+    private(set) var showingStaleDisplay = false
+    /// 旧画面要额外转几下才和改写后的样子一致（保存旋转前浏览时转的方向）
+    private(set) var heldTurns = 0
     private(set) var failure: DecodeFailure?
     /// RAW：内嵌预览已显示，正在后台完整解码
     private(set) var isDecodingRaw = false
@@ -100,6 +105,13 @@ final class BrowserModel {
     private(set) var toast: Toast?
     /// 当前文件的显示旋转（顺时针 90° 的倍数，只影响显示，不改文件）；切换文件后复位
     internal(set) var rotation = 0
+    /// 大图实际要转的方向：显示旋转，加上改写前旧画面暂时保留的方向
+    var stageRotation: Int { (rotation + heldTurns) % 4 }
+    /// 当前显示的画面按显示方向的像素尺寸（旧画面暂留时按改写后的方向）
+    var displayedPixelSize: CGSize? {
+        guard let s = displayed?.pixelSize else { return nil }
+        return heldTurns % 2 == 1 ? CGSize(width: s.height, height: s.width) : s
+    }
 
     // MARK: 编辑（BrowserModel+Edit）
 
@@ -419,9 +431,11 @@ final class BrowserModel {
         emptyResultAnchor = nil
         guard index != currentIndex || displayedItem != items[index] else { return }
         Perf.beginSwitch(to: items[index].url)
+        // 同一个文件换了版本（原地改写）：旧画面先按刚才的显示方向留着，新内容解码好再换上
+        let carriedTurns = items[index].url == displayedItem?.url ? rotation : 0
         currentIndex = index
         rotation = 0
-        loadCurrent()
+        loadCurrent(carriedTurns: carriedTurns)
         // 只用键盘切换时鼠标不动，也要开始计时自动隐藏
         scheduleHide()
     }
@@ -467,7 +481,7 @@ final class BrowserModel {
         guard maxPixel > 0, maxPixel != screenMaxPixel else { return }
         let previous = displayMaxPixel
         screenMaxPixel = maxPixel
-        guard maxPixel > previous, fullResTask == nil, !isDecodingRaw, failure == nil,
+        guard maxPixel > previous, fullResTask == nil, !isDecodingRaw, failure == nil, !showingStaleDisplay,
               let item = current, item == displayedItem, item.kind == .image,
               let shown = displayed, !shown.isPreview, shown.isDownsampled || item.format == .svg,
               max(shown.image.width, shown.image.height) < maxPixel else { return }
@@ -486,7 +500,7 @@ final class BrowserModel {
         item.format == .svg ? .display(maxPixel: 8192) : .full
     }
 
-    private func loadCurrent() {
+    private func loadCurrent(carriedTurns: Int = 0) {
         refreshInfo()
         loadTask?.cancel()
         fullResTask?.cancel()
@@ -506,6 +520,16 @@ final class BrowserModel {
             ambientItemURL = nil
             return
         }
+        // 同一个文件在原地被改写：在新内容解码好之前继续显示旧画面（不阻塞主线程，只是不清空）
+        if let shown = displayedItem, shown != item, shown.url == item.url, displayed != nil, failure == nil, item.kind == .image {
+            displayedItem = item
+            placeholder = nil
+            showingStaleDisplay = true
+            heldTurns = (heldTurns + carriedTurns) % 4
+        } else if displayedItem != item {
+            showingStaleDisplay = false
+            heldTurns = 0
+        }
         updateAmbient(for: item)
         let variant = displayVariant(for: item)
         loadGeneration += 1
@@ -522,6 +546,8 @@ final class BrowserModel {
                 displayed = nil
                 displayedItem = item
                 placeholder = ThumbnailStore.shared.cached(item)?.image
+                showingStaleDisplay = false
+                heldTurns = 0
             }
             // RAW：先取内嵌预览（不排队，立即开始）；显示出来以后，高清解码排队进行，
             // 和前后几张的预加载共用有限的名额，不会同时堆起很多个完整解码抢走 CPU
@@ -543,6 +569,8 @@ final class BrowserModel {
                 guard !Task.isCancelled else { return }
                 displayed = nil
                 placeholder = nil
+                showingStaleDisplay = false
+                heldTurns = 0
                 failure = decodeFailure
             } catch {
                 return   // 切到了别的文件
@@ -566,10 +594,13 @@ final class BrowserModel {
         // 已经切走（或筛选结果变空）的文件晚到的解码结果不显示
         guard item != unplayable, item == current else { return }
         Perf.shown(item.url, isPreview: image.isPreview)
+        // 和旧画面的方向一起换掉（同一次界面更新），不会先转一下再换图
         displayed = image
         displayedItem = item
         placeholder = nil
         failure = nil
+        showingStaleDisplay = false
+        heldTurns = 0
     }
 
     /// 预加载前后各 2 张；离开这个范围的进行中解码会被取消。
@@ -606,7 +637,7 @@ final class BrowserModel {
     /// 放大超过屏幕解码尺寸时，换成原始分辨率
     func requestFullResolution() {
         // RAW 还在完整解码（现在显示的是内嵌预览）时不要再同时解一份原始分辨率
-        guard let item = displayedItem, item == current, let shown = displayed, shown.isDownsampled,
+        guard !showingStaleDisplay, let item = displayedItem, item == current, let shown = displayed, shown.isDownsampled,
               !shown.isPreview, !isDecodingRaw,
               fullResTask == nil || fullResTask?.isCancelled == true else { return }
         let variant = fullVariant(for: item)

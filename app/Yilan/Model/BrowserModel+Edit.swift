@@ -16,7 +16,7 @@ extension BrowserModel {
     /// 当前文件现在能进入编辑：可编辑、没出错、大图已经显示
     var canEditCurrent: Bool {
         guard let item = current, Self.isEditable(item), failure == nil else { return false }
-        return displayedItem == item && displayed != nil
+        return displayedItem == item && displayed != nil && !showingStaleDisplay
     }
 
     /// 编辑按钮是不是置灰（文件类型不支持或出错）；大图还在加载时不置灰
@@ -230,7 +230,8 @@ extension BrowserModel {
         let original = s.item
         if s.item.format == .raw { settings.editRawFormat = s.rawChoice }   // RAW 选过的格式记住（spec ED-33）
         if edit === s { withAnimation(.easeOut(duration: 0.2)) { edit = nil } }
-        rotation = 0
+        // 替换原图：新图解码好之前，旧画面按编辑时转的方向留着（裁切、缩小要等新图换上才看得到）
+        if case .replace = mode, outcome.item != nil { rotation = s.turns } else { rotation = 0 }
         noteRatingWrite(outcome.rating, url: outcome.url, rating: rating)
         let name = outcome.url.lastPathComponent
         switch mode {

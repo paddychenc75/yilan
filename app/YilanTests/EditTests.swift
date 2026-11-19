@@ -663,6 +663,56 @@ struct EditModelTests {
         #expect(store.cached(item) == nil)
     }
 
+    /// 当前文件的大图此刻有画面，并且按显示方向的尺寸就是文件现在的样子
+    private func showsFile(_ m: BrowserModel, _ url: URL) -> Bool {
+        guard m.displayed != nil, m.placeholder == nil, m.displayedItem == m.current,
+              let size = m.displayedPixelSize, let file = EditWriter.orientedSize(url) else { return false }
+        return Int(size.width) == file.width && Int(size.height) == file.height
+    }
+
+    @Test("保存旋转、撤销：新内容解码好之前大图继续显示旧画面（按保存后的方向），不清空；解码好后换上新图",
+          arguments: ["IMG_2031.heic", "IMG_2052.jpg"])
+    func saveRotationKeepsDisplay(_ name: String) async throws {
+        let dir = try MetaFixtures.copy([name])
+        let url = dir.appendingPathComponent(name)
+        let m = try await ready(dir, name)
+        let old = try #require(m.displayed)
+        m.rotate(1)
+        m.saveRotation()
+        // 保存完成的那一刻（撤销记录刚加上）：画面还在，方向和尺寸已经是保存后的
+        #expect(await waitFor { m.undoHistory.canUndo })
+        #expect(showsFile(m, url))
+        if m.showingStaleDisplay {
+            #expect(m.displayed === old && m.stageRotation == 1 && m.rotation == 0)
+        }
+        #expect(await waitFor { !m.showingStaleDisplay && m.displayed !== old })
+        #expect(showsFile(m, url) && m.stageRotation == 0)
+        // 撤销：同样不清空
+        let rotated = try #require(m.displayed)
+        await waitFor { !m.trashBusy }
+        await m.undoLast()
+        #expect(m.displayed != nil && m.placeholder == nil && m.displayedItem == m.current)
+        #expect(await waitFor { !m.showingStaleDisplay && m.displayed !== rotated })
+        #expect(showsFile(m, url) && m.stageRotation == 0)
+    }
+
+    @Test("替换原图后回到浏览：新图解码好之前继续显示旧画面（按编辑时的方向），不清空")
+    func replaceKeepsDisplay() async throws {
+        let dir = try MetaFixtures.copy(["IMG_2034.jpg"])
+        let url = dir.appendingPathComponent("IMG_2034.jpg")
+        let m = try await ready(dir, "IMG_2034.jpg")
+        m.enterEdit()
+        let s = try #require(m.edit)
+        await waitFor { s.source != nil }
+        s.rotate(clockwise: true)
+        #expect(m.handleKey(try key(36, "\r", .option)))
+        #expect(m.handleKey(try key(36, "\r")))
+        #expect(await waitFor { m.edit == nil })
+        #expect(showsFile(m, url))
+        #expect(await waitFor { !m.showingStaleDisplay })
+        #expect(showsFile(m, url) && m.stageRotation == 0)
+    }
+
     // MARK: F2-03 撤销保存旋转逐字节还原
 
     /// 保存旋转一次，返回这条撤销记录里的副本

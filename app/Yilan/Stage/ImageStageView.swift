@@ -38,8 +38,16 @@ final class ImageStageView: NSView {
             guard oldValue != rotation else { return }
             // 旋转后回到适应窗口
             scale = nil
-            layoutImage(animated: window != nil)
+            layoutImage(animated: window != nil && animatesRotation)
         }
+    }
+
+    /// 换图的同时改方向（原地改写的文件换上新内容）时不播放转动动画
+    var animatesRotation = true
+
+    /// 这次要换上的内容和现在显示的不是同一张
+    func isNewContent(_ new: Content?) -> Bool {
+        content?.identity != new?.identity || content?.url != new?.url
     }
 
     private let container = CALayer()
@@ -156,7 +164,8 @@ final class ImageStageView: NSView {
 
     // MARK: - 内容
 
-    func setContent(_ new: Content?) {
+    /// fade 为 false 时直接换上，不交叉淡入（换图的同时方向也变了：淡出的旧图会按新方向画出来，看上去转了一下）
+    func setContent(_ new: Content?, fade allowsFade: Bool = true) {
         let old = content
         guard old?.identity != new?.identity || old?.url != new?.url else { return }
         content = new
@@ -168,7 +177,7 @@ final class ImageStageView: NSView {
         if !sameFile { scale = nil }
 
         // 切换图片：交叉淡入 0.18s；同一文件换成更清晰的版本：0.3s
-        if old != nil, new != nil, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+        if allowsFade, old != nil, new != nil, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             let fade = CATransition()
             fade.type = .fade
             fade.duration = sameFile ? 0.3 : 0.18
@@ -531,7 +540,15 @@ struct ImageStage: NSViewRepresentable {
             // 布局过程中回调，推迟到下一轮再改状态，避免在视图更新中修改状态
             DispatchQueue.main.async { onZoomChanged(percent) }
         }
-        view.setContent(content)
+        // 换图和改方向同时发生（保存旋转后新内容换上按旧方向暂留的旧画面）：两者看上去一样，
+        // 方向直接跳到位、图直接换，不转、不淡入淡出
+        let swapsWithTurn = view.isNewContent(content) && view.rotation != rotation
+        if swapsWithTurn {
+            view.animatesRotation = false
+            view.rotation = rotation
+            view.animatesRotation = true
+        }
+        view.setContent(content, fade: !swapsWithTurn)
         view.setVideoLayer(videoLayer)
         view.cropOverlay.onCropChanged = onCropChanged
         view.rotation = rotation
