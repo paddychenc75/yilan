@@ -268,6 +268,7 @@ struct RootView: View {
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(.white)
                             .shadow(color: .black.opacity(0.5), radius: 4, y: 1)
+                            .legacyLegibilityShadow()
                         Text(subtitle)
                             .font(.system(size: 11))
                             .foregroundStyle(Theme.text2)
