@@ -66,8 +66,17 @@ final class BrowserModel {
     /// 当前类型下的列表；缩略图栏、序号、上下切换都只针对它
     internal(set) var items: [MediaItem] = [] {
         // 图标视图里列表一变，选中集合跟着收拾（spec V8-02、V8-04）
-        didSet { if viewMode == .grid, items != oldValue { gridListChanged(old: oldValue) } }
+        didSet {
+            itemsVersion &+= 1
+            if viewMode == .grid, items != oldValue { gridListChanged(old: oldValue) }
+        }
     }
+    /// 列表、选中集合每变一次加 1：下面几个「按选中算出来的东西」靠它判断缓存还能不能用
+    @ObservationIgnored var itemsVersion = 0
+    @ObservationIgnored var gridVersion = 0
+    @ObservationIgnored var selectedItemsCache: (items: Int, grid: Int, value: [MediaItem])?
+    @ObservationIgnored var selectionSummaryCache: (items: Int, grid: Int, value: GridSummary)?
+    @ObservationIgnored var listSummaryCache: (items: Int, value: GridSummary)?
     private(set) var filter: MediaFilter
     internal(set) var currentIndex: Int?
     private(set) var counts: [MediaFilter: Int] = [.all: 0, .images: 0, .videos: 0]
@@ -162,7 +171,7 @@ final class BrowserModel {
     /// 现在是哪种视图（spec SEL-01）
     internal(set) var viewMode: ViewMode = .gallery
     /// 图标视图的选中集合、焦点、⇧ 的起点。画廊视图里不用它
-    internal(set) var grid = GridSelectionState.empty
+    internal(set) var grid = GridSelectionState.empty { didSet { gridVersion &+= 1 } }
     /// 这一次进画廊视图，是在图标视图里双击、回车或空格进来的（spec V3）：Esc、空格可以回去
     internal(set) var cameFromGrid = false
     /// 请图标视图滚到这一张让它完整可见（serial 每次加 1）
@@ -193,6 +202,8 @@ final class BrowserModel {
     /// 批量操作结束后的提示框（部分失败）
     internal(set) var batchReport: BatchReport?
     @ObservationIgnored var batchStop: BatchTrash.StopFlag?
+    /// 已处理的个数，只有进度条看它（见 BatchCounter 的说明）
+    @ObservationIgnored let batchCounter = BatchCounter()
     /// 批量操作进行中用户要求退出：做完这一批再退（spec X3-08）
     @ObservationIgnored var terminateAfterBatch = false
 

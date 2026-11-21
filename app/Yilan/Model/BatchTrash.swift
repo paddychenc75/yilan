@@ -117,7 +117,7 @@ enum BatchTrash {
     }
 }
 
-/// 批量操作报进度时的节流：最多每 0.05 秒往界面发一次，最后一个一定发。
+/// 批量操作报进度时的节流：最多每 0.1 秒往界面发一次，最后一个一定发。
 /// 不节流的话，几万个文件会往主线程塞几万次更新，「停止」的点击要排很久才轮到（界面验证时点停止后又多移走了约 5000 个）
 final class ProgressThrottle: @unchecked Sendable {
     private let lock = NSLock()
@@ -125,7 +125,7 @@ final class ProgressThrottle: @unchecked Sendable {
     private let interval: TimeInterval
     private let total: Int
 
-    init(total: Int, interval: TimeInterval = 0.05) {
+    init(total: Int, interval: TimeInterval = 0.1) {
         self.total = total
         self.interval = interval
     }

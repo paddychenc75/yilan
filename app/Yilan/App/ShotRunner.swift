@@ -9,8 +9,8 @@ enum ShotRunner {
                 || ShotHooks.windowSize != nil || ShotHooks.anyRatingShot || ShotHooks.view != nil
         else { return }
         Task { @MainActor in
-            // 等文件夹打开、当前文件显示出来（最多 5 秒）
-            for _ in 0..<50 where model.current == nil || model.displayed == nil {
+            // 等文件夹打开、当前文件显示出来（最多 40 秒：几万个文件的文件夹扫描要十几秒）
+            for _ in 0..<400 where model.current == nil || model.displayed == nil {
                 try? await Task.sleep(for: .milliseconds(100))
             }
             if let size = ShotHooks.windowSize, let window = model.window {
@@ -35,6 +35,20 @@ enum ShotRunner {
                     }
                     if let focus = model.grid.focus { model.requestGridScroll(to: focus) }
                     if ShotHooks.deleteState == "batch" { model.requestBatchDelete() }
+                }
+                // 量「停止」用：直接确认，3 秒后停止，打印从点停止到真正停下又多移走了多少
+                if ShotHooks.deleteState == "batchstop" {
+                    // 直接开始：程序在后台启动时不是当前窗口，走确认框那条路会被挡住
+                    let targets = model.selectedItems
+                    Task { await model.performBatchDelete(targets) }
+                    try? await Task.sleep(for: .seconds(3))
+                    let folder = model.folderURL!
+                    func left() -> Int { (try? FileManager.default.contentsOfDirectory(atPath: folder.path).count) ?? -1 }
+                    let before = left(), t0 = Date()
+                    model.stopBatch()
+                    while model.batchRunning { try? await Task.sleep(for: .milliseconds(20)) }
+                    print("[perf] stop: left before=\(before) after=\(left()) took=\(Int(Date().timeIntervalSince(t0) * 1000))ms")
+                    fflush(stdout)
                 }
                 // 量内存用：从头滚到尾，每 0.12 秒滚一行
                 if CommandLine.arguments.contains("--perf-grid-scroll") {

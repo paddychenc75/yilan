@@ -96,6 +96,7 @@ private struct StackThumbnail: View {
 /// 批量操作的进度条（设计稿 40，spec X3-07）：顶部栏下面，转圈、文字、进度、数字和「停止」
 struct BatchProgressBar: View {
     let progress: BatchProgress
+    let counter: BatchCounter
     let onStop: () -> Void
 
     var body: some View {
@@ -111,11 +112,11 @@ struct BatchProgressBar: View {
             ZStack(alignment: .leading) {
                 Capsule().fill(Color.white.opacity(0.2))
                 Capsule().fill(.white)
-                    .frame(width: 110 * CGFloat(progress.done) / CGFloat(max(progress.total, 1)))
+                    .frame(width: 110 * CGFloat(min(counter.done, progress.total)) / CGFloat(max(progress.total, 1)))
             }
             .frame(width: 110, height: 3)
-            .animation(.linear(duration: 0.15), value: progress.done)
-            Text(verbatim: "\(Formatting.count(progress.done)) / \(Formatting.count(progress.total))")
+            .animation(.linear(duration: 0.15), value: counter.done)
+            Text(verbatim: "\(Formatting.count(counter.done)) / \(Formatting.count(progress.total))")
                 .font(Theme.mono(11, .regular))
                 .foregroundStyle(Theme.text2)
                 .fixedSize()

@@ -7,7 +7,16 @@ extension BrowserModel {
     var isGrid: Bool { viewMode == .grid }
     var itemURLs: [URL] { items.map(\.url) }
     /// 选中的文件，按列表顺序
-    var selectedItems: [MediaItem] { items.filter { grid.selection.contains($0.url) } }
+    /// 一次界面刷新里会被问很多遍（菜单、信息条、计数、各个按钮能不能用），选中几万张时每问一遍都要把列表过一遍，
+    /// 整个窗口会卡上一两秒。所以算一次存起来，列表和选中集合不变就直接用
+    var selectedItems: [MediaItem] {
+        let all = items, selection = grid.selection      // 照常读一下，界面才知道它依赖这两样
+        if let c = selectedItemsCache, c.items == itemsVersion, c.grid == gridVersion { return c.value }
+        // 选中集合里只会有列表里的文件（列表一变就收拾过），数量相同就是全选
+        let value = selection.isEmpty ? [] : selection.count == all.count ? all : all.filter { selection.contains($0.url) }
+        selectedItemsCache = (itemsVersion, gridVersion, value)
+        return value
+    }
     var selectionCount: Int { isGrid ? grid.selection.count : (current == nil ? 0 : 1) }
     /// 多选：选中 2 张及以上
     var isMultiSelection: Bool { isGrid && grid.selection.count > 1 }
@@ -340,9 +349,21 @@ struct GridSummary: Equatable, Sendable {
 
 extension BrowserModel {
     /// 选中文件的汇总（多选时用）
-    var selectionSummary: GridSummary { GridSummary(selectedItems) }
+    var selectionSummary: GridSummary {
+        let selected = selectedItems
+        if let c = selectionSummaryCache, c.items == itemsVersion, c.grid == gridVersion { return c.value }
+        let value = GridSummary(selected)
+        selectionSummaryCache = (itemsVersion, gridVersion, value)
+        return value
+    }
     /// 眼前列表的汇总（没有选中时用）
-    var listSummary: GridSummary { GridSummary(items) }
+    var listSummary: GridSummary {
+        let all = items
+        if let c = listSummaryCache, c.items == itemsVersion { return c.value }
+        let value = GridSummary(all)
+        listSummaryCache = (itemsVersion, value)
+        return value
+    }
 
     /// 「46 个项目」：文件夹里的总数，不随筛选变（spec V1-15）
     var folderCountText: String { String(localized: "\(allItems.count) 个项目", comment: "图标视图标题下面、信息条上的项目数；%lld 是数量") }

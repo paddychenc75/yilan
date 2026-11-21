@@ -797,7 +797,7 @@ struct RootView: View {
 
             // 批量操作：进度条在顶部栏下面（spec X3-07）
             if let progress = model.batchProgress, progress.visible {
-                BatchProgressBar(progress: progress) { model.stopBatch() }
+                BatchProgressBar(progress: progress, counter: model.batchCounter) { model.stopBatch() }
                     .padding(.top, toastTop)
                     .transition(.opacity.combined(with: .offset(y: -8)))
             }

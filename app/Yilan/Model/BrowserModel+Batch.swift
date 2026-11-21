@@ -28,11 +28,18 @@ struct BatchDeleteRequest: Equatable {
     }
 }
 
+/// 已经处理了几个。单独放在一个对象里，只有进度条自己看它：
+/// 如果把这个数放进浏览模型，每变一次整个窗口和菜单栏都要重算一遍（几万个文件时一次要上百毫秒），
+/// 主线程被占满，「停止」的点击排不上（界面验证时点了停止还会多移走几千个）
+@MainActor @Observable
+final class BatchCounter {
+    var done = 0
+}
+
 /// 批量操作的进度（spec X3-07）
 struct BatchProgress: Equatable {
     enum Kind: Equatable { case trash, copy, move }
     var kind: Kind
-    var done = 0
     var total: Int
     /// 超过 1 秒还没做完才显示进度条
     var visible = false
@@ -122,6 +129,7 @@ extension BrowserModel {
         let jobs = BatchTrash.jobs(for: targets, sidecars: sidecars)
         let stop = BatchTrash.StopFlag()
         batchStop = stop
+        batchCounter.done = 0
         batchProgress = BatchProgress(kind: .trash, total: targets.count)
         // 进行中暂停对文件夹变化的自动刷新（spec X3-09）
         trashBusy = true
@@ -135,7 +143,7 @@ extension BrowserModel {
         let result = await Task.detached(priority: .userInitiated) {
             BatchTrash.run(jobs, stop: stop, trash: trash) { [weak self] done in
                 guard throttle.shouldReport(done) else { return }
-                Task { @MainActor in self?.batchProgress?.done = done }
+                Task { @MainActor in self?.batchCounter.done = done }
             }
         }.value
         reveal.cancel()

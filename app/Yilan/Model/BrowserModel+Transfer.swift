@@ -58,6 +58,7 @@ extension BrowserModel {
         let jobs = BatchTrash.jobs(for: targets, sidecars: sidecars)
         let stop = BatchTrash.StopFlag()
         batchStop = stop
+        batchCounter.done = 0
         batchProgress = BatchProgress(kind: mode == .copy ? .copy : .move, total: targets.count)
         // 进行中暂停对文件夹变化的自动刷新（spec X3-09）
         trashBusy = true
@@ -72,7 +73,7 @@ extension BrowserModel {
         let outcome = await Task.detached(priority: .userInitiated) { () -> (BatchTransfer.Result, [MediaItem]) in
             let result = BatchTransfer.run(jobs, to: folder, mode: mode, stop: stop, disk: disk) { [weak self] done in
                 guard throttle.shouldReport(done) else { return }
-                Task { @MainActor in self?.batchProgress?.done = done }
+                Task { @MainActor in self?.batchCounter.done = done }
             }
             // 复制到眼前这个文件夹：新文件要出现在列表里
             let added = mode == .copy ? result.placed.compactMap { FolderScanner.item(at: $0.destination) } : []
