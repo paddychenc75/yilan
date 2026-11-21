@@ -106,20 +106,26 @@ final class CropOverlayView: NSView {
         let dim = NSBezierPath(rect: config.angle == 0 ? imageFrame : bounds.union(imageFrame))
         dim.append(NSBezierPath(rect: box))
         dim.windingRule = .evenOdd
-        NSColor.black.withAlphaComponent(0.58).setFill()
+        // 拖刻度尺时压得更暗：斜着的照片边缘不再抢眼，注意力留在框里的水平线上（设计师走查意见）
+        NSColor.black.withAlphaComponent(config.fineGrid ? 0.78 : 0.58).setFill()
         dim.fill()
         NSGraphicsContext.restoreGraphicsState()
 
         // 参考线：平时三分线；拖刻度尺时加密成横 9 竖 6（设计稿 96）
         let columns = config.fineGrid ? 9 : 3, rows = config.fineGrid ? 6 : 3
-        NSColor.white.withAlphaComponent(config.fineGrid ? 0.28 : 0.38).setFill()
-        for i in 1..<columns {
-            let x = (box.minX + box.width * CGFloat(i) / CGFloat(columns)).rounded()
-            NSRect(x: x, y: box.minY, width: 1, height: box.height).fill()
-        }
-        for i in 1..<rows {
-            let y = (box.minY + box.height * CGFloat(i) / CGFloat(rows)).rounded()
-            NSRect(x: box.minX, y: y, width: box.width, height: 1).fill()
+        // 每条白线旁边垫一条很淡的深色线：雪地、天空这类浅色画面上白线也看得见（设计师走查意见）
+        for pass in 0..<2 {
+            if pass == 0 { NSColor.black.withAlphaComponent(0.18).setFill() }
+            else { NSColor.white.withAlphaComponent(config.fineGrid ? 0.28 : 0.38).setFill() }
+            let shift: CGFloat = pass == 0 ? 1 : 0
+            for i in 1..<columns {
+                let x = (box.minX + box.width * CGFloat(i) / CGFloat(columns)).rounded()
+                NSRect(x: x + shift, y: box.minY, width: 1, height: box.height).fill()
+            }
+            for i in 1..<rows {
+                let y = (box.minY + box.height * CGFloat(i) / CGFloat(rows)).rounded()
+                NSRect(x: box.minX, y: y + shift, width: box.width, height: 1).fill()
+            }
         }
         // 边框：外面 1pt 黑 25% 衬底，里面 1pt 白 90%
         NSColor.black.withAlphaComponent(0.25).setStroke()
@@ -149,11 +155,13 @@ final class CropOverlayView: NSView {
             handles.append(NSBezierPath(rect: NSRect(x: hx, y: sy > 0 ? oy : cy, width: l, height: t)))
             handles.append(NSBezierPath(rect: NSRect(x: sx > 0 ? ox : cx, y: vy, width: t, height: l)))
         }
-        // 四边中点的短柄
+        // 四边中点的短柄。拖刻度尺时不画：上下两个正好压在加密的参考线上（设计稿 96 也只有四角）
+        if !config.fineGrid {
         handles.append(NSBezierPath(roundedRect: NSRect(x: box.midX - e / 2, y: box.minY - t, width: e, height: t), xRadius: 1, yRadius: 1))
         handles.append(NSBezierPath(roundedRect: NSRect(x: box.midX - e / 2, y: box.maxY, width: e, height: t), xRadius: 1, yRadius: 1))
         handles.append(NSBezierPath(roundedRect: NSRect(x: box.minX - t, y: box.midY - e / 2, width: t, height: e), xRadius: 1, yRadius: 1))
         handles.append(NSBezierPath(roundedRect: NSRect(x: box.maxX, y: box.midY - e / 2, width: t, height: e), xRadius: 1, yRadius: 1))
+        }
         handles.fill()
         NSGraphicsContext.restoreGraphicsState()
     }

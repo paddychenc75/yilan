@@ -375,7 +375,8 @@ struct StraightenRuler: View {
             Text(verbatim: StraightenMath.label(angle))
                 .font(Theme.mono(11.5, .semibold))
                 .monospacedDigit()
-                .foregroundStyle(Theme.yellow)
+                // 和工具条上的数字一致：不是 0 才变黄（spec E6-06）
+                .foregroundStyle(angle == 0 ? Color.white : Theme.yellow)
                 .padding(.top, 4)
         }
         .frame(width: width, height: 44)
