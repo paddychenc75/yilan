@@ -288,4 +288,37 @@ struct GridMetrics: Equatable, Sendable {
         if a >= size.box / size.boxHeight { return CGSize(width: size.box, height: (size.box / a).rounded()) }
         return CGSize(width: (size.boxHeight * a).rounded(), height: size.boxHeight)
     }
+
+    /// 第 index 个格子在网格内容里的位置（左上为原点，y 向下）
+    func cellFrame(at index: Int) -> CGRect {
+        let cols = columns
+        let row = index / cols, col = index % cols
+        return CGRect(x: Self.sideMargin + CGFloat(col) * (cellWidth + columnGap),
+                      y: Self.topInset + CGFloat(row) * rowStride,
+                      width: cellWidth, height: cellHeight)
+    }
+
+    /// count 个格子排出来的内容高度
+    func contentHeight(count: Int) -> CGFloat {
+        let rows = count == 0 ? 0 : (count - 1) / columns + 1
+        return max(Self.topInset + CGFloat(rows) * rowStride - (rows > 0 ? Self.rowGap : 0) + Self.bottomInset, 1)
+    }
+
+    /// 缩略图在格子里的位置：在 4:3 的缩略图区里居中
+    func thumbnailRect(aspect: CGFloat) -> CGRect {
+        let s = thumbnailSize(aspect: aspect)
+        let box = CGRect(x: Self.boxInset, y: Self.boxInset, width: size.box, height: size.boxHeight)
+        return CGRect(x: (box.midX - s.width / 2).rounded(), y: (box.midY - s.height / 2).rounded(), width: s.width, height: s.height)
+    }
+
+    /// 要让这个格子完整露在顶部栏和信息条之间，网格该滚到哪（内容顶端的 y）。
+    /// current：现在滚到的位置；返回 nil 表示不用滚
+    static func revealOffset(for frame: CGRect, current: CGFloat, viewportHeight: CGFloat, contentHeight: CGFloat) -> CGFloat? {
+        let top = frame.minY - 64, bottom = frame.maxY + 68
+        let maxY = max(0, contentHeight - viewportHeight)
+        var y = current
+        if top < current { y = top } else if bottom > current + viewportHeight { y = bottom - viewportHeight }
+        y = min(max(y, 0), maxY)
+        return abs(y - current) > 0.5 ? y : nil
+    }
 }

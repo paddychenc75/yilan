@@ -7,19 +7,12 @@ final class GridLayout: NSCollectionViewLayout {
     var metrics = GridMetrics(size: .default, width: 1280) { didSet { if metrics != oldValue { invalidateLayout() } } }
     var count = 0
 
-    func frame(at index: Int) -> CGRect {
-        let cols = metrics.columns
-        let row = index / cols, col = index % cols
-        return CGRect(x: GridMetrics.sideMargin + CGFloat(col) * (metrics.cellWidth + metrics.columnGap),
-                      y: GridMetrics.topInset + CGFloat(row) * metrics.rowStride,
-                      width: metrics.cellWidth, height: metrics.cellHeight)
-    }
+    func frame(at index: Int) -> CGRect { metrics.cellFrame(at: index) }
 
     var rows: Int { count == 0 ? 0 : (count - 1) / metrics.columns + 1 }
 
     override var collectionViewContentSize: NSSize {
-        let height = GridMetrics.topInset + CGFloat(rows) * metrics.rowStride - (rows > 0 ? GridMetrics.rowGap : 0) + GridMetrics.bottomInset
-        return NSSize(width: metrics.width, height: max(height, 1))
+        NSSize(width: metrics.width, height: metrics.contentHeight(count: count))
     }
 
     /// 和这块区域相交的格子
@@ -97,6 +90,8 @@ struct GridCollection: NSViewRepresentable {
     let scrollRequest: GridScrollRequest?
     /// 正在拖出去的文件：变淡（spec X8）
     var dimmed: Set<URL> = []
+    /// 切换动画里过渡图正飞向这一张：先不画它的缩略图，落位后再露出来（spec V2-03）
+    var hiddenThumbnail: URL?
 
     func makeCoordinator() -> Coordinator { Coordinator(model: model) }
 
@@ -138,6 +133,7 @@ struct GridCollection: NSViewRepresentable {
         private var selection: Set<URL> = []
         private var ratings: [URL: Int] = [:]
         private var dimmed: Set<URL> = []
+        private var hiddenThumbnail: URL?
         private var lastScrollSerial: Int?
         private var lastHeight: CGFloat = 0
         private var boundsObserver: NSObjectProtocol?
@@ -149,6 +145,7 @@ struct GridCollection: NSViewRepresentable {
         func attach(_ view: GridCollectionNSView, scroll: NSScrollView) {
             self.view = view
             self.scroll = scroll
+            model.gridGeometry = self
             scroll.contentView.postsBoundsChangedNotifications = true
             boundsObserver = NotificationCenter.default.addObserver(forName: NSView.boundsDidChangeNotification, object: scroll.contentView,
                                                                     queue: .main) { [weak self] _ in
@@ -159,6 +156,8 @@ struct GridCollection: NSViewRepresentable {
         func detach() {
             if let boundsObserver { NotificationCenter.default.removeObserver(boundsObserver) }
             boundsObserver = nil
+            // 快速来回切换时，新网格可能已经登记上了：只摘掉自己
+            if model.gridGeometry === self { model.gridGeometry = nil }
         }
 
         // MARK: 跟上模型
@@ -172,6 +171,7 @@ struct GridCollection: NSViewRepresentable {
             selection = p.selection
             ratings = p.ratings
             dimmed = p.dimmed
+            hiddenThumbnail = p.hiddenThumbnail
             if itemsChanged || metricsChanged {
                 layout.count = items.count
                 layout.metrics = metrics
@@ -189,6 +189,7 @@ struct GridCollection: NSViewRepresentable {
                 item.cell.setSelected(selection.contains(file.url))
                 item.cell.setRating(ratings[file.url] ?? 0)
                 item.cell.setDimmed(dimmed.contains(file.url))
+                item.cell.setThumbnailHidden(hiddenThumbnail == file.url)
             }
             model.gridColumns = metrics.columns
             model.gridVisibleRows = metrics.visibleRows(height: p.viewport.height)
@@ -221,15 +222,36 @@ struct GridCollection: NSViewRepresentable {
             }
             // 高度用 SwiftUI 给的：这时候 AppKit 那边可能还没按新尺寸排过，clip 的高度是旧的
             let height = lastHeight > 0 ? lastHeight : clip.bounds.height
-            let visible = CGRect(x: 0, y: clip.bounds.minY, width: clip.bounds.width, height: height)
-            let top = frame.minY - 64, bottom = frame.maxY + 68
-            let maxY = max(0, layout.collectionViewContentSize.height - visible.height)
-            var y = visible.minY
-            if top < visible.minY { y = top } else if bottom > visible.maxY { y = bottom - visible.height }
-            y = min(max(y, 0), maxY)
-            guard abs(y - visible.minY) > 0.5 else { return }
+            // 和切换动画预测落点用的是同一个算法（ViewSwitchGeometry.predictedGridRect）
+            guard let y = GridMetrics.revealOffset(for: frame, current: clip.bounds.minY, viewportHeight: height,
+                                                   contentHeight: layout.collectionViewContentSize.height) else { return }
             clip.scroll(to: NSPoint(x: 0, y: y))
             scroll.reflectScrolledClipView(clip)
+        }
+
+        /// 切到画廊的那一刻：被选中的那一格立即不画缩略图（过渡图从这里飞走，网格自己在淡出，
+        /// 不能留一张在原处）。正在移除的视图 SwiftUI 不再更新，只能直接改
+        func hideThumbnailNow(_ url: URL) {
+            hiddenThumbnail = url
+            guard let view else { return }
+            for case let item as GridItem in view.visibleItems() where item.cell.item?.url == url {
+                item.cell.setThumbnailHidden(true)
+                item.cell.layoutSubtreeIfNeeded()
+            }
+        }
+
+        /// 这一张的缩略图现在在网格视图里的位置（左上为原点，y 向下；网格贴在窗口左上角，也就是窗口里的位置）。
+        /// 格子不在屏幕上、或缩略图完全滚出可见区时返回 nil（切换动画用，spec V2-03）
+        func thumbnailRect(for url: URL) -> CGRect? {
+            guard let view, let scroll, let index = items.firstIndex(where: { $0.url == url }),
+                  let cell = (view.item(at: IndexPath(item: index, section: 0)) as? GridItem)?.cell, cell.item?.url == url
+            else { return nil }
+            let clip = scroll.contentView
+            guard clip.bounds.height >= 1 else { return nil }
+            let frame = layout.frame(at: index)
+            let rect = cell.thumbnailFrame.offsetBy(dx: frame.minX - clip.bounds.minX, dy: frame.minY - clip.bounds.minY)
+            let visible = CGRect(x: 0, y: 0, width: clip.bounds.width, height: lastHeight > 0 ? lastHeight : clip.bounds.height)
+            return rect.intersects(visible) ? rect : nil
         }
 
         /// 第一张露在顶部栏下面的是第几个（没有焦点时键盘从它开始，spec V4-01）
@@ -252,6 +274,7 @@ struct GridCollection: NSViewRepresentable {
             let cell = item.cell
             cell.configure(item: file, metrics: layout.metrics, selected: selection.contains(file.url),
                            rating: ratings[file.url] ?? 0, dimmed: dimmed.contains(file.url))
+            cell.setThumbnailHidden(hiddenThumbnail == file.url)
             cell.onMouseDown = { [weak self] file, event in self?.mouseDown(file, event) }
             cell.onMouseUp = { [weak self] file, _ in self?.mouseUp(file) }
             cell.onContextClick = { [weak self] file, _ in self?.contextClick(file) }

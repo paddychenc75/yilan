@@ -53,6 +53,17 @@ final class ImageStageView: NSView {
     /// 换图的同时改方向（原地改写的文件换上新内容）时不播放转动动画
     var animatesRotation = true
 
+    /// 切换视图的过渡图还盖在上面（spec V2-03）：画面先不显示，免得和飞过来的过渡图叠成两张
+    var contentHidden = false {
+        didSet {
+            guard oldValue != contentHidden else { return }
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            container.opacity = contentHidden ? 0 : 1
+            CATransaction.commit()
+        }
+    }
+
     /// 这次要换上的内容和现在显示的不是同一张
     func isNewContent(_ new: Content?) -> Bool {
         content?.identity != new?.identity || content?.url != new?.url
@@ -529,6 +540,10 @@ struct ImageStage: NSViewRepresentable {
     /// 编辑模式的拉直角度（度）
     var straighten: Double = 0
     var onCropChanged: (PixelRect) -> Void = { _ in }
+    /// 切换视图的过渡图还没拿掉：先不显示画面
+    var contentHidden = false
+    /// 建好时把视图交出去（切换动画要在它被移除前直接藏起画面）
+    var onMake: (ImageStageView) -> Void = { _ in }
 
     final class Coordinator {
         var lastZoomSerial: Int?
@@ -539,6 +554,7 @@ struct ImageStage: NSViewRepresentable {
     func makeNSView(context: Context) -> ImageStageView {
         let view = ImageStageView(frame: .zero)
         context.coordinator.lastZoomSerial = zoomCommand?.serial
+        onMake(view)
         return view
     }
 
@@ -565,6 +581,7 @@ struct ImageStage: NSViewRepresentable {
         view.straighten = straighten
         view.cropConfig = crop
         view.fitInsets = insets
+        view.contentHidden = contentHidden
         if let cmd = zoomCommand, cmd.serial != context.coordinator.lastZoomSerial {
             context.coordinator.lastZoomSerial = cmd.serial
             view.apply(cmd.action)

@@ -10,6 +10,7 @@ final class GridCellView: NSView {
     private var isHovered = false
     private var isDimmed = false
     private var rating = 0
+    private var thumbHidden = false
     private var thumbnail: Thumbnail?
     private var loadTask: Task<Void, Never>?
     private var tracking: NSTrackingArea?
@@ -153,6 +154,7 @@ final class GridCellView: NSView {
         item = nil
         thumbnail = nil
         isHovered = false
+        thumbHidden = false
     }
 
     // MARK: - 布局
@@ -161,9 +163,19 @@ final class GridCellView: NSView {
     private var thumbFrame: CGRect {
         let image = thumbnail?.image
         let aspect: CGFloat = image.map { CGFloat($0.width) / CGFloat(max($0.height, 1)) } ?? 1.5
-        let size = metrics.thumbnailSize(aspect: aspect)
-        let box = CGRect(x: GridMetrics.boxInset, y: GridMetrics.boxInset, width: metrics.size.box, height: metrics.size.boxHeight)
-        return CGRect(x: (box.midX - size.width / 2).rounded(), y: (box.midY - size.height / 2).rounded(), width: size.width, height: size.height)
+        return metrics.thumbnailRect(aspect: aspect)
+    }
+
+    /// 缩略图在格子里的位置（切换动画用）
+    var thumbnailFrame: CGRect { thumbFrame }
+
+    /// 切换动画里过渡图正飞向这一格：缩略图、阴影、角标先不画，格子底色和文件名照常（spec V2-03）
+    func setThumbnailHidden(_ hidden: Bool) {
+        guard hidden != thumbHidden else { return }
+        thumbHidden = hidden
+        needsLayout = true
+        // 落位那一刻立即露出来，不等下一轮布局，免得空一帧
+        if !hidden { layoutSubtreeIfNeeded() }
     }
 
     private var nameFrame: CGRect {
@@ -186,13 +198,15 @@ final class GridCellView: NSView {
         thumbLayer.contents = thumbnail?.image
         thumbLayer.backgroundColor = (failed ? NSColor(red: 35 / 255, green: 36 / 255, blue: 40 / 255, alpha: 1)
                                              : NSColor(red: 28 / 255, green: 29 / 255, blue: 33 / 255, alpha: 1)).cgColor
-        shadowLayer.isHidden = thumbnail == nil
-        warning.isHidden = !failed
+        thumbLayer.isHidden = thumbHidden
+        shadowLayer.isHidden = thumbnail == nil || thumbHidden
+        warning.isHidden = !failed || thumbHidden
         warning.frame = CGRect(x: t.midX - 12, y: t.midY - 12, width: 24, height: 24)
         let n = nameFrame
         nameBackground.frame = n
         nameField.frame = n.insetBy(dx: 5, dy: 0).offsetBy(dx: 0, dy: 2)
         layoutBadges(in: t, failed: failed)
+        if thumbHidden { ratingBadge.isHidden = true; kindBadge.isHidden = true }
         CATransaction.commit()
     }
 

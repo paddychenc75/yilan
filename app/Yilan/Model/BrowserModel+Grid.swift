@@ -31,10 +31,15 @@ extension BrowserModel {
         switch mode {
         case .grid:
             // 画廊视图全屏时：先退出全屏，再切（spec V1-19）
+            // 过渡图要在退出全屏、清掉大图之前拍下（spec V2-03）
+            let transition = makeViewSwitch(to: .grid, target: current?.url)
             if isFullScreen { toggleFullScreen() }
             let cur = current
             suspendStage()
             cameFromGrid = false
+            beginViewSwitch(transition)
+            // 过渡图从大图的位置飞走：大图区正在淡出，画面立即藏起，不留两张
+            if transition != nil { stageView?.contentHidden = true }
             withAnimation(.easeInOut(duration: 0.25)) { viewMode = .grid }
             noteMouseActivity()   // 图标视图里控件始终显示（spec V1-18）
             // 选中集合变成只有当前这一张，并滚到完整可见（spec SEL-03）
@@ -45,8 +50,11 @@ extension BrowserModel {
         case .gallery:
             // 显示选中的那一张；多选时显示最后点的那一张，选中收成它（spec SEL-04）
             let target = GridSelection.representative(grid, items: itemURLs)
+            let transition = makeViewSwitch(to: .gallery, target: target)
             grid = .single(target)
             cameFromGrid = false
+            beginViewSwitch(transition)
+            if let transition { gridGeometry?.hideThumbnailNow(transition.url) }
             withAnimation(.easeInOut(duration: 0.25)) { viewMode = .gallery }
             currentIndex = target.flatMap { url in items.firstIndex { $0.url == url } }
             resumeStage()
@@ -71,6 +79,7 @@ extension BrowserModel {
     func prepareView(forFolder: Bool) {
         let mode: ViewMode = forFolder ? settings.viewModeForFolder : .gallery
         cameFromGrid = false
+        viewSwitch = nil
         guard mode != viewMode else { return }
         if mode == .grid {
             if isFullScreen { toggleFullScreen() }

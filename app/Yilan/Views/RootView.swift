@@ -18,6 +18,8 @@ struct RootView: View {
     @State private var gridCounterShortWidth: CGFloat = 60
     @State private var gridToolsWidth: CGFloat = 70
     @State private var updater = UpdateChecker.shared
+    /// 系统「减弱动态效果」：视图切换只淡入淡出（spec V2-03）
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { geo in
@@ -49,6 +51,13 @@ struct RootView: View {
                     stageControls(layout)
                 }
               }
+                // 视图切换的过渡图：在两个视图上面、顶部栏下面（spec V2-03）
+                if let t = activeViewSwitch, let rects = viewSwitchRects(t, layout) {
+                    ViewSwitchOverlay(image: t.image, from: rects.from, to: rects.to) { model.viewSwitchLanded(t.serial) }
+                        .frame(width: size.width, height: size.height)
+                        .id(t.serial)
+                        .transition(.asymmetric(insertion: .identity, removal: .opacity))
+                }
                 topBar(layout)
                 cards(size)
                 overlays(layout)
@@ -81,6 +90,8 @@ struct RootView: View {
         }
         .onDisappear { monitors.remove() }
         .onChange(of: model.chromeVisible) { _, visible in setTrafficLights(visible: visible) }
+        // 过渡图落位、目标视图里那一张也出来了：拿掉过渡图
+        .onChange(of: model.viewSwitchCanFinish) { _, done in if done { model.endViewSwitch() } }
         // 全屏时红绿灯由系统跟着菜单栏一起显示，要先恢复成不透明
         .onChange(of: model.isFullScreen) { _, fullScreen in
             setTrafficLights(visible: fullScreen || model.chromeVisible)
@@ -176,7 +187,6 @@ struct RootView: View {
     // MARK: - 大图
 
     private func stage(_ layout: StageLayout) -> some View {
-        let fs = layout.fullScreen
         // 信息面板浮在图片上：图片区和面板开关无关，开关面板时图片不移动、不缩放
         if model.edit != nil {
             return ImageStage(content: stageContent, insets: editInsets(layout.size), zoomCommand: model.zoomCommand,
@@ -185,14 +195,12 @@ struct RootView: View {
                               onNeedsFullResolution: { model.requestFullResolution() },
                               onDisplayChanged: { model.displayDidChange(maxPixel: $0) },
                               crop: editCropConfig, straighten: model.edit?.angle ?? 0,
-                              onCropChanged: { rect in model.edit?.crop = rect })
+                              onCropChanged: { rect in model.edit?.crop = rect },
+                              onMake: { model.stageView = $0 })
         }
         return ImageStage(
             content: stageContent,
-            insets: NSEdgeInsets(top: fs ? 0 : Theme.imageInsetTop,
-                                 left: layout.imageSideInset,
-                                 bottom: fs ? 0 : bottomInset,
-                                 right: layout.imageSideInset),
+            insets: galleryInsets(layout),
             zoomCommand: model.zoomCommand,
             rotation: model.edit?.turns ?? model.stageRotation,
             videoLayer: showsVideoLayer ? model.video.layer : nil,
@@ -201,8 +209,53 @@ struct RootView: View {
             onNeedsFullResolution: { model.requestFullResolution() },
             onDisplayChanged: { model.displayDidChange(maxPixel: $0) },
             crop: editCropConfig, straighten: model.edit?.angle ?? 0,
-            onCropChanged: { rect in model.edit?.crop = rect }
+            onCropChanged: { rect in model.edit?.crop = rect },
+            contentHidden: hidesStageForSwitch(layout),
+            onMake: { model.stageView = $0 }
         )
+    }
+
+    /// 浏览时图片区距窗口四边
+    private func galleryInsets(_ layout: StageLayout) -> NSEdgeInsets {
+        let fs = layout.fullScreen
+        return NSEdgeInsets(top: fs ? 0 : Theme.imageInsetTop, left: layout.imageSideInset,
+                            bottom: fs ? 0 : bottomInset, right: layout.imageSideInset)
+    }
+
+    // MARK: - 视图切换动画（spec V2-03）
+
+    /// 要画的过渡图；减弱动态效果时没有
+    private var activeViewSwitch: ViewSwitchTransition? { reduceMotion ? nil : model.viewSwitch }
+
+    /// 过渡图的起点和终点。算不出来（那一张不在列表里、矩形不在窗口里）时为 nil，这次只淡入淡出
+    private func viewSwitchRects(_ t: ViewSwitchTransition, _ layout: StageLayout) -> (from: CGRect, to: CGRect)? {
+        let size = layout.size
+        let area = ViewSwitchGeometry.galleryArea(size: size, insets: galleryInsets(layout))
+        let gallery = ViewSwitchGeometry.galleryRect(area: area, pixelSize: t.galleryPixelSize, aspect: t.thumbnailAspect,
+                                                     allowsUpscale: t.galleryAllowsUpscale)
+        let grid: CGRect
+        if let source = t.gridSourceRect {
+            grid = source
+        } else {
+            guard let index = model.items.firstIndex(where: { $0.url == t.url }) else { return nil }
+            let metrics = GridMetrics(size: model.gridSize, width: max(gridWidth(size), 1))
+            grid = ViewSwitchGeometry.predictedGridRect(index: index, count: model.items.count, metrics: metrics,
+                                                        viewportHeight: size.height, aspect: t.thumbnailAspect)
+        }
+        guard ViewSwitchGeometry.isUsable(gallery, in: size), ViewSwitchGeometry.isUsable(grid, in: size) else { return nil }
+        return t.toGrid ? (gallery, grid) : (grid, gallery)
+    }
+
+    /// 去画廊的过渡图还盖着：大图区先不显示画面
+    private func hidesStageForSwitch(_ layout: StageLayout) -> Bool {
+        guard let t = activeViewSwitch, !t.toGrid, model.edit == nil else { return false }
+        return viewSwitchRects(t, layout) != nil
+    }
+
+    /// 回图标视图的过渡图还在飞：那一格先不画缩略图
+    private func gridHiddenThumbnail(_ layout: StageLayout) -> URL? {
+        guard let t = activeViewSwitch, t.toGrid, viewSwitchRects(t, layout) != nil else { return nil }
+        return t.url
     }
 
     private var bottomInset: CGFloat {
@@ -831,7 +884,7 @@ struct RootView: View {
             GridCollection(model: model, items: model.items, selection: model.grid.selection,
                            ratings: model.showsRatingUI ? model.ratings : [:], size: model.gridSize,
                            viewport: CGSize(width: width, height: size.height), scrollRequest: model.gridScrollRequest,
-                           dimmed: model.gridDragging)
+                           dimmed: model.gridDragging, hiddenThumbnail: gridHiddenThumbnail(layout))
                 .frame(width: width, height: size.height)
             // 顶部和底部各一段渐暗（spec V1-09）
             VStack(spacing: 0) {

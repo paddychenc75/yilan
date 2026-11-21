@@ -167,6 +167,12 @@ final class BrowserModel {
     internal(set) var cameFromGrid = false
     /// 请图标视图滚到这一张让它完整可见（serial 每次加 1）
     var gridScrollRequest: GridScrollRequest?
+    /// 正在播放的视图切换动画（spec V2-03）；nil = 没有，或者这次只淡入淡出。只影响画面，模型状态已经切过去了
+    internal(set) var viewSwitch: ViewSwitchTransition?
+    /// 眼前的网格：切换动画从它那里问某一张缩略图在窗口里的位置
+    @ObservationIgnored weak var gridGeometry: GridCollection.Coordinator?
+    /// 眼前的大图区：切回图标视图时立即藏起它的画面，过渡图从这里飞走
+    @ObservationIgnored weak var stageView: ImageStageView?
     /// 图标视图报上来的排列：一行几列、一屏几行、第一张可见的是第几个（键盘移动用）
     @ObservationIgnored var gridColumns = 6
     @ObservationIgnored var gridVisibleRows = 3
