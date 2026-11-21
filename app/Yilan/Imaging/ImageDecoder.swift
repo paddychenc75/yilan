@@ -61,8 +61,15 @@ enum ImageDecoder {
             kCGImageSourceThumbnailMaxPixelSize: target,
         ]
         try Task.checkCancellation()
-        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
-            throw corrupt(item, detail: String(localized: "解码失败"))
+        // RAW：系统这一次会完整解码时，改用同样的步骤自己解（画面一致，内存少得多，见 RawFullDecode）；不适用时返回 nil
+        let image: CGImage
+        if item.format == .raw, let own = try RawFullDecode.decode(item.url, source: source, target: target) {
+            image = own
+        } else {
+            guard let system = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+                throw corrupt(item, detail: String(localized: "解码失败"))
+            }
+            image = system
         }
         return DecodedImage(
             image: image,
