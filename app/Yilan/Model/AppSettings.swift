@@ -34,6 +34,7 @@ final class AppSettings {
         static let featureRating = "featureRating"
         static let featureFilter = "featureFilter"
         static let featureEdit = "featureEdit"
+        static let simpleMode = "simpleMode"
         /// 上次用户主动选的视图、打开文件夹时用哪种视图、图标视图的缩略图大小（spec V6、V5）
         static let lastViewMode = "lastViewMode"
         static let openFolderView = "openFolderView"
@@ -94,6 +95,10 @@ final class AppSettings {
     var didShowCameraPreviewHint: Bool { didSet { defaults.set(didShowCameraPreviewHint, forKey: Key.didShowCameraPreviewHint) } }
 
     /// 功能开关（spec 第 8 节）。关掉后这项功能的入口和快捷键都不再出现，不改动任何用户文件
+    /// 简洁模式（spec 第 8 节）：只保留看图。评星、筛选、编辑、复制 / 移动到文件夹一起关掉。
+    /// 界面上只有这一个开关；下面三个属性是它在程序内部的展开，不单独保存
+    var simpleMode: Bool { didSet { defaults.set(simpleMode, forKey: Key.simpleMode) } }
+
     var featureRating: Bool { didSet { featureDidSet(.rating, Key.featureRating, featureRating, oldValue) } }
     var featureFilter: Bool { didSet { featureDidSet(.filter, Key.featureFilter, featureFilter, oldValue) } }
     var featureEdit: Bool { didSet { featureDidSet(.edit, Key.featureEdit, featureEdit, oldValue) } }
@@ -124,7 +129,6 @@ final class AppSettings {
 
     private func featureDidSet(_ feature: Feature, _ key: String, _ value: Bool, _ old: Bool) {
         guard value != old else { return }
-        defaults.set(value, forKey: key)
         featureChanged?(feature, value)
     }
 
@@ -192,9 +196,11 @@ final class AppSettings {
         didShowSidecarHint = defaults.bool(forKey: Key.didShowSidecarHint)
         editRawFormat = defaults.string(forKey: Key.editRawFormat).flatMap(RawExportFormat.init(rawValue:)) ?? .jpeg
         didShowCameraPreviewHint = defaults.bool(forKey: Key.didShowCameraPreviewHint)
-        featureRating = defaults.bool(forKey: Key.featureRating)
-        featureFilter = defaults.bool(forKey: Key.featureFilter)
-        featureEdit = defaults.bool(forKey: Key.featureEdit)
+        let simple = defaults.bool(forKey: Key.simpleMode)
+        simpleMode = simple
+        featureRating = !simple
+        featureFilter = !simple
+        featureEdit = !simple
         lastViewMode = defaults.string(forKey: Key.lastViewMode).flatMap(ViewMode.init(rawValue:)) ?? .gallery
         openFolderView = defaults.string(forKey: Key.openFolderView).flatMap(OpenFolderView.init(rawValue:)) ?? .last
         gridSize = GridSize(rawValue: defaults.integer(forKey: Key.gridSize)) ?? .default

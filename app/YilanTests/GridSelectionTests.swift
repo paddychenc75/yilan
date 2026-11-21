@@ -195,9 +195,9 @@ struct GridMetricsTests {
         #expect(GridMetrics(size: .xl, width: 100).columns == 1)
     }
 
-    @Test("信息面板打开时可用宽度变小，列数变少（spec V10-02）")
-    func withPanel() {
-        #expect(GridMetrics(size: .m, width: 1280 - 316).columns == 5)
+    @Test("窗口变窄列数变少")
+    func narrower() {
+        #expect(GridMetrics(size: .m, width: 964).columns == 5)
     }
 
     @Test("缩略图保持原比例：比 4:3 扁的顶满宽，其余顶满高（spec V1-02）")

@@ -1853,6 +1853,16 @@
         }
       }
     },
+    "只保留看图：浏览、缩放、旋转、视频播放、删除和拷贝。评星、筛选、编辑、复制和移动到文件夹不再出现；已有的星级和文件不受影响，随时可以关掉恢复。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keeps only viewing: browsing, zoom, rotation, video playback, delete and copy. Ratings, filters, editing, and copying or moving to a folder no longer appear. Your existing ratings and files are not affected, and you can turn this off at any time."
+          }
+        }
+      }
+    },
     "只改方向标记，画质不变，⌘Z 可撤销" : {
       "localizations" : {
         "en" : {
@@ -3538,6 +3548,16 @@
         }
       }
     },
+    "按 G 切换到图标视图，一屏看很多张，可以选中多张一起删除或拷贝。在图片上点右键能直接操作。只想看图的话，可以在“设置 › 通用”里打开简洁模式。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press G for Icon View to see many photos at once and select several to delete or copy together. Right-click a photo for quick actions. If you only want to view photos, turn on Simple Mode in Settings › General."
+          }
+        }
+      }
+    },
     "按 G 切换到图标视图，一屏看很多张，可以选中多张一起删除或拷贝。在图片上点右键能直接操作。用不到的功能可以在“设置 › 功能”里关掉。" : {
       "localizations" : {
         "en" : {
@@ -4653,6 +4673,16 @@
         }
       }
     },
+    "有一张图片正在编辑。先保存或取消编辑，才能打开简洁模式。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A photo is being edited. Save or cancel the edit before turning on Simple Mode."
+          }
+        }
+      }
+    },
     "有新版本 %@" : {
       "localizations" : {
         "en" : {
@@ -5575,6 +5605,16 @@
     },
     "简体中文" : {
       "shouldTranslate" : false
+    },
+    "简洁模式" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Simple Mode"
+          }
+        }
+      }
     },
     "系统不支持这种视频编码。" : {
       "localizations" : {

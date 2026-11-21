@@ -180,12 +180,14 @@ struct AppCommands: Commands {
                     .keyboardShortcut("e", modifiers: [])
                     .disabled(!model.canEditCurrent || model.isEditing || !model.mainWindowIsKey || model.isGrid)
             }
-            Divider()
-            // 复制到 / 移动到文件夹（spec R9-01）：当前文件或选中的文件
-            Button("复制到文件夹…") { model.perform(.copyTo) }
-                .disabled(!model.canTransfer)
-            Button("移动到文件夹…") { model.perform(.moveTo) }
-                .disabled(!model.canTransfer)
+            // 复制到 / 移动到文件夹（spec R9-01）：当前文件或选中的文件。简洁模式里没有
+            if model.transferEnabled {
+                Divider()
+                Button("复制到文件夹…") { model.perform(.copyTo) }
+                    .disabled(!model.canTransfer)
+                Button("移动到文件夹…") { model.perform(.moveTo) }
+                    .disabled(!model.canTransfer)
+            }
             Divider()
             // 只在主窗口在前时可用：设置窗口的输入框里按 ⌫ 是删字
             Button(model.menuTitle(.trash)) { model.perform(.trash) }
@@ -217,6 +219,10 @@ struct AppCommands: Commands {
                 .disabled(!model.copyActsOnFiles || !model.isGrid || model.grid.selection.isEmpty)
         }
         CommandGroup(before: .toolbar) {
+            // 简洁模式：只保留看图（spec 第 8 节）。正在编辑时不能打开
+            Toggle("简洁模式", isOn: Binding(get: { model.simpleMode }, set: { model.setSimpleMode($0) }))
+                .disabled(model.isEditing && !model.simpleMode)
+            Divider()
             // 两种视图：当前的打勾，G 只标在另一项上（spec MB-03）
             viewToggle("画廊视图", .gallery)
             viewToggle("图标视图", .grid)

@@ -6,13 +6,12 @@ import SwiftUI
 /// 英文比中文长：控件不改尺寸，放不下时用更短的英文说法
 struct SettingsView: View {
     enum Pane: String, CaseIterable, Identifiable {
-        case general, browsing, features, video, formats, cache, shortcuts
+        case general, browsing, video, formats, cache, shortcuts
         var id: String { rawValue }
         var title: LocalizedStringResource {
             switch self {
             case .general: "通用"
             case .browsing: "浏览"
-            case .features: "功能"
             case .video: "视频"
             case .formats: "文件格式"
             case .cache: "缓存与性能"
@@ -23,7 +22,6 @@ struct SettingsView: View {
             switch self {
             case .general: "gearshape.fill"
             case .browsing: "photo"
-            case .features: "switch.2"
             case .video: "video.fill"
             case .formats: "doc.fill"
             case .cache: "clock.fill"
@@ -35,7 +33,6 @@ struct SettingsView: View {
             switch self {
             case .general: Color(hex: 0x8E8E93)
             case .browsing: Color(hex: 0x0A84FF)
-            case .features: Color(hex: 0x30B0C7)
             case .video: Color(hex: 0xFF9F0A)
             case .formats: Color(hex: 0x30D158)
             case .cache: Color(hex: 0xBF5AF2)
@@ -155,7 +152,6 @@ struct SettingsView: View {
                 switch pane {
                 case .general: generalPane
                 case .browsing: browsingPane
-                case .features: FeaturesPane(settings: settings)
                 case .video: videoPane
                 case .formats: formatsPane
                 case .shortcuts: ShortcutsPane(rating: settings.featureRating, filter: settings.featureFilter, edit: settings.featureEdit)
@@ -182,6 +178,7 @@ struct SettingsView: View {
     @ViewBuilder
     private var generalPane: some View {
         languageGroup
+        simpleModeGroup
         if UpdateChecker.isAvailable {
             SettingsGroup {
                 SettingsRow("自动检查更新", note: "一览只在检查更新时联网，不会上传任何信息。") {
@@ -235,6 +232,32 @@ struct SettingsView: View {
                 .padding(.vertical, 8)
                 .frame(minHeight: 40)
             }
+        }
+    }
+
+    /// 简洁模式（spec 第 8 节）：一个开关。正在编辑时不能打开
+    @ViewBuilder
+    private var simpleModeGroup: some View {
+        let model = BrowserModel.shared
+        let blocked = model.edit != nil && !settings.simpleMode
+        SettingsGroup {
+            SettingsRow("简洁模式", note: "只保留看图：浏览、缩放、旋转、视频播放、删除和拷贝。评星、筛选、编辑、复制和移动到文件夹不再出现；已有的星级和文件不受影响，随时可以关掉恢复。") {
+                SettingsSwitch(isOn: Binding(get: { settings.simpleMode }, set: { model.setSimpleMode($0) }))
+                    .disabled(blocked)
+                    .opacity(blocked ? 0.4 : 1)
+            }
+        }
+        if blocked {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "exclamationmark.triangle").font(.system(size: 12, weight: .medium)).padding(.top, 1)
+                Text("有一张图片正在编辑。先保存或取消编辑，才能打开简洁模式。")
+                    .font(.system(size: 12))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .foregroundStyle(Theme.previewTag)
+            .padding(EdgeInsets(top: 9, leading: 12, bottom: 9, trailing: 12))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.yellow.opacity(0.12)))
         }
     }
 

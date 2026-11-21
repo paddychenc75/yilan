@@ -745,7 +745,7 @@ struct RootView: View {
             if let hint = model.hint {
                 HintCardView(card: hint, onPrimary: {
                     if hint == .shortcutsChanged { SettingsWindow.shared.show(pane: .shortcuts) }
-                    if hint == .whatsNew { SettingsWindow.shared.show(pane: .features) }
+                    if hint == .whatsNew { SettingsWindow.shared.show(pane: .general) }
                     model.dismissHint()
                 }, onClose: { model.dismissHint() })
                 .onHover { model.setHovering("hint", $0) }
@@ -872,10 +872,8 @@ struct RootView: View {
 
     // MARK: - 图标视图（设计稿 11）
 
-    /// 网格可用的宽度：信息面板打开时减去面板和间距，缩略图不被面板盖住（spec V10-02）
-    private func gridWidth(_ size: CGSize) -> CGFloat {
-        showsInfoPanel ? max(200, size.width - InfoPanel.width - InfoPanel.trailing) : size.width
-    }
+    /// 网格的宽度就是窗口宽度：信息面板浮在缩略图上面，开关面板时缩略图不重新排列（spec V10-02，和画廊视图一致）
+    private func gridWidth(_ size: CGSize) -> CGFloat { size.width }
 
     private func gridStage(_ layout: StageLayout) -> some View {
         let size = layout.size

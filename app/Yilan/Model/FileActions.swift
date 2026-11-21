@@ -77,7 +77,8 @@ extension BrowserModel {
         // 「⋯」菜单和 v0.3 一样不显示快捷键（spec M4-01）
         let keys = context != .more
         // 「移到废纸篓」之前的一组（spec R9-01、X4-02、设计稿 98）
-        let transfer: [FileMenuItem] = [
+        // 简洁模式里整组消失
+        let transfer: [FileMenuItem] = !transferEnabled ? [] : [
             item(.copyTo, String(localized: "复制到文件夹…"), nil, canTransfer),
             item(.moveTo, String(localized: "移动到文件夹…"), nil, canTransfer),
             .separator,

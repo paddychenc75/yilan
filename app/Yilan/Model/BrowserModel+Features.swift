@@ -1,11 +1,23 @@
 import SwiftUI
 
-/// 功能开关（spec 第 8 节）：评星、筛选、编辑各自能关掉。
-/// 界面、按键、菜单都读这里的三个属性，不直接读设置，方便核对有没有漏掉的入口
+/// 简洁模式（spec 第 8 节）：一个开关，打开后只保留看图，评星、筛选、编辑、复制 / 移动到文件夹一起消失。
+/// 界面、按键、菜单都读这里的几个属性，不直接读设置，方便核对有没有漏掉的入口。
+/// 内部仍按三项功能分开收尾（各自要清的状态不一样），但用户只能一起开、一起关：只有两种状态，不存在别的组合
 extension BrowserModel {
     var ratingEnabled: Bool { settings.featureRating }
     var filterEnabled: Bool { settings.featureFilter }
     var editEnabled: Bool { settings.featureEdit }
+
+    var simpleMode: Bool { settings.simpleMode }
+    /// 复制到 / 移动到文件夹：简洁模式里没有
+    var transferEnabled: Bool { !settings.simpleMode }
+
+    /// 打开或关闭简洁模式。正在编辑时不能打开：不然没保存的改动会丢（spec T2-15）
+    func setSimpleMode(_ on: Bool) {
+        guard on != settings.simpleMode, !on || edit == nil else { return }
+        settings.simpleMode = on
+        for feature in Feature.allCases { settings.setEnabled(feature, !on) }
+    }
 
     /// 界面上能不能看到星（信息行、角标、计数、信息面板）
     var showsRatingUI: Bool { ratingEnabled }
@@ -53,12 +65,4 @@ extension BrowserModel {
         }
     }
 
-    /// 「全部关闭」「全部打开」（spec T4-01）。正在编辑时不能全部关闭（spec T2-15）
-    func setAllFeatures(_ enabled: Bool) {
-        guard enabled || edit == nil else { return }
-        for feature in Feature.allCases { settings.setEnabled(feature, enabled) }
-    }
-
-    var allFeaturesOff: Bool { !ratingEnabled && !filterEnabled && !editEnabled }
-    var allFeaturesOn: Bool { ratingEnabled && filterEnabled && editEnabled }
 }

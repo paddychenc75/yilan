@@ -7,7 +7,7 @@ import Testing
 
 @Suite("功能开关：设置")
 struct FeatureSettingsTests {
-    @Test("默认都开；改了会保存；回调只在真的变了时触发")
+    @Test("默认都开；回调只在真的变了时触发；单独一项不保存，只有简洁模式这一个开关记得住")
     @MainActor
     func defaultsAndPersistence() {
         let s = T5.suite()
@@ -18,8 +18,9 @@ struct FeatureSettingsTests {
         settings.featureRating = false
         settings.featureRating = false
         #expect(calls.count == 1 && calls[0].0 == .rating && calls[0].1 == false)
+        // 内部某一项单独改了不会保存：下次打开只看简洁模式（这里没开），三项都在
         let again = AppSettings(defaults: s.defaults, domainName: s.name)
-        #expect(!again.featureRating && again.featureFilter && again.featureEdit)
+        #expect(again.featureRating && again.featureFilter && again.featureEdit && !again.simpleMode)
     }
 }
 
@@ -158,20 +159,42 @@ struct FilterEditSwitchTests {
         #expect(model.showsSaveRotation)
     }
 
-    @Test("全部关闭 / 全部打开；正在编辑时不能全部关闭（spec T4-01、T2-15）")
+    @Test("简洁模式：一个开关，评星、筛选、编辑、复制 / 移动到文件夹一起关、一起开；正在编辑时不能打开（spec T1、T2-15）")
     @MainActor
-    func allOffOn() async throws {
+    func simpleMode() async throws {
         let folder = try MetaFixtures.copy(["aurora.jpg", "IMG_2034.jpg"])
         let settings = T5.settings()
         let model = try T5.model(folder, settings: settings)
-        model.setAllFeatures(false)
-        #expect(model.allFeaturesOff)
-        model.setAllFeatures(true)
-        #expect(model.allFeaturesOn)
-        await T5.waitFor { model.displayed != nil }
+        #expect(!model.simpleMode && model.ratingEnabled && model.filterEnabled && model.editEnabled && model.transferEnabled)
+        model.setSimpleMode(true)
+        #expect(model.simpleMode && !model.ratingEnabled && !model.filterEnabled && !model.editEnabled && !model.transferEnabled)
+        // 菜单里没有编辑、复制到、移动到
+        let actions = model.fileMenu(.single).compactMap(\.action)
+        #expect(!actions.contains(.edit) && !actions.contains(.copyTo) && !actions.contains(.moveTo))
+        #expect(actions.contains(.copy) && actions.contains(.trash) && actions.contains(.rotateLeft))
+        model.setSimpleMode(false)
+        #expect(model.ratingEnabled && model.filterEnabled && model.editEnabled && model.transferEnabled)
+        #expect(model.fileMenu(.single).compactMap(\.action).contains(.copyTo))
+        _ = await T5.waitFor { model.displayed != nil }
         model.enterEdit()
         #expect(model.edit != nil)
-        model.setAllFeatures(false)
-        #expect(model.allFeaturesOn)
+        model.setSimpleMode(true)
+        #expect(!model.simpleMode && model.editEnabled)
+    }
+
+    @Test("简洁模式记得住：下次打开还是简洁模式，三项功能跟着它，不存在别的组合（spec T1）")
+    @MainActor
+    func simpleModePersists() throws {
+        let suite = T5.suite()
+        let first = AppSettings(defaults: suite.defaults)
+        #expect(!first.simpleMode && first.featureRating && first.featureFilter && first.featureEdit)
+        first.simpleMode = true
+        // 即使内部某一项被单独改过，重新打开时也只看简洁模式这一个开关
+        first.featureRating = true
+        let second = AppSettings(defaults: suite.defaults)
+        #expect(second.simpleMode && !second.featureRating && !second.featureFilter && !second.featureEdit)
+        second.simpleMode = false
+        let third = AppSettings(defaults: suite.defaults)
+        #expect(!third.simpleMode && third.featureRating && third.featureFilter && third.featureEdit)
     }
 }
