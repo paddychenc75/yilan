@@ -95,7 +95,7 @@ final class AppSettings {
     var didShowCameraPreviewHint: Bool { didSet { defaults.set(didShowCameraPreviewHint, forKey: Key.didShowCameraPreviewHint) } }
 
     /// 功能开关（spec 第 8 节）。关掉后这项功能的入口和快捷键都不再出现，不改动任何用户文件
-    /// 简洁模式（spec 第 8 节）：只保留看图。评星、筛选、编辑、复制 / 移动到文件夹一起关掉。
+    /// 简洁模式（spec 第 8 节）：只保留看图。评星、编辑、复制 / 移动到文件夹一起关掉（筛选、视图、照片信息属于「看」，保留）。
     /// 界面上只有这一个开关；下面三个属性是它在程序内部的展开，不单独保存
     var simpleMode: Bool { didSet { defaults.set(simpleMode, forKey: Key.simpleMode) } }
 
@@ -199,7 +199,7 @@ final class AppSettings {
         let simple = defaults.bool(forKey: Key.simpleMode)
         simpleMode = simple
         featureRating = !simple
-        featureFilter = !simple
+        featureFilter = true      // 筛选属于「看」，简洁模式里保留
         featureEdit = !simple
         lastViewMode = defaults.string(forKey: Key.lastViewMode).flatMap(ViewMode.init(rawValue:)) ?? .gallery
         openFolderView = defaults.string(forKey: Key.openFolderView).flatMap(OpenFolderView.init(rawValue:)) ?? .last

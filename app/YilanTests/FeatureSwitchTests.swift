@@ -159,7 +159,7 @@ struct FilterEditSwitchTests {
         #expect(model.showsSaveRotation)
     }
 
-    @Test("简洁模式：一个开关，评星、筛选、编辑、复制 / 移动到文件夹一起关、一起开；正在编辑时不能打开（spec T1、T2-15）")
+    @Test("简洁模式：一个开关，评星、编辑、复制 / 移动到文件夹一起关、一起开；筛选保留；正在编辑时不能打开（spec T1、T2-15）")
     @MainActor
     func simpleMode() async throws {
         let folder = try MetaFixtures.copy(["aurora.jpg", "IMG_2034.jpg"])
@@ -167,7 +167,7 @@ struct FilterEditSwitchTests {
         let model = try T5.model(folder, settings: settings)
         #expect(!model.simpleMode && model.ratingEnabled && model.filterEnabled && model.editEnabled && model.transferEnabled)
         model.setSimpleMode(true)
-        #expect(model.simpleMode && !model.ratingEnabled && !model.filterEnabled && !model.editEnabled && !model.transferEnabled)
+        #expect(model.simpleMode && !model.ratingEnabled && model.filterEnabled && !model.editEnabled && !model.transferEnabled)
         // 菜单里没有编辑、复制到、移动到
         let actions = model.fileMenu(.single).compactMap(\.action)
         #expect(!actions.contains(.edit) && !actions.contains(.copyTo) && !actions.contains(.moveTo))
@@ -192,7 +192,7 @@ struct FilterEditSwitchTests {
         // 即使内部某一项被单独改过，重新打开时也只看简洁模式这一个开关
         first.featureRating = true
         let second = AppSettings(defaults: suite.defaults)
-        #expect(second.simpleMode && !second.featureRating && !second.featureFilter && !second.featureEdit)
+        #expect(second.simpleMode && !second.featureRating && second.featureFilter && !second.featureEdit)
         second.simpleMode = false
         let third = AppSettings(defaults: suite.defaults)
         #expect(!third.simpleMode && third.featureRating && third.featureFilter && third.featureEdit)

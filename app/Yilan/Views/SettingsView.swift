@@ -241,7 +241,7 @@ struct SettingsView: View {
         let model = BrowserModel.shared
         let blocked = model.edit != nil && !settings.simpleMode
         SettingsGroup {
-            SettingsRow("简洁模式", note: "只保留看图：浏览、缩放、旋转、视频播放、删除和拷贝。评星、筛选、编辑、复制和移动到文件夹不再出现；已有的星级和文件不受影响，随时可以关掉恢复。") {
+            SettingsRow("简洁模式", note: "只保留和看图有关的功能：两种视图、筛选、照片信息、缩放、旋转、视频播放。评星、编辑、复制和移动到文件夹不再出现；已有的星级和文件不受影响，随时可以关掉恢复。") {
                 SettingsSwitch(isOn: Binding(get: { settings.simpleMode }, set: { model.setSimpleMode($0) }))
                     .disabled(blocked)
                     .opacity(blocked ? 0.4 : 1)

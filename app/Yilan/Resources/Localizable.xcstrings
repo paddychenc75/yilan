@@ -1853,12 +1853,12 @@
         }
       }
     },
-    "只保留看图：浏览、缩放、旋转、视频播放、删除和拷贝。评星、筛选、编辑、复制和移动到文件夹不再出现；已有的星级和文件不受影响，随时可以关掉恢复。" : {
+    "只保留和看图有关的功能：两种视图、筛选、照片信息、缩放、旋转、视频播放。评星、编辑、复制和移动到文件夹不再出现；已有的星级和文件不受影响，随时可以关掉恢复。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keeps only viewing: browsing, zoom, rotation, video playback, delete and copy. Ratings, filters, editing, and copying or moving to a folder no longer appear. Your existing ratings and files are not affected, and you can turn this off at any time."
+            "value" : "Keeps only what you need for viewing: both views, filters, photo info, zoom, rotation and video playback. Ratings, editing, and copying or moving to a folder no longer appear. Your existing ratings and files are not affected, and you can turn this off at any time."
           }
         }
       }

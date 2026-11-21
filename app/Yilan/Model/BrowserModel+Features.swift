@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 简洁模式（spec 第 8 节）：一个开关，打开后只保留看图，评星、筛选、编辑、复制 / 移动到文件夹一起消失。
+/// 简洁模式（spec 第 8 节）：一个开关，打开后只保留和看图有关的功能（视图、筛选、照片信息、缩放、旋转、视频），评星、编辑、复制 / 移动到文件夹一起消失。
 /// 界面、按键、菜单都读这里的几个属性，不直接读设置，方便核对有没有漏掉的入口。
 /// 内部仍按三项功能分开收尾（各自要清的状态不一样），但用户只能一起开、一起关：只有两种状态，不存在别的组合
 extension BrowserModel {
@@ -16,7 +16,8 @@ extension BrowserModel {
     func setSimpleMode(_ on: Bool) {
         guard on != settings.simpleMode, !on || edit == nil else { return }
         settings.simpleMode = on
-        for feature in Feature.allCases { settings.setEnabled(feature, !on) }
+        // 筛选属于「看」，不跟着关（评星关掉时，正在生效的星级条件会被清掉，格式条件保留）
+        for feature in Feature.allCases where feature != .filter { settings.setEnabled(feature, !on) }
     }
 
     /// 界面上能不能看到星（信息行、角标、计数、信息面板）
