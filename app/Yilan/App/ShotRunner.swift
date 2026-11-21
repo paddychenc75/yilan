@@ -10,7 +10,7 @@ enum ShotRunner {
         else { return }
         Task { @MainActor in
             // 等文件夹打开、当前文件显示出来（最多 40 秒：几万个文件的文件夹扫描要十几秒）
-            for _ in 0..<400 where model.current == nil || model.displayed == nil {
+            for _ in 0..<400 where !model.hasOpenedFolder || (!model.isGrid && (model.current == nil || model.displayed == nil)) {
                 try? await Task.sleep(for: .milliseconds(100))
             }
             if let size = ShotHooks.windowSize, let window = model.window {
