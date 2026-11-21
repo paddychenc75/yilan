@@ -198,6 +198,11 @@ enum ShotRunner {
             s.crop = CropMath.clamp(rect, bounds: size)
         }
         if let p = ShotHooks.editResize, let scale = ResizeMath.scale(forPercent: p) { s.scale = scale }
+        if let angle = ShotHooks.editAngle {
+            s.straightenOpen = true
+            s.straightening = ShotHooks.editAngleDragging
+            s.setAngle(angle)
+        }
         try? await Task.sleep(for: .milliseconds(300))
         switch state {
         case "ratio": s.ratioMenuOpen = true

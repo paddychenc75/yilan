@@ -50,6 +50,9 @@ enum ShotHooks {
     static let filterSpec: String? = value("shot-filter")
     static let filterPanel = CommandLine.arguments.contains("--shot-filter-panel")
     static let edit: String? = value("shot-edit")
+    /// `--shot-angle=20`：拉直到这个角度，刻度尺开着；加 `--shot-angle-drag` 是正在拖刻度尺的样子
+    static let editAngle: Double? = value("shot-angle").flatMap(Double.init)
+    static let editAngleDragging = CommandLine.arguments.contains("--shot-angle-drag")
     static let editCrop: [Double]? = value("shot-crop").map { $0.split(separator: ",").compactMap { Double($0) } }
     static let editRatio: String? = value("shot-ratio")
     static let editResize: Int? = value("shot-resize").flatMap(Int.init)
@@ -87,6 +90,8 @@ enum ShotHooks {
     static let filterSpec: String? = nil
     static let filterPanel = false
     static let edit: String? = nil
+    static let editAngle: Double? = nil
+    static let editAngleDragging = false
     static let editCrop: [Double]? = nil
     static let editRatio: String? = nil
     static let editResize: Int? = nil
