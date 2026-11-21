@@ -92,6 +92,8 @@ extension BrowserModel {
                 target = replacement?.item
             }
         }
+        // 改名的文件如果在选中里，改名后仍然选中（spec V8-04）
+        if viewMode == .grid { gridPendingRenames = Dictionary(uniqueKeysWithValues: diff.renamed.map { ($0.key.url, $0.value.url) }) }
         replaceItems(scanned, showing: target)
 
         if currentGone {

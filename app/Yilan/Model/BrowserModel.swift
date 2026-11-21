@@ -60,7 +60,10 @@ final class BrowserModel {
     private(set) var folderURL: URL?
     private(set) var allItems: [MediaItem] = []
     /// 当前类型下的列表；缩略图栏、序号、上下切换都只针对它
-    internal(set) var items: [MediaItem] = []
+    internal(set) var items: [MediaItem] = [] {
+        // 图标视图里列表一变，选中集合跟着收拾（spec V8-02、V8-04）
+        didSet { if viewMode == .grid, items != oldValue { gridListChanged(old: oldValue) } }
+    }
     private(set) var filter: MediaFilter
     internal(set) var currentIndex: Int?
     private(set) var counts: [MediaFilter: Int] = [.all: 0, .images: 0, .videos: 0]
@@ -149,6 +152,27 @@ final class BrowserModel {
     @ObservationIgnored private var loadGeneration = 0
     /// 最近一次翻页的方向（1 = 往后，-1 = 往前）：RAW 的高清版只往这个方向预加载
     @ObservationIgnored private(set) var browseDirection = 1
+
+    // MARK: 图标视图和多选（BrowserModel+Grid）
+
+    /// 现在是哪种视图（spec SEL-01）
+    internal(set) var viewMode: ViewMode = .gallery
+    /// 图标视图的选中集合、焦点、⇧ 的起点。画廊视图里不用它
+    internal(set) var grid = GridSelectionState.empty
+    /// 这一次进画廊视图，是在图标视图里双击、回车或空格进来的（spec V3）：Esc、空格可以回去
+    internal(set) var cameFromGrid = false
+    /// 请图标视图滚到这一张让它完整可见（serial 每次加 1）
+    var gridScrollRequest: GridScrollRequest?
+    /// 图标视图报上来的排列：一行几列、一屏几行、第一张可见的是第几个（键盘移动用）
+    @ObservationIgnored var gridColumns = 6
+    @ObservationIgnored var gridVisibleRows = 3
+    @ObservationIgnored var gridFirstVisible = 0
+    /// 上一次收拾选中时的列表（算焦点落到哪用）
+    @ObservationIgnored var gridKnownURLs: [URL] = []
+    /// 文件夹同步发现的改名（旧 → 新），收拾选中时用一次
+    @ObservationIgnored var gridPendingRenames: [URL: URL] = [:]
+    /// 列表变化把唯一选中的那一张去掉了：接下来 select() 给的那一张顶上（单张删除后的落点，spec V4-06）
+    @ObservationIgnored var gridLostOnlySelection = false
 
     // MARK: 信息面板（BrowserModel+Info）
 
@@ -272,14 +296,15 @@ final class BrowserModel {
             }.value
             guard !openRequested else { return }
             // 有封面（上次停留的文件）就从那个文件开始
-            open(coverExists ? URL(fileURLWithPath: cover ?? last.path) : last.url)
+            open(coverExists ? URL(fileURLWithPath: cover ?? last.path) : last.url, asFolder: true)
         }
     }
 
     /// 已经要求打开过文件（启动时用来判断要不要自动打开上次的文件夹）
     private(set) var openRequested = false
 
-    func open(_ url: URL) {
+    /// asFolder：这次打开算「打开文件夹」（启动时回到上次的文件夹，传进来的是上次停留的文件），视图按设置来
+    func open(_ url: URL, asFolder: Bool = false) {
         openRequested = true
         scanTask?.cancel()
         openError = nil
@@ -293,9 +318,12 @@ final class BrowserModel {
             let result = await Task.detached(priority: .userInitiated) {
                 Result { try FolderScanner.open(url) }
             }.value
+            let isDirectory = await Task.detached { (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true }.value
             guard !Task.isCancelled else { return }
             switch result {
             case .success(let r):
+                // 打开的是一个具体文件：始终先用画廊视图看它；打开文件夹：按设置（spec V6-03、V6-04）
+                prepareView(forFolder: asFolder || isDirectory)
                 // 换了文件夹：之前的删除不能再撤销（文件夹已经不在眼前）
                 if r.folder.standardizedFileURL.path != folderURL?.standardizedFileURL.path { undoHistory.removeAll() }
                 apply(r)
@@ -322,6 +350,7 @@ final class BrowserModel {
         if result.folder.standardizedFileURL.path != folderURL?.standardizedFileURL.path {
             resetRatings()
             resetBrowseFilter()
+            resetGridSelection()
         }
         folderURL = result.folder
         allItems = result.items
@@ -339,6 +368,8 @@ final class BrowserModel {
         displayedItem = nil
         let index = FilterSelection.index(keeping: opened, in: allItems, newList: items)
         select(index)
+        // 图标视图里打开：选中打开的那一张（启动时回到上次停留的文件，spec V6-05）
+        if viewMode == .grid { selectInGridAfterOpen(index) }
         loadRatings()
     }
 
@@ -411,6 +442,11 @@ final class BrowserModel {
     // MARK: - 切换
 
     func select(_ index: Int?) {
+        // 图标视图里「选中」不加载大图（spec SEL-05）：只更新选中集合
+        if viewMode == .grid {
+            adoptInGrid(index)
+            return
+        }
         var index = index
         // 从暂留的文件切走：它这时才从结果里消失，序号和总数随之更新（spec F-01）
         if let sticky = stickyURL, let i = index, items.indices.contains(i), items[i].url != sticky {
@@ -675,6 +711,37 @@ final class BrowserModel {
         }
     }
 
+    /// 进入图标视图：停掉大图的加载和视频，放开大图占的内存（spec SEL-05、F2-06）
+    func suspendStage() {
+        loadTask?.cancel()
+        fullResTask?.cancel()
+        fullResTask = nil
+        ambientTask?.cancel()
+        isDecodingRaw = false
+        unplayable = nil
+        video.stop()
+        displayed = nil
+        displayedItem = nil
+        placeholder = nil
+        failure = nil
+        showingStaleDisplay = false
+        heldTurns = 0
+        rotation = 0
+        rotationMenuOpen = false
+        zoomState = nil
+        let pipeline = self.pipeline
+        Task {
+            await pipeline.cancelAll(except: [])
+            await pipeline.trimMemory()
+        }
+    }
+
+    /// 回到画廊视图：加载当前这一张
+    func resumeStage() {
+        loadCurrent()
+        scheduleHide()
+    }
+
     /// 当前显示的是相机预览图（系统解不了这张 RAW，spec C1-02）
     var showingCameraPreview: Bool {
         displayedItem != nil && displayedItem == current && failure == nil && displayed?.isCameraPreview == true
@@ -806,7 +873,7 @@ final class BrowserModel {
         }
     }
 
-    private func scheduleHide() {
+    func scheduleHide() {
         // 没开自动隐藏：什么都不用做（鼠标每动一下都会走到这里）
         guard settings.autoHideControls else {
             hideTask?.cancel()
@@ -830,7 +897,8 @@ final class BrowserModel {
 
     /// 只有在看图或视频时才自动隐藏；出错、空文件夹时控件一直显示
     private var canAutoHide: Bool {
-        settings.autoHideControls && current != nil && failure == nil && pendingDelete == nil && edit == nil
+        // 只在画廊视图里自动隐藏（spec V1-18）
+        settings.autoHideControls && viewMode == .gallery && current != nil && failure == nil && pendingDelete == nil && edit == nil
     }
 
     // MARK: - 提示条
@@ -892,6 +960,8 @@ final class BrowserModel {
             }
             return true
         }
+        // 图标视图：按键另有一套（spec 第 9 节）；返回 nil 的按键和画廊视图共用下面的处理
+        if viewMode == .grid, let handled = handleGridKey(event, mods: mods) { return handled }
         // ⌫ 和 ⌘⌫：移到废纸篓
         if event.keyCode == 51, mods.isEmpty || mods == [.command] {
             requestDelete()
@@ -902,6 +972,8 @@ final class BrowserModel {
             if filterPanelOpen { closeFilterPanel(); return true }
             if infoVisible { setInfoVisible(false); return true }
             if isFullScreen { toggleFullScreen(); return true }
+            // 从图标视图进来的：回去（spec V3-04）。一次 Esc 只做一件事（spec K-20）
+            if cameFromGrid { returnToGrid(); return true }
             return false
         }
         // 数字键 1–5 评星、0 清除（spec R1、K-01）：按键码判断，主键盘和小键盘都算；按住不放的重复不算
@@ -953,10 +1025,18 @@ final class BrowserModel {
         case "f":
             toggleFullScreen()
             return true
+        case "g" where !event.modifierFlags.contains(.shift):
+            toggleViewMode()   // G：画廊视图 ↔ 图标视图（spec K-01）
+            return true
         case "e":
             enterEdit()   // 不能编辑的文件上无反应（spec ED-02）
             return true
         default: break
+        }
+        // 从图标视图进来看图片：再按空格回去（spec V3-05）；视频上空格仍是播放 / 暂停
+        if event.keyCode == 49, cameFromGrid, current?.kind != .video {
+            returnToGrid()
+            return true
         }
         // 视频：空格 播放/暂停，J / L 快退/快进 5 秒，M 静音（方向键留给切换文件）
         guard current?.kind == .video, failure == nil, video.isActive else { return false }
@@ -1017,6 +1097,12 @@ enum PreloadOrder {
             .map { Job(item: $0.element, variant: display($0.element), order: generation * step + 50 - $0.offset) }
         return first + full
     }
+}
+
+/// 请图标视图滚到某一张
+struct GridScrollRequest: Equatable {
+    let url: URL
+    let serial: Int
 }
 
 /// NSCache 只能存对象，CGImage 包一层

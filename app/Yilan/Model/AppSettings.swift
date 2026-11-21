@@ -34,6 +34,10 @@ final class AppSettings {
         static let featureRating = "featureRating"
         static let featureFilter = "featureFilter"
         static let featureEdit = "featureEdit"
+        /// 上次用户主动选的视图、打开文件夹时用哪种视图、图标视图的缩略图大小（spec V6、V5）
+        static let lastViewMode = "lastViewMode"
+        static let openFolderView = "openFolderView"
+        static let gridSize = "gridSize"
     }
 
     /// 设置里“默认显示”的选项：沿用上次，或者固定一种
@@ -91,6 +95,22 @@ final class AppSettings {
     var featureRating: Bool { didSet { featureDidSet(.rating, Key.featureRating, featureRating, oldValue) } }
     var featureFilter: Bool { didSet { featureDidSet(.filter, Key.featureFilter, featureFilter, oldValue) } }
     var featureEdit: Bool { didSet { featureDidSet(.edit, Key.featureEdit, featureEdit, oldValue) } }
+    /// 用户上次主动选的视图（spec V6-01）
+    var lastViewMode: ViewMode { didSet { defaults.set(lastViewMode.rawValue, forKey: Key.lastViewMode) } }
+    /// 打开文件夹时用哪种视图（spec V6-02）
+    var openFolderView: OpenFolderView { didSet { defaults.set(openFolderView.rawValue, forKey: Key.openFolderView) } }
+    /// 图标视图的缩略图大小（spec V5-03）
+    var gridSize: GridSize { didSet { defaults.set(gridSize.rawValue, forKey: Key.gridSize) } }
+
+    /// 打开一个文件夹时该用哪种视图（spec V6-03）
+    var viewModeForFolder: ViewMode {
+        switch openFolderView {
+        case .last: lastViewMode
+        case .gallery: .gallery
+        case .grid: .grid
+        }
+    }
+
     /// 开关变了之后要做的收尾（清筛选条件、丢弃撤销记录等，由 BrowserModel 接）
     @ObservationIgnored var featureChanged: ((Feature, Bool) -> Void)?
 
@@ -167,6 +187,9 @@ final class AppSettings {
         featureRating = defaults.bool(forKey: Key.featureRating)
         featureFilter = defaults.bool(forKey: Key.featureFilter)
         featureEdit = defaults.bool(forKey: Key.featureEdit)
+        lastViewMode = defaults.string(forKey: Key.lastViewMode).flatMap(ViewMode.init(rawValue:)) ?? .gallery
+        openFolderView = defaults.string(forKey: Key.openFolderView).flatMap(OpenFolderView.init(rawValue:)) ?? .last
+        gridSize = GridSize(rawValue: defaults.integer(forKey: Key.gridSize)) ?? .default
     }
 
     /// 从 v0.2 升级后第一次启动（spec K-10）：以前用过（存过任何设置或最近打开）、但没记过版本号。
