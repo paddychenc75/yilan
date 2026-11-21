@@ -21,7 +21,7 @@ enum RatingFileIO {
         switch item.url.pathExtension.lowercased() {
         case "jpg", "jpeg": return .jpeg
         case "png": return .png
-        case "heic", "heif", "tif", "tiff": return .imageIO
+        case "heic", "heif", "hif", "tif", "tiff": return .imageIO
         default: return .sidecarOnly   // WebP、BMP
         }
     }

@@ -16,13 +16,14 @@ extension BrowserModel {
     /// 当前文件现在能进入编辑：可编辑、没出错、大图已经显示
     var canEditCurrent: Bool {
         guard let item = current, Self.isEditable(item), failure == nil else { return false }
-        return displayedItem == item && displayed != nil && !showingStaleDisplay
+        // 相机预览图不能编辑（spec C2-01）：编辑会把低一档的预览图当成原片存出去
+        return displayedItem == item && displayed != nil && !showingStaleDisplay && displayed?.isCameraPreview != true
     }
 
     /// 编辑按钮是不是置灰（文件类型不支持或出错）；大图还在加载时不置灰
     var editUnsupported: Bool {
         guard let item = current else { return true }
-        return !Self.isEditable(item) || failure != nil
+        return !Self.isEditable(item) || failure != nil || showingCameraPreview
     }
 
     // MARK: - 进入、退出
@@ -376,7 +377,8 @@ extension BrowserModel {
 
     /// 胶囊要不要出现：浏览、转过、可编辑
     var showsSaveRotation: Bool {
-        edit == nil && rotation != 0 && current.map(Self.isEditable) == true && failure == nil
+        // 相机预览图：可以转着看，但不出「保存旋转」（spec C2-02）
+        edit == nil && rotation != 0 && current.map(Self.isEditable) == true && failure == nil && !showingCameraPreview
     }
 
     /// 当前文件能只改方向标记（JPEG、HEIC/HEIF、TIFF）

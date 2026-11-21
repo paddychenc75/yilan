@@ -406,6 +406,16 @@
         }
       }
     },
+    "macOS 暂时无法完整解码这张 RAW。预览图比原片小，放大后可能不够清晰。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS can’t fully decode this RAW yet. The preview is smaller than the original, so it may look soft when zoomed in."
+          }
+        }
+      }
+    },
     "macOS 没有接受这次更改，%@ 仍由 %@ 打开。请稍后再试。" : {
       "localizations" : {
         "en" : {
@@ -723,6 +733,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "You’re using %@"
+          }
+        }
+      }
+    },
+    "你的 macOS 版本还不支持这台相机的 RAW，一览改为显示相机存在文件里的 JPEG 预览图。可以照常翻看、放大、打星和删除，只是不能编辑。升级 macOS 后会自动换成完整解码。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your version of macOS doesn’t support RAW files from this camera yet, so Yilan shows the JPEG preview the camera saved inside the file. You can browse, zoom, rate and delete as usual, but not edit. Full decoding takes over automatically once you update macOS."
           }
         }
       }
@@ -2221,6 +2241,16 @@
         }
       }
     },
+    "当前显示" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Showing"
+          }
+        }
+      }
+    },
     "当前筛选：%@" : {
       "localizations" : {
         "en" : {
@@ -3085,6 +3115,16 @@
         }
       }
     },
+    "文件可能已损坏，里面也没有可以显示的预览图。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The file may be damaged, and it has no preview that can be shown."
+          }
+        }
+      }
+    },
     "文件名" : {
       "localizations" : {
         "en" : {
@@ -3839,6 +3879,16 @@
         }
       }
     },
+    "正在显示相机预览图" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Showing the camera preview"
+          }
+        }
+      }
+    },
     "正在检查更新…" : {
       "localizations" : {
         "en" : {
@@ -4188,6 +4238,27 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Camera RAW"
+          }
+        }
+      }
+    },
+    "相机预览图" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera Preview"
+          }
+        }
+      }
+    },
+    "相机预览图 · %@" : {
+      "comment" : "缩放菜单最上面的小字；%@ 是预览图的宽 × 高",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera Preview · %@"
           }
         }
       }
@@ -4967,6 +5038,36 @@
         }
       }
     },
+    "这张 RAW 显示的是相机预览图" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Showing the camera’s preview of this RAW"
+          }
+        }
+      }
+    },
+    "这张 RAW 系统暂时无法完整解码，不能编辑" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS can’t fully decode this RAW yet, so it can’t be edited"
+          }
+        }
+      }
+    },
+    "这是相机存在文件里的 JPEG，不是 RAW 解码的结果。macOS 支持这台相机后会自动换成完整解码。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This is the JPEG the camera saved inside the file, not a decoded RAW. Full decoding takes over once macOS supports this camera."
+          }
+        }
+      }
+    },
     "进入 / 退出全屏" : {
       "localizations" : {
         "en" : {
@@ -5153,6 +5254,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Audio"
+          }
+        }
+      }
+    },
+    "预览图 · %@" : {
+      "comment" : "信息面板：当前显示的是相机预览图；%@ 是宽 × 高",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preview · %@"
           }
         }
       }

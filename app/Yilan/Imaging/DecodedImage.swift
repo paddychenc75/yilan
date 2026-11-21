@@ -18,9 +18,14 @@ final class DecodedImage: @unchecked Sendable {
     let duration: Double?
     /// 状态行里格式后面的补充，例如 “36 帧”、“HEVC”
     let formatDetail: String?
+    /// 相机预览图：系统解不了这张 RAW，显示的是相机存在文件里的 JPEG（spec C1-02）。这时 pixelSize 是预览图自己的尺寸
+    let isCameraPreview: Bool
+    /// 相机预览图状态下，系统读到的原片像素尺寸（读不到时 nil，spec C1-11）
+    let originalPixelSize: CGSize?
 
     init(image: CGImage, pixelSize: CGSize, frames: [CGImage] = [], frameDurations: [Double] = [],
-         isPreview: Bool = false, isDownsampled: Bool = false, duration: Double? = nil, formatDetail: String? = nil) {
+         isPreview: Bool = false, isDownsampled: Bool = false, duration: Double? = nil, formatDetail: String? = nil,
+         isCameraPreview: Bool = false, originalPixelSize: CGSize? = nil) {
         self.image = image
         self.pixelSize = pixelSize
         self.frames = frames
@@ -29,6 +34,8 @@ final class DecodedImage: @unchecked Sendable {
         self.isDownsampled = isDownsampled
         self.duration = duration
         self.formatDetail = formatDetail
+        self.isCameraPreview = isCameraPreview
+        self.originalPixelSize = originalPixelSize
     }
 
     var isAnimated: Bool { frames.count > 1 }

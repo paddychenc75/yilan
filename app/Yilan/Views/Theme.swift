@@ -6,6 +6,8 @@ enum Theme {
     static let text2 = Color.white.opacity(0.68)
     static let text3 = Color.white.opacity(0.44)
     static let yellow = Color(red: 1, green: 214 / 255, blue: 10 / 255)            // #FFD60A
+    /// 「相机预览图」标签的文字颜色 #FFE27A（设计稿第 07 章）；底色是 yellow 16%
+    static let previewTag = Color(red: 1, green: 226 / 255, blue: 122 / 255)
     static let selectedFill = Color.white.opacity(0.24)
     static let link = Color(red: 100 / 255, green: 181 / 255, blue: 1)             // #64B5FF
     static let danger = Color(red: 1, green: 69 / 255, blue: 58 / 255)              // #FF453A

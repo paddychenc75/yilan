@@ -17,8 +17,12 @@ enum MediaFormat: Sendable, Hashable {
 
 /// PRD 第 9 节列出的全部支持格式
 enum SupportedFormats {
-    static let raw: Set<String> = ["cr2", "cr3", "nef", "arw", "raf", "rw2", "orf", "dng"]
-    static let standardImages: Set<String> = ["jpg", "jpeg", "png", "webp", "heic", "heif", "tif", "tiff", "bmp"]
+    /// v0.5 新增（spec C3-01）：srw 起的各项。它们和原来的 8 种一样是 .raw：星级只写旁边的小文件，编辑只能另存
+    static let raw: Set<String> = ["cr2", "cr3", "nef", "arw", "raf", "rw2", "orf", "dng",
+                                   "srw", "pef", "3fr", "fff", "iiq", "x3f", "erf", "mrw", "srf", "sr2",
+                                   "crw", "nrw", "rwl", "dcr", "kdc", "mef", "mos", "gpr"]
+    /// hif：索尼等相机直接拍的 HEIF（spec C4-01）
+    static let standardImages: Set<String> = ["jpg", "jpeg", "png", "webp", "heic", "heif", "hif", "tif", "tiff", "bmp"]
     static let videos: Set<String> = ["mp4", "m4v", "mov"]
 
     static let allExtensions: Set<String> =
@@ -41,14 +45,26 @@ enum SupportedFormats {
         case "jpg", "jpeg": "JPEG"
         case "png": "PNG"
         case "webp": "WebP"
-        case "heic", "heif": "HEIF"
+        case "heic", "heif", "hif": "HEIF"
         case "tif", "tiff": "TIFF"
         case "bmp": "BMP"
         case "gif": "GIF"
         case "svg": "SVG"
-        case "cr2", "cr3": "Canon RAW"
-        case "nef": "Nikon RAW"
-        case "arw": "Sony RAW"
+        case "cr2", "cr3", "crw": "Canon RAW"
+        case "nef", "nrw": "Nikon RAW"
+        case "arw", "srf", "sr2": "Sony RAW"
+        case "srw": "Samsung RAW"
+        case "pef": "Pentax RAW"
+        case "3fr", "fff": "Hasselblad RAW"
+        case "iiq": "Phase One RAW"
+        case "x3f": "Sigma RAW"
+        case "erf": "Epson RAW"
+        case "mrw": "Minolta RAW"
+        case "rwl": "Leica RAW"
+        case "dcr", "kdc": "Kodak RAW"
+        case "mef": "Mamiya RAW"
+        case "mos": "Leaf RAW"
+        case "gpr": "GoPro RAW"
         case "raf": "Fujifilm RAW"
         case "rw2": "Panasonic RAW"
         case "orf": "Olympus RAW"

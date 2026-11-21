@@ -5,6 +5,8 @@ struct ZoomControl: View {
     let state: ZoomState
     /// true：只留百分比，放大 / 缩小进它的菜单
     let percentOnly: Bool
+    /// 菜单最上面一行不可点的小字（相机预览图状态下写「相机预览图 · 宽 × 高」，spec C1-10）
+    var note: String? = nil
     let onZoom: (ZoomCommand.Action) -> Void
 
     var body: some View {
@@ -13,7 +15,11 @@ struct ZoomControl: View {
                 ZoomStepButton(symbol: "minus", enabled: state.canZoomOut, help: "缩小（⌘−）") { onZoom(.zoomOut) }
             }
             Menu {
-                ZoomMenuItems(state: state, includeSteps: percentOnly, onZoom: onZoom)
+                if let note {
+                    Section(note) { ZoomMenuItems(state: state, includeSteps: percentOnly, onZoom: onZoom) }
+                } else {
+                    ZoomMenuItems(state: state, includeSteps: percentOnly, onZoom: onZoom)
+                }
             } label: {
                 ZoomPercentLabel(percent: state.percent, minWidth: percentOnly ? 58 : 62)
             }

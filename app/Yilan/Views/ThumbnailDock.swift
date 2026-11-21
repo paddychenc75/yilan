@@ -36,6 +36,24 @@ struct DockMeta: Equatable {
     var dimensions: String?
     var trailing: String
     var failed: Bool
+    /// 文件名后面的黄色小标签（「相机预览图」，spec C1-05）
+    var tag: String? = nil
+}
+
+/// 「相机预览图」小标签（设计稿第 07 章）：高 16、圆角 5、黄字、黄 16% 底
+struct PreviewTag: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 10.5, weight: .semibold))
+            .foregroundStyle(Theme.previewTag)
+            .lineLimit(1)
+            .padding(.horizontal, 6)
+            .frame(height: 16)
+            .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Theme.yellow.opacity(0.16)))
+            .fixedSize()
+    }
 }
 
 /// 信息行让位规则（spec R2-06，2026-11-18 改定）：左边只放名称，尺寸永远在右边一组
@@ -46,6 +64,14 @@ struct InfoRowLayout: Equatable {
     var showTrailing: Bool
     /// 每一半最多多宽
     var side: CGFloat
+    /// 文件名后面的标签放得下（spec C1-07：标签在尺寸之后让位，文件名最后才截断）
+    var showTag = false
+    /// 标签显示时，文件名最多多宽
+    var nameMax: CGFloat { showTag ? max(0, side - tagWidth - InfoRowLayout.spacing) : side }
+    var tagWidth: CGFloat = 0
+
+    /// 标签显示时文件名至少留多宽，不够就不显示标签
+    static let minNameWithTag: CGFloat = 72
 
     static let starsWidth: CGFloat = 110       // 5 颗 × 22
     static let gap: CGFloat = 16
@@ -53,12 +79,25 @@ struct InfoRowLayout: Equatable {
     /// 尺寸和「大小 · 格式」之间的「·」多占的宽度
     static let separator: CGFloat = 14
 
-    static func decide(width: CGFloat, dims: CGFloat?, trailing: CGFloat) -> InfoRowLayout {
+    static func decide(width: CGFloat, dims: CGFloat?, trailing: CGFloat, tag: CGFloat = 0, name: CGFloat = 0) -> InfoRowLayout {
         let side = max(0, (width - starsWidth) / 2 - gap)
-        guard let d = dims else { return .init(showDims: false, showTrailing: trailing <= side, side: side) }
-        if d + separator + spacing + trailing <= side { return .init(showDims: true, showTrailing: true, side: side) }
-        // ① 先隐藏「大小 · 格式」 ② 再隐藏尺寸
-        return .init(showDims: d <= side, showTrailing: false, side: side)
+        var layout: InfoRowLayout
+        if let d = dims {
+            if d + separator + spacing + trailing <= side {
+                layout = .init(showDims: true, showTrailing: true, side: side)
+            } else {
+                // ① 先隐藏「大小 · 格式」 ② 再隐藏尺寸
+                layout = .init(showDims: d <= side, showTrailing: false, side: side)
+            }
+        } else {
+            layout = .init(showDims: false, showTrailing: trailing <= side, side: side)
+        }
+        // ③ 标签：左半边放得下它和至少一小段文件名才显示
+        if tag > 0, tag + spacing + min(max(name, 1), minNameWithTag) <= side {
+            layout.showTag = true
+            layout.tagWidth = tag
+        }
+        return layout
     }
 }
 
@@ -75,17 +114,24 @@ struct MetaLine: View {
     @State private var nameWidth: CGFloat = 0
     @State private var dimsWidth: CGFloat = 0
     @State private var trailingWidth: CGFloat = 0
+    @State private var tagWidth: CGFloat = 0
 
     var body: some View {
         GeometryReader { geo in
             let hasDims = meta.failed || meta.dimensions != nil
-            let layout = InfoRowLayout.decide(width: geo.size.width, dims: hasDims ? dimsWidth : nil, trailing: trailingWidth)
+            let layout = InfoRowLayout.decide(width: geo.size.width, dims: hasDims ? dimsWidth : nil, trailing: trailingWidth,
+                                              tag: meta.tag == nil ? 0 : tagWidth, name: nameWidth)
             ZStack {
                 HStack(spacing: 0) {
-                    nameText
-                        .truncationMode(.middle)
-                        .frame(maxWidth: layout.side, alignment: .leading)
-                        .help(nameWidth > layout.side ? meta.name : "")   // 截断时悬停显示全名
+                    HStack(spacing: InfoRowLayout.spacing) {
+                        nameText
+                            .truncationMode(.middle)
+                            .frame(maxWidth: layout.nameMax, alignment: .leading)
+                            .fixedSize(horizontal: nameWidth <= layout.nameMax, vertical: false)
+                            .help(nameWidth > layout.nameMax ? meta.name : "")   // 截断时悬停显示全名
+                        if layout.showTag, let tag = meta.tag { PreviewTag(text: tag) }
+                    }
+                    .frame(maxWidth: layout.side, alignment: .leading)
                     Spacer(minLength: 0)
                     HStack(spacing: InfoRowLayout.spacing) {
                         if layout.showDims { dimsView.fixedSize() }
@@ -106,6 +152,7 @@ struct MetaLine: View {
                     nameText.fixedSize().measure { nameWidth = $0 }
                     dimsView.fixedSize().measure { dimsWidth = $0 }
                     trailing.fixedSize().measure { trailingWidth = $0 }
+                    if let tag = meta.tag { PreviewTag(text: tag).measure { tagWidth = $0 } }
                 }
                 .opacity(0)
                 .frame(width: 0, height: 0)

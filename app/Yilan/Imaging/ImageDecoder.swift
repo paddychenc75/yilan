@@ -12,6 +12,8 @@ enum ImageDecoder {
         case rawPreview
         /// 原始分辨率（放大查看细节时）
         case full
+        /// 相机预览图：系统解不了这张 RAW 时，取文件里最大的内嵌 JPEG（spec C1-03）。maxPixel 为 nil 时取原始大小
+        case cameraPreview(maxPixel: Int?)
     }
 
     /// 一次解码的长边上限：再大的图（例如几万像素的全景、扫描件）也只解到这么大，避免占满内存。
@@ -39,6 +41,7 @@ enum ImageDecoder {
             return try decodeAnimated(item, maxPixel: variant.maxPixel)
         case .standard, .raw:
             if variant == .rawPreview { return try decodeEmbeddedPreview(item) }
+            if case .cameraPreview(let maxPixel) = variant { return try decodeCameraPreview(item, maxPixel: maxPixel) }
             return try decodeStill(item, maxPixel: variant.maxPixel)
         }
     }
@@ -81,7 +84,39 @@ enum ImageDecoder {
         guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
             throw DecodeFailure(reason: "没有内嵌预览", detail: "")   // 只在内部用（调用方会改为完整解码），不显示给用户，不用翻译
         }
-        return DecodedImage(image: image, pixelSize: size, isPreview: true, isDownsampled: true)
+        // 系统读不到这张 RAW 的尺寸（不认识的机型）时，按预览图自己的尺寸算，不能是 0
+        let shown = size == .zero ? CGSize(width: image.width, height: image.height) : size
+        return DecodedImage(image: image, pixelSize: shown, isPreview: true, isDownsampled: true)
+    }
+
+    /// 相机预览图（spec C1-03、C1-04）：先在文件里找最大的内嵌 JPEG，找不到再用系统给的内嵌预览；都没有就抛错
+    static func decodeCameraPreview(_ item: MediaItem, maxPixel: Int?) throws -> DecodedImage {
+        // 系统对这个文件知道多少算多少：原片尺寸、方向。文件格式系统不认识时这里什么都读不到
+        var original: CGSize?
+        var orientation: Int?
+        if let source = CGImageSourceCreateWithURL(item.url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
+           CGImageSourceGetCount(source) > 0 {
+            let size = orientedPixelSize(source)
+            if size.width > 0, size.height > 0 { original = size }
+            let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+            orientation = (props?[kCGImagePropertyOrientation] as? NSNumber)?.intValue
+        }
+        try Task.checkCancellation()
+        if let found = EmbeddedPreview.largestJPEG(url: item.url, maxPixel: maxPixel, orientation: orientation) {
+            let long = max(found.pixelSize.width, found.pixelSize.height)
+            return DecodedImage(image: found.image, pixelSize: found.pixelSize,
+                                isDownsampled: CGFloat(max(found.image.width, found.image.height)) < long,
+                                isCameraPreview: true, originalPixelSize: original)
+        }
+        try Task.checkCancellation()
+        if let fallback = try? decodeEmbeddedPreview(item) {
+            return DecodedImage(image: fallback.image, pixelSize: CGSize(width: fallback.image.width, height: fallback.image.height),
+                                isCameraPreview: true, originalPixelSize: original)
+        }
+        if let failure = accessFailure(item) { throw failure }
+        // spec C1-12：两种预览都取不到
+        throw DecodeFailure(reason: String(localized: "文件可能已损坏，里面也没有可以显示的预览图。"),
+                            detail: Formatting.fileSize(item.fileSize))
     }
 
     // MARK: - GIF
@@ -297,6 +332,7 @@ extension ImageDecoder.Variant {
         case .display(let m): m
         case .rawPreview: nil
         case .full: nil
+        case .cameraPreview(let m): m
         }
     }
 }

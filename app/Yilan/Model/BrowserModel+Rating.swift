@@ -14,6 +14,8 @@ enum HintCard: Equatable {
     case shortcutsChanged
     /// 第一次为图片创建 .xmp（spec S-17），带小文件名、是不是 RAW
     case sidecarCreated(String, isRaw: Bool)
+    /// 第一次显示相机预览图（spec C1-13）
+    case cameraPreview
 }
 
 /// 评星：打星、写盘、读取、撤销、提示（spec 第 1–5、7 节）

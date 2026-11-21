@@ -35,7 +35,7 @@ enum FormatGroup: String, CaseIterable, Sendable, Identifiable {
     static func of(_ item: MediaItem) -> FormatGroup? {
         if item.format == .raw { return .raw }
         switch item.url.pathExtension.lowercased() {
-        case "heic", "heif": return .heic
+        case "heic", "heif", "hif": return .heic
         case "jpg", "jpeg": return .jpeg
         case "png": return .png
         case "webp": return .webp

@@ -75,7 +75,7 @@ enum ThumbnailGenerator {
             return Thumbnail(image: image, duration: nil)
         case .standard, .raw, .gif:
             guard let source = CGImageSourceCreateWithURL(item.url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
-                  CGImageSourceGetCount(source) > 0 else { return Thumbnail(image: nil, duration: nil) }
+                  CGImageSourceGetCount(source) > 0 else { return Thumbnail(image: cameraPreviewThumbnail(item), duration: nil) }
             // 有内嵌缩略图且足够大就直接用（RAW、相机 JPEG 都有），否则从原图缩小
             let options: [CFString: Any] = [
                 kCGImageSourceCreateThumbnailFromImageIfAbsent: true,
@@ -90,8 +90,21 @@ enum ThumbnailGenerator {
                 always[kCGImageSourceCreateThumbnailFromImageAlways] = true
                 image = CGImageSourceCreateThumbnailAtIndex(source, 0, always as CFDictionary) ?? i
             }
+            // 系统解不了这张 RAW（spec C1-15）：用相机存在文件里的预览图
+            if image == nil { image = cameraPreviewThumbnail(item) }
             return Thumbnail(image: image, duration: nil)
         }
+    }
+
+    /// RAW 的缩略图生成不出来时，取文件里的内嵌 JPEG 缩小；别的格式不试
+    static func cameraPreviewThumbnail(_ item: MediaItem) -> CGImage? {
+        guard item.format == .raw else { return nil }
+        let orientation = CGImageSourceCreateWithURL(item.url as CFURL, nil).flatMap { source -> Int? in
+            guard CGImageSourceGetCount(source) > 0 else { return nil }
+            let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+            return (props?[kCGImagePropertyOrientation] as? NSNumber)?.intValue
+        }
+        return EmbeddedPreview.largestJPEG(url: item.url, maxPixel: maxPixel, orientation: orientation)?.image
     }
 
     /// 视频缩略图取哪一秒：时长的 40%，最多 6 秒。第 0 秒常常是黑帧、淡入或还没对好焦的画面

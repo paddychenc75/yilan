@@ -85,7 +85,7 @@ struct EditTarget: Equatable, Sendable {
         let ext = item.url.pathExtension
         var type = sourceType ?? ""
         // 扩展名是 .heif 的照片：ImageIO 可能认作 public.heif（不能写），按 HEIC 编码写，扩展名不变
-        if type == "public.heif" || (["heif", "heic"].contains(ext.lowercased()) && type.isEmpty) { type = "public.heic" }
+        if type == "public.heif" || (["heif", "heic", "hif"].contains(ext.lowercased()) && type.isEmpty) { type = "public.heic" }
         if writable.contains(type) {
             return EditTarget(typeIdentifier: type, pathExtension: ext, reason: .same)
         }

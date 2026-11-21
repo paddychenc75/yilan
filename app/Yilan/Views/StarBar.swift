@@ -153,9 +153,9 @@ struct HintCardView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: card == .shortcutsChanged ? "keyboard" : "doc")
+            Image(systemName: card == .shortcutsChanged ? "keyboard" : card == .cameraPreview ? "eye" : "doc")
                 .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(.white)
+                .foregroundStyle(card == .cameraPreview ? Theme.previewTag : .white)
                 .frame(width: 34, height: 34)
                 .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Color.white.opacity(0.12)))
             VStack(alignment: .leading, spacing: 3) {
@@ -166,17 +166,17 @@ struct HintCardView: View {
                     .foregroundStyle(Theme.text2)
                     .fixedSize(horizontal: false, vertical: true)
                 Button(action: onPrimary) { primaryTitle }
-                    .buttonStyle(card == .shortcutsChanged ? AnyHintButtonStyle.glass : AnyHintButtonStyle.primary)
+                    .buttonStyle(card.usesPrimaryButton ? AnyHintButtonStyle.primary : AnyHintButtonStyle.glass)
                     .padding(.top, 7)
             }
-            .padding(.trailing, card == .shortcutsChanged ? 20 : 0)
+            .padding(.trailing, card.hasCloseButton ? 20 : 0)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(EdgeInsets(top: 14, leading: 14, bottom: 14, trailing: 16))
         .frame(width: card == .shortcutsChanged ? 480 : 430)
         .thickGlass(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(alignment: .topTrailing) {
-            if card == .shortcutsChanged {
+            if card.hasCloseButton {
                 Button(action: onClose) {
                     Image(systemName: "xmark")
                         .font(.system(size: 9.5, weight: .bold))
@@ -196,6 +196,7 @@ struct HintCardView: View {
         switch card {
         case .shortcutsChanged: Text("快捷键有变化")
         case .sidecarCreated(let name, _): Text("已在旁边创建 \(name)", comment: "第一次为图片创建 .xmp 的提示；%@ 是小文件名")
+        case .cameraPreview: Text("这张 RAW 显示的是相机预览图")
         }
     }
 
@@ -208,13 +209,15 @@ struct HintCardView: View {
         case .sidecarCreated(_, let isRaw):
             // RAW 多一句 Lightroom 的读取方法
             isRaw ? Text("照片本身不会被改动，星级记在这个同名的 .xmp 小文件里。Lightroom 里要用「元数据 › 从文件读取元数据」才会看到新星级。") : Text("照片本身不会被改动，星级记在这个同名的 .xmp 小文件里。")
+        case .cameraPreview:
+            Text("你的 macOS 版本还不支持这台相机的 RAW，一览改为显示相机存在文件里的 JPEG 预览图。可以照常翻看、放大、打星和删除，只是不能编辑。升级 macOS 后会自动换成完整解码。")
         }
     }
 
     @ViewBuilder private var primaryTitle: some View {
         switch card {
         case .shortcutsChanged: Text("查看快捷键")
-        case .sidecarCreated: Text("知道了")
+        case .sidecarCreated, .cameraPreview: Text("知道了")
         }
     }
 }
@@ -395,5 +398,21 @@ struct ExpandedRect: Shape {
 
     func path(in rect: CGRect) -> Path {
         Path(CGRect(x: rect.minX, y: rect.minY - top, width: rect.width, height: rect.height + top + bottom))
+    }
+}
+
+extension HintCard {
+    /// 右上角有关闭叉的卡片（设计稿：快捷键变化、相机预览图说明）
+    var hasCloseButton: Bool {
+        switch self {
+        case .shortcutsChanged, .cameraPreview: true
+        case .sidecarCreated: false
+        }
+    }
+
+    /// 按钮是白底的主按钮（只有「知道了」一个动作的 .xmp 说明）
+    var usesPrimaryButton: Bool {
+        if case .sidecarCreated = self { return true }
+        return false
     }
 }

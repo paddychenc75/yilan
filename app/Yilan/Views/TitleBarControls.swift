@@ -68,6 +68,8 @@ struct CounterPill: View {
     let total: Int
     /// 缩略图栏隐藏或全屏时序号后面带星级“· ★4”（spec R3-05）；nil 或 0 不显示
     var rating: Int? = nil
+    /// 缩略图栏隐藏或全屏时，「相机预览图」标签跟在计数后面（spec C1-08）
+    var tag: String? = nil
 
     var body: some View {
         HStack(spacing: 0) {
@@ -77,6 +79,7 @@ struct CounterPill: View {
                 StarShape().fill(Theme.Brand.sun).frame(width: 11, height: 11).padding(.trailing, 3)
                 Text(verbatim: "\(rating)")
             }
+            if let tag { PreviewTag(text: tag).padding(.leading, 8) }
         }
             .font(Theme.mono(12))
             .foregroundStyle(.white)
@@ -95,6 +98,8 @@ struct ToolGroup: View {
     var rotateSelected = false
     /// 视频、GIF、SVG、出错：编辑按钮置灰但仍能悬停看提示（spec ED-02）
     var editUnsupported = true
+    /// 置灰的原因是相机预览图（spec C2-01）：提示换一句
+    var editBlockedByPreview = false
     var onEdit: () -> Void = {}
     let onRotate: () -> Void
     let onInfo: () -> Void
@@ -118,7 +123,7 @@ struct ToolGroup: View {
             ToolButton(symbol: "arrow.counterclockwise", help: "向左旋转（⇧R）", selected: rotateSelected, action: onRotate)
                 .disabled(!enabled)
             // 编辑（spec ED-01、ED-02）：不支持时不用 disabled，好让悬停提示照常出现
-            EditEntryButton(unsupported: editUnsupported, action: onEdit)
+            EditEntryButton(unsupported: editUnsupported, previewOnly: editBlockedByPreview, action: onEdit)
             ToolButton(symbol: "info.circle", help: "信息（I）", selected: infoSelected, action: onInfo)
                 .disabled(!enabled)
             Menu {
@@ -185,10 +190,12 @@ struct ToolButton: View {
 /// 不支持编辑的文件上不用 disabled，好让悬停提示照常出现
 struct EditEntryButton: View {
     let unsupported: Bool
+    var previewOnly = false
     let action: () -> Void
 
     var body: some View {
-        ToolButton(symbol: "square.and.pencil", help: unsupported ? "此类文件不支持编辑" : "编辑（E）",
+        ToolButton(symbol: "square.and.pencil",
+                   help: previewOnly ? "这张 RAW 系统暂时无法完整解码，不能编辑" : unsupported ? "此类文件不支持编辑" : "编辑（E）",
                    opticalOffset: Self.opticalOffset) {
             if !unsupported { action() }
         }

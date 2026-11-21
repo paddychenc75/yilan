@@ -282,11 +282,12 @@ struct RootView: View {
                 HStack(spacing: 14) {
                     // 顶部缩放控件（spec E1）：[缩放] [序号] [工具组]
                     if let zoom, tier.zoom != .menu {
-                        ZoomControl(state: zoom, percentOnly: tier.zoom == .percent) { model.zoom($0) }
+                        ZoomControl(state: zoom, percentOnly: tier.zoom == .percent, note: cameraPreviewZoomNote) { model.zoom($0) }
                     }
                     if let i = model.currentIndex {
                         CounterPill(index: i, total: model.items.count,
-                                    rating: !model.stripVisible || layout.fullScreen ? model.currentRating : nil)
+                                    rating: !model.stripVisible || layout.fullScreen ? model.currentRating : nil,
+                                    tag: (!model.stripVisible || layout.fullScreen) && model.showingCameraPreview ? Self.previewTagText : nil)
                     }
                     // 欢迎界面不显示工具组（设计稿“首次启动 · 欢迎”）
                     if model.hasOpenedFolder {
@@ -369,6 +370,7 @@ struct RootView: View {
             infoSelected: showsInfoPanel,
             rotateSelected: model.rotation != 0,
             editUnsupported: model.editUnsupported,
+            editBlockedByPreview: model.showingCameraPreview,
             onEdit: { model.enterEdit() },
             onRotate: { model.rotate(-1) },
             onInfo: model.toggleInfo,
@@ -596,7 +598,8 @@ struct RootView: View {
                     showsRating: model.currentIsRatable,
                     ratingLocation: model.current.map { model.ratingLocationDescription(for: $0) } ?? "",
                     canRate: model.canRateCurrent,
-                    onRate: { model.rateCurrent($0, fromKeyboard: false) }
+                    onRate: { model.rateCurrent($0, fromKeyboard: false) },
+                    cameraPreview: model.showingCameraPreview ? model.displayed.map(CameraPreviewNote.make) : nil
                 )
                 .onHover { model.setHovering("info", $0) }
                 .padding(.top, top)
@@ -695,7 +698,17 @@ struct RootView: View {
         var format = item.formatName
         if let detail = decoded?.formatDetail { format += " · \(detail)" }
         parts.append(format)
-        return DockMeta(name: item.name, dimensions: dims, trailing: parts.joined(separator: " · "), failed: false)
+        return DockMeta(name: item.name, dimensions: dims, trailing: parts.joined(separator: " · "), failed: false,
+                        tag: model.showingCameraPreview ? Self.previewTagText : nil)
+    }
+
+    /// 「相机预览图」标签的文字（spec TX-01）
+    static var previewTagText: String { String(localized: "相机预览图") }
+
+    /// 相机预览图状态下缩放菜单最上面的小字（spec C1-10）
+    private var cameraPreviewZoomNote: String? {
+        guard model.showingCameraPreview, let s = model.displayedPixelSize else { return nil }
+        return String(localized: "相机预览图 · \("\(Int(s.width)) × \(Int(s.height))")", comment: "缩放菜单最上面的小字；%@ 是预览图的宽 × 高")
     }
 
     // MARK: - 卡片

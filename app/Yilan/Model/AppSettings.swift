@@ -28,6 +28,8 @@ final class AppSettings {
         static let didShowSidecarHint = "didShowSidecarHint"
         /// 编辑 RAW 时存 JPEG 还是 HEIF（spec ED-33）
         static let editRawFormat = "editRawFormat"
+        /// 第一次显示相机预览图的说明已经出现过（spec C1-13）
+        static let didShowCameraPreviewHint = "didShowCameraPreviewHint"
     }
 
     /// 设置里“默认显示”的选项：沿用上次，或者固定一种
@@ -79,6 +81,7 @@ final class AppSettings {
     /// 第一次为 RAW 创建 .xmp 的提示已经出现过（spec S-17）
     var didShowSidecarHint: Bool { didSet { defaults.set(didShowSidecarHint, forKey: Key.didShowSidecarHint) } }
     var editRawFormat: RawExportFormat { didSet { defaults.set(editRawFormat.rawValue, forKey: Key.editRawFormat) } }
+    var didShowCameraPreviewHint: Bool { didSet { defaults.set(didShowCameraPreviewHint, forKey: Key.didShowCameraPreviewHint) } }
 
     @ObservationIgnored private let defaults: UserDefaults
     /// 设置存放的域名（判断“以前用过一览”时只看这个域，不看全局域）
@@ -124,6 +127,7 @@ final class AppSettings {
         ratingStorage = defaults.string(forKey: Key.ratingStorage).flatMap(RatingStorageMode.init(rawValue:)) ?? .sidecar
         didShowSidecarHint = defaults.bool(forKey: Key.didShowSidecarHint)
         editRawFormat = defaults.string(forKey: Key.editRawFormat).flatMap(RawExportFormat.init(rawValue:)) ?? .jpeg
+        didShowCameraPreviewHint = defaults.bool(forKey: Key.didShowCameraPreviewHint)
     }
 
     /// 从 v0.2 升级后第一次启动（spec K-10）：以前用过（存过任何设置或最近打开）、但没记过版本号。

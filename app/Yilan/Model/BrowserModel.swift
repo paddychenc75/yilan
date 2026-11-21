@@ -483,7 +483,7 @@ final class BrowserModel {
         screenMaxPixel = maxPixel
         guard maxPixel > previous, fullResTask == nil, !isDecodingRaw, failure == nil, !showingStaleDisplay,
               let item = current, item == displayedItem, item.kind == .image,
-              let shown = displayed, !shown.isPreview, shown.isDownsampled || item.format == .svg,
+              let shown = displayed, !shown.isPreview, !shown.isCameraPreview, shown.isDownsampled || item.format == .svg,
               max(shown.image.width, shown.image.height) < maxPixel else { return }
         let variant = displayVariant(for: item)
         fullResTask = Task {
@@ -540,6 +540,12 @@ final class BrowserModel {
                 preloadNeighbors()
                 return
             }
+            // 这张 RAW 之前已经确定系统解不了：直接显示缓存里的相机预览图，不再闪一遍「正在解码」
+            if item.format == .raw, let hit = await pipeline.cached(item, .cameraPreview(maxPixel: displayMaxPixel)) {
+                show(hit, for: item)
+                preloadNeighbors()
+                return
+            }
             // 还没解码好：先用缩略图占位（模糊一点也比黑屏好）
             failure = nil
             if displayedItem != item {
@@ -567,11 +573,29 @@ final class BrowserModel {
                 show(image, for: item)
             } catch let decodeFailure as DecodeFailure {
                 guard !Task.isCancelled else { return }
+                // 系统解不了这张 RAW（spec C1-02）：改为显示相机存在文件里的预览图；连预览图都没有才显示出错卡片
+                var shownFailure = decodeFailure
+                if item.format == .raw, decodeFailure.kind == .corrupt {
+                    do {
+                        let preview = try await pipeline.image(item, .cameraPreview(maxPixel: displayMaxPixel))
+                        guard !Task.isCancelled else { return }
+                        show(preview, for: item)
+                        isDecodingRaw = false
+                        noteCameraPreviewShown(item)
+                        preloadNeighbors()
+                        return
+                    } catch let previewFailure as DecodeFailure {
+                        guard !Task.isCancelled else { return }
+                        shownFailure = previewFailure
+                    } catch {
+                        return   // 切到了别的文件
+                    }
+                }
                 displayed = nil
                 placeholder = nil
                 showingStaleDisplay = false
                 heldTurns = 0
-                failure = decodeFailure
+                failure = shownFailure
             } catch {
                 return   // 切到了别的文件
             }
@@ -640,13 +664,27 @@ final class BrowserModel {
         guard !showingStaleDisplay, let item = displayedItem, item == current, let shown = displayed, shown.isDownsampled,
               !shown.isPreview, !isDecodingRaw,
               fullResTask == nil || fullResTask?.isCancelled == true else { return }
-        let variant = fullVariant(for: item)
+        // 相机预览图的「原始分辨率」是内嵌 JPEG 的原始大小
+        let variant = shown.isCameraPreview ? ImageDecoder.Variant.cameraPreview(maxPixel: nil) : fullVariant(for: item)
         fullResTask = Task {
             defer { fullResTask = nil }
             guard let image = try? await pipeline.image(item, variant), !Task.isCancelled, item == current,
                   image !== displayed else { return }
             show(image, for: item)
         }
+    }
+
+    /// 当前显示的是相机预览图（系统解不了这张 RAW，spec C1-02）
+    var showingCameraPreview: Bool {
+        displayedItem != nil && displayedItem == current && failure == nil && displayed?.isCameraPreview == true
+    }
+
+    /// 第一次显示相机预览图：出一张说明卡（spec C1-13），这台电脑上只出一次
+    private func noteCameraPreviewShown(_ item: MediaItem) {
+        Log.app.info("系统无法解码 \(item.name, privacy: .public)，显示相机预览图")
+        guard !settings.didShowCameraPreviewHint else { return }
+        settings.didShowCameraPreviewHint = true
+        enqueueHint(.cameraPreview)
     }
 
     /// 播放器打不开当前视频：显示出错卡片

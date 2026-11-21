@@ -23,6 +23,8 @@ struct InfoPanel: View {
     var ratingLocation = ""
     var canRate = true
     var onRate: (Int) -> Void = { _ in }
+    /// 相机预览图状态（spec C1-11）：预览图的像素尺寸、是不是比原片小
+    var cameraPreview: CameraPreviewNote? = nil
 
     /// 滚动区下面还有没显示的内容
     @State private var hasMoreBelow = false
@@ -133,7 +135,10 @@ struct InfoPanel: View {
                     InfoSectionView(title: "评星") { ratingRows }
                     Divider14()
                 }
-                InfoSectionView(title: "文件") { InfoRows(rows: content.file) }
+                InfoSectionView(title: "文件") {
+                    InfoRows(rows: fileRows(content))
+                    if let cameraPreview { CameraPreviewNoteView(note: cameraPreview) }
+                }
                 if let video = content.video {
                     Divider14()
                     InfoSectionView(title: "视频") { InfoRows(rows: video) }
@@ -167,6 +172,20 @@ struct InfoPanel: View {
                 }
             }
         }
+    }
+
+    /// 「文件」一组的行。相机预览图状态下：读不到原片尺寸（系统给的就是预览图的尺寸或没有）时不写「像素尺寸」，
+    /// 并在大小后面加一行「当前显示」（spec C1-11）
+    private func fileRows(_ content: InfoContent) -> [InfoRow] {
+        guard let cameraPreview else { return content.file }
+        let sizeLabel = String(localized: "像素尺寸")
+        var rows = content.file
+        if !cameraPreview.hasOriginalSize { rows.removeAll { $0.label == sizeLabel } }
+        let shown = InfoRow(label: String(localized: "当前显示"),
+                            value: String(localized: "预览图 · \(cameraPreview.sizeText)", comment: "信息面板：当前显示的是相机预览图；%@ 是宽 × 高"), mono: true)
+        let at = rows.firstIndex { $0.label == sizeLabel }.map { $0 + 1 } ?? min(2, rows.count)
+        rows.insert(shown, at: at)
+        return rows
     }
 
     /// 评星组：可以点的五颗星 + “N 星 / 未评星”，下面一行保存位置
@@ -382,5 +401,51 @@ private struct PanelButtonLabelStyle: LabelStyle {
             configuration.icon.font(.system(size: 11, weight: .medium))
             configuration.title
         }
+    }
+}
+
+/// 信息面板里相机预览图的说明（spec C1-11）
+struct CameraPreviewNote: Equatable {
+    /// 预览图的像素尺寸
+    var size: CGSize
+    /// 系统读到了原片尺寸
+    var hasOriginalSize: Bool
+    /// 预览图明显比原片小（不到原片的 90%）
+    var isSmall: Bool
+
+    var sizeText: String { "\(Int(size.width)) × \(Int(size.height))" }
+
+    static func make(_ image: DecodedImage) -> CameraPreviewNote {
+        let original = image.originalPixelSize
+        let small = original.map { image.pixelSize.width * image.pixelSize.height < $0.width * $0.height * 0.9 } ?? false
+        return CameraPreviewNote(size: image.pixelSize, hasOriginalSize: original != nil, isSmall: small)
+    }
+}
+
+/// 黄色说明块：眼睛图标、标题、一两句话（设计稿 74）
+struct CameraPreviewNoteView: View {
+    let note: CameraPreviewNote
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "eye")
+                .font(.system(size: 12, weight: .medium))
+                .frame(width: 15)
+                .padding(.top, 1)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("正在显示相机预览图").font(.system(size: 11.5, weight: .medium))
+                (note.isSmall
+                    ? Text("macOS 暂时无法完整解码这张 RAW。预览图比原片小，放大后可能不够清晰。")
+                    : Text("这是相机存在文件里的 JPEG，不是 RAW 解码的结果。macOS 支持这台相机后会自动换成完整解码。"))
+                    .font(.system(size: 11.5))
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .foregroundStyle(Theme.previewTag)
+        .padding(EdgeInsets(top: 9, leading: 10, bottom: 9, trailing: 10))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.yellow.opacity(0.10)))
+        .padding(.top, 2)
     }
 }
