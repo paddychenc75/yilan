@@ -14,7 +14,7 @@ extension BrowserModel {
 
     /// 能不能切换视图：打开了文件夹，没有在编辑，没有确认框和批量操作
     var canSwitchView: Bool {
-        hasOpenedFolder && edit == nil && pendingDelete == nil && !batchRunning && UpdateChecker.shared.sheetRelease == nil
+        hasOpenedFolder && edit == nil && pendingDelete == nil && !batchRunning && !batchModalOpen && UpdateChecker.shared.sheetRelease == nil
     }
 
     // MARK: - 切换视图
@@ -207,8 +207,6 @@ extension BrowserModel {
             if isFullScreen { toggleFullScreen(); return true }
             return false
         }
-        // 批量操作进行中：除了上面的 Esc 关面板，别的键都不响应（spec K-24）
-        if batchRunning { return true }
         // ⌫：一张按单张规则，多张一定先确认，没有选中时没有反应（spec K-07）
         if event.keyCode == 51, mods.isEmpty || mods == [.command] {
             if isMultiSelection { requestBatchDelete() } else if current != nil { requestDelete() }
@@ -266,6 +264,23 @@ extension BrowserModel {
         case "z", "t", "r", "e", "j", "l", "m": return true
         default: return nil
         }
+    }
+
+    // MARK: - 菜单栏「前往」（spec MB-06）
+
+    func goPrevious() {
+        if isGrid { setGridSelection(GridSelection.move(.left, state: grid, items: itemURLs, columns: gridColumns, firstVisible: gridFirstVisible), scrollToFocus: true) } else { previous() }
+    }
+
+    func goNext() {
+        if isGrid { setGridSelection(GridSelection.move(.right, state: grid, items: itemURLs, columns: gridColumns, firstVisible: gridFirstVisible), scrollToFocus: true) } else { next() }
+    }
+
+    func goEdge(first: Bool) {
+        if isGrid {
+            guard !items.isEmpty else { return }
+            setGridSelection(GridSelection.moveToEdge(first: first, items: itemURLs), scrollToFocus: true)
+        } else if first { self.first() } else { last() }
     }
 
     /// ⌘C：拷贝选中的文件；没有选中时没有反应（spec K-10）

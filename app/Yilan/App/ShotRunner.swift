@@ -32,6 +32,7 @@ enum ShotRunner {
                         model.gridClick(model.items[index].url, command: n > 0, shift: false)
                     }
                     if let focus = model.grid.focus { model.requestGridScroll(to: focus) }
+                    if ShotHooks.deleteState == "batch" { model.requestBatchDelete() }
                 }
             }
             if ShotHooks.openInfo { model.setInfoVisible(true) }

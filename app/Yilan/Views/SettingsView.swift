@@ -245,6 +245,11 @@ struct SettingsView: View {
                 SettingsMenu(selection: $settings.reopenLastFolder,
                              options: [(true, "打开上次的文件夹"), (false, "显示欢迎界面")])
             }
+            // 打开文件夹时用哪种视图（spec V6-02）
+            SettingsRow("打开文件夹时用", note: "从访达双击一张图片打开时，始终先显示这张大图") {
+                SettingsMenu(selection: $settings.openFolderView,
+                             options: [(.last, "上次的视图"), (.gallery, "画廊视图"), (.grid, "图标视图")])
+            }
             SettingsRow("默认显示") {
                 SettingsMenu(selection: $settings.startFilter,
                              options: AppSettings.StartFilter.allCases.map { ($0, $0.title) })
@@ -302,7 +307,7 @@ struct SettingsView: View {
             }
         }
         SettingsGroup {
-            SettingsRow("删除前确认", note: "关闭后按 ⌫ 直接移到废纸篓，可以按 ⌘Z 撤销") {
+            SettingsRow("删除前确认", note: "关闭后按 ⌫ 直接移到废纸篓，可以按 ⌘Z 撤销。一次删除多张时始终会确认") {
                 SettingsSwitch(isOn: $settings.confirmBeforeDelete)
             }
         }

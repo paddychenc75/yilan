@@ -174,6 +174,18 @@ final class BrowserModel {
     /// 列表变化把唯一选中的那一张去掉了：接下来 select() 给的那一张顶上（单张删除后的落点，spec V4-06）
     @ObservationIgnored var gridLostOnlySelection = false
 
+    // MARK: 批量操作（BrowserModel+Batch）
+
+    /// 批量删除的确认框（spec X3-02）
+    internal(set) var pendingBatchDelete: BatchDeleteRequest?
+    /// 正在进行的批量操作；nil = 没有
+    internal(set) var batchProgress: BatchProgress?
+    /// 批量操作结束后的提示框（部分失败）
+    internal(set) var batchReport: BatchReport?
+    @ObservationIgnored var batchStop: BatchTrash.StopFlag?
+    /// 批量操作进行中用户要求退出：做完这一批再退（spec X3-08）
+    @ObservationIgnored var terminateAfterBatch = false
+
     /// 正在拖出窗口的文件：格子变淡（spec X8-03）
     internal(set) var gridDragging: Set<URL> = []
     /// 图标视图里选中的那一张的基本信息（信息条右边的尺寸，spec V1-10）
@@ -312,6 +324,8 @@ final class BrowserModel {
 
     /// asFolder：这次打开算「打开文件夹」（启动时回到上次的文件夹，传进来的是上次停留的文件），视图按设置来
     func open(_ url: URL, asFolder: Bool = false) {
+        // 批量操作进行中不能切换文件夹（spec X3-08）
+        guard !batchRunning else { return }
         openRequested = true
         scanTask?.cancel()
         openError = nil
@@ -969,6 +983,10 @@ final class BrowserModel {
             }
             return true
         }
+        // 批量确认框、结束提示框：只有回车和 Esc 起作用，交给框里的按钮（spec X3-03、X3-04）
+        if batchModalOpen { return !(event.keyCode == 36 || event.keyCode == 76 || event.keyCode == 53) }
+        // 批量操作进行中：按键都不响应（spec X3-08、K-24）
+        if batchRunning { return true }
         // 图标视图：按键另有一套（spec 第 9 节）；返回 nil 的按键和画廊视图共用下面的处理
         if viewMode == .grid, let handled = handleGridKey(event, mods: mods) { return handled }
         // ⌫ 和 ⌘⌫：移到废纸篓

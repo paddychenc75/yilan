@@ -287,6 +287,7 @@ extension BrowserModel {
         switch undoHistory.last {
         case .rating?: String(localized: "撤销“评星”")
         case .trash?: String(localized: "撤销“移到废纸篓”")
+        case .trashBatch(let entries)?: String(localized: "撤销“将 \(entries.count) 项移到废纸篓”", comment: "编辑菜单第一项；%lld 是数量")
         case .edit(.copy)?: String(localized: "撤销“另存副本”")
         case .edit(.replace)?: String(localized: "撤销“替换原图”")
         case .edit(.rotation)?: String(localized: "撤销“保存旋转”")
@@ -296,9 +297,10 @@ extension BrowserModel {
 
     /// ⌘Z：撤销最近一次评星或删除
     func undoLast() async {
-        guard pendingDelete == nil, !trashBusy, edit == nil else { return }
+        guard pendingDelete == nil, !trashBusy, edit == nil, !batchRunning, !batchModalOpen else { return }
         switch undoHistory.last {
         case .trash?: await undoDelete()
+        case .trashBatch(let entries)?: await undoBatchTrash(entries)
         case .edit(let entry)?: await undoEdit(entry)
         case .rating(let change)?:
             undoHistory.pop()

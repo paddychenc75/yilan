@@ -53,6 +53,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// 还有没写完的星级时先等一等（最多 3 秒，spec S-20）
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        // 批量操作进行中：等这一批做完再退（spec X3-08）
+        if BrowserModel.shared.batchRunning {
+            BrowserModel.shared.terminateAfterBatch = true
+            return .terminateLater
+        }
         guard BrowserModel.shared.pendingRatingWrites > 0 else { return .terminateNow }
         Task { @MainActor in
             await BrowserModel.shared.flushRatingWrites()
@@ -150,33 +155,36 @@ struct AppCommands: Commands {
                 Button("清除星级") { model.rateCurrent(0, fromKeyboard: false) }
                     .keyboardShortcut("0", modifiers: [])
             }
-            .disabled(!model.currentIsRatable || !model.mainWindowIsKey || model.pendingDelete != nil || model.isEditing)
+            .disabled(!model.currentIsRatable || !model.mainWindowIsKey || model.pendingDelete != nil || model.isEditing || model.batchRunning)
             }
         }
         CommandGroup(after: .newItem) {
             Divider()
-            Button("在访达中显示") { model.revealCurrentInFinder() }
+            // 图标视图里作用于选中的文件，多选时文字带数量，没有选中时置灰（spec MB-05）
+            Button("在访达中显示") { model.perform(.reveal) }
                 .keyboardShortcut("r", modifiers: [.command, .shift])
-            Button("拷贝文件路径") { model.copyCurrentPath() }
+                .disabled(model.isGrid && model.selectionCount == 0)
+            Button(model.menuTitle(.copyPath)) { model.perform(.copyPath) }
                 .keyboardShortcut("c", modifiers: [.command, .option])
+                .disabled(model.isGrid && model.selectionCount == 0)
             Divider()
             Button("向右旋转") { model.rotate(1) }
                 .keyboardShortcut("r", modifiers: [])
-                .disabled(model.current == nil)
+                .disabled(model.current == nil || model.isGrid)
             Button("向左旋转") { model.rotate(-1) }
                 .keyboardShortcut("r", modifiers: [.shift])
-                .disabled(model.current == nil)
+                .disabled(model.current == nil || model.isGrid)
             // 编辑：裁切、旋转、调整尺寸（spec ED-03）；编辑功能关掉后不出现（spec T2-12）
             if model.editEnabled {
                 Button("编辑") { model.enterEdit() }
                     .keyboardShortcut("e", modifiers: [])
-                    .disabled(!model.canEditCurrent || model.isEditing || !model.mainWindowIsKey)
+                    .disabled(!model.canEditCurrent || model.isEditing || !model.mainWindowIsKey || model.isGrid)
             }
             Divider()
             // 只在主窗口在前时可用：设置窗口的输入框里按 ⌫ 是删字
-            Button("移到废纸篓") { model.requestDelete() }
+            Button(model.menuTitle(.trash)) { model.perform(.trash) }
                 .keyboardShortcut(.delete, modifiers: [])
-                .disabled(!model.canDelete)
+                .disabled(model.isMultiSelection ? !model.canBatchDelete : !model.canDelete)
         }
         // 编辑 › 撤销“移到废纸篓”（⌘Z）。设置窗口在前时交给输入框自己撤销
         CommandGroup(replacing: .undoRedo) {
@@ -190,15 +198,23 @@ struct AppCommands: Commands {
         // 编辑 › 拷贝、全选（spec MB-01、MB-02）：换掉系统默认的剪切 / 拷贝 / 粘贴 / 删除 / 全选一组。
         // 焦点在文字输入框里时照样是文字的拷贝和全选
         CommandGroup(replacing: .pasteboard) {
-            Button("拷贝") { model.copyFromMenu() }
+            Button(model.copyActsOnFiles ? model.menuTitle(.copy) : String(localized: "拷贝", comment: "菜单：把文件拷贝到剪贴板")) { model.copyFromMenu() }
                 .keyboardShortcut("c")
-                .disabled(model.copyActsOnFiles && model.current == nil)
+                .disabled(model.copyActsOnFiles && model.selectionCount == 0)
             Divider()
+            // 画廊视图里全选和取消全选置灰（spec MB-02）；焦点在文字上时交给文字
             Button("全选") { model.selectAllFromMenu() }
                 .keyboardShortcut("a")
-                .disabled(model.copyActsOnFiles)
+                .disabled(model.copyActsOnFiles && (!model.isGrid || model.items.isEmpty))
+            Button("取消全选") { model.deselectAllInGrid() }
+                .keyboardShortcut("a", modifiers: [.command, .option])
+                .disabled(!model.copyActsOnFiles || !model.isGrid || model.grid.selection.isEmpty)
         }
         CommandGroup(before: .toolbar) {
+            // 两种视图：当前的打勾，G 只标在另一项上（spec MB-03）
+            viewToggle("画廊视图", .gallery)
+            viewToggle("图标视图", .grid)
+            Divider()
             filterToggle("全部", .all, key: "1")
             filterToggle("只看图片", .images, key: "2")
             filterToggle("只看视频", .videos, key: "3")
@@ -213,23 +229,29 @@ struct AppCommands: Commands {
                 Divider()
             }
             // 数字键让给评星：⌘9 适应窗口、⌘0 实际大小、Z 切换（spec 4.2）
-            Button("适应窗口") { model.zoom(.fit) }.keyboardShortcut("9")
-            Button("实际大小") { model.zoom(.actualSize) }.keyboardShortcut("0")
-            Button("切换适应窗口 / 实际大小") { model.zoom(.toggle) }.keyboardShortcut("z", modifiers: [])
-            Button("放大") { model.zoom(.zoomIn) }.keyboardShortcut("+")
-            Button("缩小") { model.zoom(.zoomOut) }.keyboardShortcut("-")
+            // 图标视图里没有缩放图片这回事（spec MB-04）：这几项置灰，放大 / 缩小改成调缩略图大小
+            Button("适应窗口") { model.zoom(.fit) }.keyboardShortcut("9").disabled(model.isGrid)
+            Button("实际大小") { model.zoom(.actualSize) }.keyboardShortcut("0").disabled(model.isGrid)
+            Button("切换适应窗口 / 实际大小") { model.zoom(.toggle) }.keyboardShortcut("z", modifiers: []).disabled(model.isGrid)
+            Button(model.isGrid ? "放大缩略图" : "放大") { if model.isGrid { model.stepGridSize(larger: true) } else { model.zoom(.zoomIn) } }
+                .keyboardShortcut("+")
+                .disabled(model.isGrid && model.gridSize == GridSize.allCases.last)
+            Button(model.isGrid ? "缩小缩略图" : "缩小") { if model.isGrid { model.stepGridSize(larger: false) } else { model.zoom(.zoomOut) } }
+                .keyboardShortcut("-")
+                .disabled(model.isGrid && model.gridSize == GridSize.allCases.first)
             Divider()
             Toggle("缩略图栏", isOn: Binding(
                 get: { model.stripVisible },
                 set: { visible in withAnimation(.easeInOut(duration: 0.25)) { model.stripVisible = visible } }
             ))
             .keyboardShortcut("t", modifiers: [])
+            .disabled(model.isGrid)
             Toggle("信息面板", isOn: Binding(
                 get: { model.infoVisible },
                 set: { model.setInfoVisible($0) }
             ))
             .keyboardShortcut("i", modifiers: [])
-            .disabled(model.current == nil || !model.mainWindowIsKey || model.isEditing)
+            .disabled((model.current == nil && !(model.isGrid && model.hasOpenedFolder)) || !model.mainWindowIsKey || model.isEditing)
             Divider()
             Button(model.isFullScreen ? "退出全屏幕" : "进入全屏幕") { model.toggleFullScreen() }
                 .keyboardShortcut("f", modifiers: [])
@@ -239,16 +261,26 @@ struct AppCommands: Commands {
         CommandMenu("前往") {
             // 编辑中不切图（spec ED-08）
             Group {
-                Button("上一个") { model.previous() }.keyboardShortcut(.upArrow, modifiers: [])
-                Button("下一个") { model.next() }.keyboardShortcut(.downArrow, modifiers: [])
-                Button("第一个") { model.first() }.keyboardShortcut(.home, modifiers: [])
-                Button("最后一个") { model.last() }.keyboardShortcut(.end, modifiers: [])
+                // 图标视图里上一个 / 下一个是 ←、→；没有选中时置灰（spec MB-06）
+                Button("上一个") { model.goPrevious() }.keyboardShortcut(model.isGrid ? .leftArrow : .upArrow, modifiers: [])
+                    .disabled(model.isGrid && model.grid.selection.isEmpty)
+                Button("下一个") { model.goNext() }.keyboardShortcut(model.isGrid ? .rightArrow : .downArrow, modifiers: [])
+                    .disabled(model.isGrid && model.grid.selection.isEmpty)
+                Button("第一个") { model.goEdge(first: true) }.keyboardShortcut(.home, modifiers: [])
+                Button("最后一个") { model.goEdge(first: false) }.keyboardShortcut(.end, modifiers: [])
             }
             .disabled(model.isEditing)
         }
     }
 
     /// 带勾选标记的类型菜单项（设计稿“菜单 · 显示”）
+    @ViewBuilder
+    private func viewToggle(_ title: LocalizedStringKey, _ mode: ViewMode) -> some View {
+        let toggle = Toggle(title, isOn: Binding(get: { model.viewMode == mode }, set: { _ in model.setViewMode(mode) }))
+            .disabled(!model.canSwitchView || !model.mainWindowIsKey)
+        if model.viewMode == mode { toggle } else { toggle.keyboardShortcut("g", modifiers: []) }
+    }
+
     private func filterToggle(_ title: LocalizedStringKey, _ filter: MediaFilter, key: KeyEquivalent) -> some View {
         Toggle(title, isOn: Binding(
             get: { model.filter == filter },

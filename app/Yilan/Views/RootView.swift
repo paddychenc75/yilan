@@ -726,6 +726,24 @@ struct RootView: View {
 
             editAlerts(size)
 
+            // 批量操作：进度条在顶部栏下面（spec X3-07）
+            if let progress = model.batchProgress, progress.visible {
+                BatchProgressBar(progress: progress) { model.stopBatch() }
+                    .padding(.top, toastTop)
+                    .transition(.opacity.combined(with: .offset(y: -8)))
+            }
+            if let request = model.pendingBatchDelete {
+                BatchDeleteConfirm(request: request, onCancel: model.cancelBatchDelete, onConfirm: model.confirmBatchDelete)
+                    .frame(width: size.width, height: size.height)
+                    .transition(.opacity)
+            }
+            if let report = model.batchReport {
+                BatchReportAlert(report: report, onAction: { model.dismissBatchReport(performAction: true) },
+                                 onDone: { model.dismissBatchReport(performAction: false) })
+                    .frame(width: size.width, height: size.height)
+                    .transition(.opacity)
+            }
+
             if let pending = model.pendingDelete {
                 DeleteConfirm(
                     name: pending.name,
@@ -801,7 +819,7 @@ struct RootView: View {
                 .frame(width: width, height: size.height)
             // 顶部和底部各一段渐暗（spec V1-09）
             VStack(spacing: 0) {
-                LinearGradient(stops: [.init(color: GridStage.color.opacity(0.96), location: 0.3), .init(color: GridStage.color.opacity(0), location: 1)],
+                LinearGradient(stops: [.init(color: GridStage.color.opacity(0.96), location: 0.45), .init(color: GridStage.color.opacity(0), location: 1)],
                                startPoint: .top, endPoint: .bottom).frame(height: 74)
                 Spacer(minLength: 0)
                 LinearGradient(stops: [.init(color: GridStage.color.opacity(0.94), location: 0.2), .init(color: GridStage.color.opacity(0), location: 1)],

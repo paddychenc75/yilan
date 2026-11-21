@@ -57,18 +57,24 @@ struct DeleteConfirm: View {
 }
 
 /// 确认框里的按钮（高 32，13pt 中等字重，平分宽度）：取消是玻璃，确认是红色 #FF453A 加 3pt 红色光圈
-private struct AlertButtonStyle: ButtonStyle {
+struct AlertButtonStyle: ButtonStyle {
     let destructive: Bool
+    /// 白底深色字的主按钮（提示框里的「好」）
+    var prominent = false
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(.white)
+            .foregroundStyle(prominent ? Color.black.opacity(0.88) : .white)
             .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .padding(.horizontal, 6)
             .frame(maxWidth: .infinity)
             .frame(height: 32)
             .background {
-                if destructive {
+                if prominent {
+                    Capsule().fill(.white)
+                } else if destructive {
                     Capsule().fill(Theme.danger)
                         // 外面 3pt 的光圈 rgba(255,69,58,.35)
                         .overlay(Capsule().stroke(Theme.danger.opacity(0.35), lineWidth: 3).padding(-1.5))

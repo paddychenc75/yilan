@@ -116,6 +116,11 @@ extension BrowserModel {
         return items
     }
 
+    /// 菜单栏里同名项目的文字（多选时带数量，spec MB-05）
+    func menuTitle(_ action: FileAction) -> String {
+        fileMenu(.more).first { $0.action == action }?.title ?? ""
+    }
+
     func perform(_ action: FileAction) {
         // 多选：作用于全部选中的文件（spec X4）
         if isMultiSelection {
@@ -188,6 +193,10 @@ extension BrowserModel {
     }
 
     func selectAllFromMenu() {
+        if copyActsOnFiles {
+            selectAllInGrid()
+            return
+        }
         NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: nil)
     }
 
@@ -204,7 +213,7 @@ extension BrowserModel {
 
     /// 图标视图里能不能弹右键菜单
     var canShowGridMenu: Bool {
-        isGrid && edit == nil && pendingDelete == nil && !batchRunning && UpdateChecker.shared.sheetRelease == nil
+        isGrid && edit == nil && pendingDelete == nil && !batchRunning && !batchModalOpen && UpdateChecker.shared.sheetRelease == nil
     }
 
     /// 能不能弹右键菜单（spec M1-05、M1-08）：有当前文件，没有在编辑，没有确认框和更新说明

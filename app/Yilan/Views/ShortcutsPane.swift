@@ -54,10 +54,13 @@ struct ShortcutsPane: View {
 
     private static let base: [Section] = [
         Section(title: "浏览", rows: [
-            Shortcut(action: "上一个 / 下一个", keys: [[
+            Shortcut(action: "上一个 / 下一个；图标视图里上下左右移动", keys: [[
                 .symbol("arrow.left", label: "←"), .symbol("arrow.right", label: "→"),
                 .symbol("arrow.up", label: "↑"), .symbol("arrow.down", label: "↓"),
             ]]),
+            Shortcut(action: "画廊视图 ↔ 图标视图", keys: [[.text("G")]]),
+            Shortcut(action: "图标视图里：看大图（空格再按一次回来）",
+                     keys: [[.symbol("return", label: "↩")], [.text(String(localized: "空格", comment: "快捷键列表里的空格键"))]]),
             Shortcut(action: "第一个 / 最后一个", keys: [[.text("Home")], [.text("End")]]),
             Shortcut(action: "全部 / 只看图片 / 只看视频", keys: [[.text("⌘1"), .text("⌘2"), .text("⌘3")]]),
             Shortcut(action: "打开 / 关闭筛选面板", keys: [[.text("⌘F")]]),
@@ -71,7 +74,14 @@ struct ShortcutsPane: View {
             Shortcut(action: "显示或隐藏信息面板", keys: [[.text("I")]]),
             Shortcut(action: "向右 / 向左旋转", keys: [[.text("R")], [.text("⇧R")]]),
         ]),
+        Section(title: "选择", rows: [
+            Shortcut(action: "加选或取消一张", keys: [[.text("⌘"), .text(String(localized: "点按", comment: "快捷键列表里的鼠标点按"))]]),
+            Shortcut(action: "选中一段", keys: [[.symbol("shift", label: "⇧"), .text(String(localized: "点按", comment: "快捷键列表里的鼠标点按"))]]),
+            Shortcut(action: "全选", keys: [[.text("⌘A")]]),
+            Shortcut(action: "取消全选", keys: [[.text("⌥⌘A")], [.text("Esc")]]),
+        ]),
         Section(title: "文件", rows: [
+            Shortcut(action: "拷贝文件（一个或选中的全部）", keys: [[.text("⌘C")]]),
             Shortcut(action: "拷贝文件路径", keys: [[.text("⌥⌘C")]]),
             Shortcut(action: "编辑", keys: [[.text("E")]]),
             Shortcut(action: "移到废纸篓", keys: [[.symbol("delete.left", label: "⌫")]]),

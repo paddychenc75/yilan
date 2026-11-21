@@ -21,6 +21,8 @@ enum EditUndo: Equatable, Sendable {
 struct UndoHistory: Equatable {
     enum Entry: Equatable {
         case trash(TrashEntry)
+        /// 批量移到废纸篓：整批是一条记录（spec X3-16）
+        case trashBatch([TrashEntry])
         case rating(RatingChange)
         case edit(EditUndo)
     }
