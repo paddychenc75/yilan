@@ -46,7 +46,7 @@ struct ShortcutsPane: View {
         if !edit { rest = rest.map { s in Section(title: s.title, rows: s.rows.filter { $0.id != "编辑" }) } }
         if !rating {
             rest = rest.map { s in
-                Section(title: s.title, rows: s.rows.map { $0.id == "撤销上一次评星 / 删除" ? Shortcut(action: "撤销上一次删除", keys: $0.keys) : $0 })
+                Section(title: s.title, rows: s.rows.map { $0.id == "撤销上一次评星 / 删除（批量删除一次全部撤销）" ? Shortcut(action: "撤销上一次删除", keys: $0.keys) : $0 })
             }
         }
         return result + rest
@@ -84,8 +84,8 @@ struct ShortcutsPane: View {
             Shortcut(action: "拷贝文件（一个或选中的全部）", keys: [[.text("⌘C")]]),
             Shortcut(action: "拷贝文件路径", keys: [[.text("⌥⌘C")]]),
             Shortcut(action: "编辑", keys: [[.text("E")]]),
-            Shortcut(action: "移到废纸篓", keys: [[.symbol("delete.left", label: "⌫")]]),
-            Shortcut(action: "撤销上一次评星 / 删除", keys: [[.text("⌘Z")]]),
+            Shortcut(action: "移到废纸篓（一张或选中的全部）", keys: [[.symbol("delete.left", label: "⌫")]]),
+            Shortcut(action: "撤销上一次评星 / 删除（批量删除一次全部撤销）", keys: [[.text("⌘Z")]]),
             Shortcut(action: "打开…", keys: [[.text("⌘O")]]),
         ]),
         Section(title: "视频", rows: [

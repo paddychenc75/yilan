@@ -3698,6 +3698,16 @@
         }
       }
     },
+    "撤销上一次评星 / 删除（批量删除一次全部撤销）" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Undo the last rating / delete (a batch delete is undone all at once)"
+          }
+        }
+      }
+    },
     "播到结尾后从头再播；也可以点控制条上的循环按钮" : {
       "localizations" : {
         "en" : {
@@ -5376,6 +5386,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Move to Trash"
+          }
+        }
+      }
+    },
+    "移到废纸篓（一张或选中的全部）" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move to Trash (one, or everything selected)"
           }
         }
       }

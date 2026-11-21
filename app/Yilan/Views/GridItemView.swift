@@ -307,6 +307,12 @@ final class GridCellView: NSView {
         let area = NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect], owner: self)
         addTrackingArea(area)
         tracking = area
+        // 重排后格子换了位置：按鼠标现在在不在它上面重新判断，不然原来悬停的底色会留在别的格子上
+        let inside = window.map { bounds.contains(convert($0.mouseLocationOutsideOfEventStream, from: nil)) } ?? false
+        if inside != isHovered {
+            isHovered = inside
+            applyState()
+        }
     }
 
     override func mouseEntered(with event: NSEvent) {

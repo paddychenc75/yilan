@@ -109,11 +109,11 @@ struct RatingSwitchTests {
         let all = ShortcutsPane.sections(rating: true, filter: true, edit: true)
         let ids = { (s: [ShortcutsPane.Section]) in s.flatMap { $0.rows.map(\.id) } }
         #expect(all.first?.id == "评星")
-        #expect(ids(all).contains("打开 / 关闭筛选面板") && ids(all).contains("编辑") && ids(all).contains("撤销上一次评星 / 删除"))
+        #expect(ids(all).contains("打开 / 关闭筛选面板") && ids(all).contains("编辑") && ids(all).contains("撤销上一次评星 / 删除（批量删除一次全部撤销）"))
         let off = ShortcutsPane.sections(rating: false, filter: false, edit: false)
         #expect(off.first?.id != "评星")
         #expect(!ids(off).contains("打开 / 关闭筛选面板") && !ids(off).contains("编辑"))
-        #expect(ids(off).contains("撤销上一次删除") && !ids(off).contains("撤销上一次评星 / 删除"))
+        #expect(ids(off).contains("撤销上一次删除") && !ids(off).contains("撤销上一次评星 / 删除（批量删除一次全部撤销）"))
     }
 }
 

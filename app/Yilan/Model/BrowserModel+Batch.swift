@@ -131,8 +131,10 @@ extension BrowserModel {
             guard !Task.isCancelled, batchProgress != nil else { return }
             withAnimation(.easeOut(duration: 0.2)) { batchProgress?.visible = true }
         }
+        let throttle = ProgressThrottle(total: targets.count)
         let result = await Task.detached(priority: .userInitiated) {
             BatchTrash.run(jobs, stop: stop, trash: trash) { [weak self] done in
+                guard throttle.shouldReport(done) else { return }
                 Task { @MainActor in self?.batchProgress?.done = done }
             }
         }.value

@@ -68,8 +68,10 @@ extension BrowserModel {
             guard !Task.isCancelled, batchProgress != nil else { return }
             withAnimation(.easeOut(duration: 0.2)) { batchProgress?.visible = true }
         }
+        let throttle = ProgressThrottle(total: jobs.count)
         let outcome = await Task.detached(priority: .userInitiated) { () -> (BatchTransfer.Result, [MediaItem]) in
             let result = BatchTransfer.run(jobs, to: folder, mode: mode, stop: stop, disk: disk) { [weak self] done in
+                guard throttle.shouldReport(done) else { return }
                 Task { @MainActor in self?.batchProgress?.done = done }
             }
             // 复制到眼前这个文件夹：新文件要出现在列表里

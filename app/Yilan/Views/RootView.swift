@@ -935,7 +935,7 @@ struct RootView: View {
 
     /// 右上角的计数（spec V1-14）；空列表时不显示
     private var gridCounter: GridCounterPill.Content? {
-        guard model.isGrid, model.hasOpenedFolder, !model.items.isEmpty else { return nil }
+        guard model.isGrid, model.hasOpenedFolder else { return nil }
         if model.isMultiSelection { return .selected(model.grid.selection.count) }
         if let i = model.currentIndex { return .position(index: i, total: model.items.count) }
         return .total(model.items.count)
