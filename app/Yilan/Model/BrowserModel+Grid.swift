@@ -136,8 +136,12 @@ extension BrowserModel {
         var new = new
         // 选中换到别处：暂留的文件这时才离开列表（spec V8-03）。它自己还在选中里（比如全选）就继续留着，
         // 眼前看到的每一张都要能被选中、被删除
-        if let sticky = stickyURL, new.selection != grid.selection, !new.selection.contains(sticky) {
-            stickyURL = nil
+        // 批量评星暂留的文件同样处理（spec X7-05）：还在新选中集合里的继续留着，其余一起消失
+        let stickies = stickyBatch.union(stickyURL.map { [$0] } ?? [])
+        if !stickies.isEmpty, new.selection != grid.selection, !stickies.isSubset(of: new.selection) {
+            let keep = stickies.intersection(new.selection)
+            stickyURL = stickyURL.flatMap { keep.contains($0) ? $0 : nil }
+            stickyBatch = keep.subtracting(stickyURL.map { [$0] } ?? [])
             let old = itemURLs
             let fresh = resultList()
             if fresh != items {

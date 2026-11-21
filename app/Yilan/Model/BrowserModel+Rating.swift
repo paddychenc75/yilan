@@ -6,6 +6,8 @@ struct RatingFlash: Equatable {
     /// 刚评的星级（0 = 清除），第 value 颗放大发光
     let value: Int
     let serial: Int
+    /// 批量评星时胶囊右边写的张数（spec X7-02）
+    var count: Int? = nil
 }
 
 /// 顶部提示卡片（设计稿 1.4）：一次只显示一个，后来的排队
@@ -78,9 +80,10 @@ extension BrowserModel {
     }
 
     /// 改星级：界面立即变化，写盘在后台（spec R1-02、S-05）
-    func setRating(_ value: Int, for item: MediaItem, old: Int, recordUndo: Bool) {
+    /// batch：属于哪一次批量评星（写盘结果回来时汇总，spec X7-04）；refresh 为 false 时由调用方最后统一刷新结果列表
+    func setRating(_ value: Int, for item: MediaItem, old: Int, recordUndo: Bool, batch: Int? = nil, refresh: Bool = true) {
         ratings[item.url] = value
-        ratingsDidChange()
+        if refresh { ratingsDidChange() }
         if recordUndo {
             undoHistory.push(.rating(RatingChange(item: item, old: old, new: value)))
             unconfirmedRatingEntries[item.url, default: 0] += 1
@@ -91,16 +94,18 @@ extension BrowserModel {
         let writer = ratingWriter
         Task {
             await writer.enqueue(job) { [weak self] outcome in
-                await MainActor.run { self?.writeFinished(outcome, for: item, value: value) }
+                await MainActor.run { self?.writeFinished(outcome, for: item, value: value, batch: batch) }
             }
         }
     }
 
-    func writeFinished(_ outcome: RatingWriter.Outcome, for item: MediaItem, value: Int) {
+    func writeFinished(_ outcome: RatingWriter.Outcome, for item: MediaItem, value: Int, batch: Int? = nil) {
         pendingRatingWrites = max(0, pendingRatingWrites - 1)
         inFlightRatingWrites[item.url] = max(0, (inFlightRatingWrites[item.url] ?? 1) - 1)
         if case .written(_, let stamps) = outcome { ownWrites.record(stamps) }
-        guard ratingWriterOwns(item) else { return }
+        let owned = ratingWriterOwns(item)
+        if let batch { batchRatingWriteFinished(batch, item: item, outcome: outcome, owned: owned) }
+        guard owned else { return }
         localChangeSerial += 1
         switch outcome {
         case .written(let result, _):
@@ -130,7 +135,8 @@ extension BrowserModel {
             ratingsDidChange()
             for _ in 0..<(unconfirmedRatingEntries[item.url] ?? 0) { undoHistory.removeLastRating(for: item.url) }
             unconfirmedRatingEntries[item.url] = 0
-            reportWriteFailure(error)
+            // 批量评星的失败最后汇总成一句（spec X7-04）
+            if batch == nil { reportWriteFailure(error) }
         }
     }
 
@@ -162,10 +168,10 @@ extension BrowserModel {
 
     /// 按 0–5 后画面底部的胶囊闪现约 1 秒（spec R3a）；设置里关掉时不闪。
     /// value 为 nil 时显示当前文件自己的星级（自动下一张时）
-    func flash(_ value: Int?) {
+    func flash(_ value: Int?, count: Int? = nil) {
         guard settings.flashRatingOnStage, !hoveringVideoBar else { return }
         serial += 1
-        ratingFlash = RatingFlash(value: value ?? currentRating ?? 0, serial: serial)
+        ratingFlash = RatingFlash(value: value ?? currentRating ?? 0, serial: serial, count: count)
         flashTask?.cancel()
         if ShotHooks.holdFlash { return }
         flashTask = Task {
@@ -287,7 +293,8 @@ extension BrowserModel {
     /// 编辑菜单里撤销项的文字（spec R7-02）
     var undoMenuTitle: String {
         switch undoHistory.last {
-        case .rating?: String(localized: "撤销“评星”")
+        case .rating?, .ratingBatch?: String(localized: "撤销“评星”")
+        case .moveBatch?: String(localized: "撤销“移动到文件夹”")
         case .trash?: String(localized: "撤销“移到废纸篓”")
         case .trashBatch(let entries)?: String(localized: "撤销“将 \(entries.count) 项移到废纸篓”", comment: "编辑菜单第一项；%lld 是数量")
         case .edit(.copy)?: String(localized: "撤销“另存副本”")
@@ -303,6 +310,10 @@ extension BrowserModel {
         switch undoHistory.last {
         case .trash?: await undoDelete()
         case .trashBatch(let entries)?: await undoBatchTrash(entries)
+        case .moveBatch(let placed)?: await undoMoveBatch(placed)
+        case .ratingBatch(let batch)?:
+            undoHistory.pop()
+            undoRatingBatch(batch)
         case .edit(let entry)?: await undoEdit(entry)
         case .rating(let change)?:
             undoHistory.pop()

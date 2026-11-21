@@ -104,7 +104,17 @@ struct StarBar: View {
 
     var body: some View {
         let flashing = flash != nil
-        StarRow(rating: rating, size: 22, spacing: 4, enabled: false, flash: flash) { _ in }
+        HStack(spacing: 12) {
+            StarRow(rating: rating, size: 22, spacing: 4, enabled: false, flash: flash) { _ in }
+            // 批量评星：星的右边写改了几张（设计稿 43，spec X7-02）
+            if let count = flash?.count {
+                Text("\(count) 张图片", comment: "多选的构成；%lld 是数量")
+                    .font(.system(size: 12.5, weight: .medium))
+                    .foregroundStyle(Theme.text2)
+                    .fixedSize()
+                    .padding(.trailing, 2)
+            }
+        }
             .allowsHitTesting(false)
             .padding(.horizontal, 14)
             .frame(height: 38)

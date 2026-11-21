@@ -38,6 +38,8 @@ final class AppSettings {
         static let lastViewMode = "lastViewMode"
         static let openFolderView = "openFolderView"
         static let gridSize = "gridSize"
+        /// 「复制到 / 移动到文件夹」上次选的目标文件夹（spec R9-02）
+        static let lastTransferFolder = "lastTransferFolder"
     }
 
     /// 设置里“默认显示”的选项：沿用上次，或者固定一种
@@ -101,6 +103,12 @@ final class AppSettings {
     var openFolderView: OpenFolderView { didSet { defaults.set(openFolderView.rawValue, forKey: Key.openFolderView) } }
     /// 图标视图的缩略图大小（spec V5-03）
     var gridSize: GridSize { didSet { defaults.set(gridSize.rawValue, forKey: Key.gridSize) } }
+
+    /// 「复制到 / 移动到文件夹」上次选的目标文件夹，选文件夹面板默认停在这里（spec R9-02）
+    var lastTransferFolder: URL? {
+        get { defaults.string(forKey: Key.lastTransferFolder).map { URL(fileURLWithPath: $0, isDirectory: true) } }
+        set { defaults.set(newValue?.path, forKey: Key.lastTransferFolder) }
+    }
 
     /// 打开一个文件夹时该用哪种视图（spec V6-03）
     var viewModeForFolder: ViewMode {

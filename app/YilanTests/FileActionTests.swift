@@ -12,14 +12,15 @@ private func titles(_ items: [FileMenuItem]) -> [String] {
 
 @Suite("文件菜单清单")
 struct FileMenuTests {
-    @Test("单张菜单的项目和顺序（spec M1-02）")
+    @Test("单张菜单的项目和顺序（spec M1-02），「移到废纸篓」之前多一组复制到 / 移动到文件夹（spec R9-01）")
     @MainActor
     func single() async throws {
         let model = try T5.model(try MetaFixtures.copy(["aurora.jpg", "IMG_2034.jpg"]))
         await T5.waitFor { model.displayed != nil }
         let menu = model.fileMenu(.single)
-        #expect(menu.compactMap(\.action) == [.reveal, .copy, .copyPath, .rotateLeft, .rotateRight, .edit, .toggleInfo, .trash])
-        #expect(titles(menu).filter { $0 == "—" }.count == 2)
+        #expect(menu.compactMap(\.action) == [.reveal, .copy, .copyPath, .rotateLeft, .rotateRight, .edit, .toggleInfo, .copyTo, .moveTo, .trash])
+        #expect(titles(menu).filter { $0 == "—" }.count == 3)
+        #expect(Array(titles(menu).suffix(4)) == [String(localized: "复制到文件夹…"), String(localized: "移动到文件夹…"), "—", String(localized: "移到废纸篓")])
         #expect(menu.allSatisfy { $0.action == nil || $0.enabled })
         #expect(menu.first { $0.action == .copy }?.shortcut == MenuShortcut(key: "c", command: true))
         #expect(menu.first { $0.action == .trash }?.shortcut == .delete)

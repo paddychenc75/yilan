@@ -17,6 +17,13 @@ enum EditUndo: Equatable, Sendable {
     case rotation(url: URL, old: Int, new: Int, backup: RotationBackup?)
 }
 
+/// 一次批量评星（spec X7-03）：整批一条记录，撤销时每张恢复成各自原来的星级
+struct RatingBatchUndo: Equatable, Sendable {
+    /// 写盘结果回来时按它找到这条记录
+    let id: Int
+    var changes: [RatingChange]
+}
+
 /// 删除、评星和编辑共用的撤销记录（spec R7-01）：按时间先后，⌘Z 撤销最近的一条，最多 100 条
 struct UndoHistory: Equatable {
     enum Entry: Equatable {
@@ -24,6 +31,10 @@ struct UndoHistory: Equatable {
         /// 批量移到废纸篓：整批是一条记录（spec X3-16）
         case trashBatch([TrashEntry])
         case rating(RatingChange)
+        /// 批量评星：整批是一条记录（spec X7-03）
+        case ratingBatch(RatingBatchUndo)
+        /// 移动到文件夹：整批是一条记录（spec R9-08）
+        case moveBatch([BatchTransfer.Placed])
         case edit(EditUndo)
     }
 
@@ -55,5 +66,13 @@ struct UndoHistory: Equatable {
     mutating func removeLastRating(for url: URL) {
         guard let i = entries.lastIndex(where: { if case .rating(let c) = $0 { c.item.url == url } else { false } }) else { return }
         entries.remove(at: i)
+    }
+
+    /// 批量评星里有的文件没写成：从那条记录里拿掉它们（spec X7-04）；全都没写成时整条拿掉
+    mutating func dropFromRatingBatch(_ id: Int, urls: Set<URL>) {
+        guard let i = entries.firstIndex(where: { if case .ratingBatch(let b) = $0 { b.id == id } else { false } }),
+              case .ratingBatch(var batch) = entries[i] else { return }
+        batch.changes.removeAll { urls.contains($0.item.url) }
+        if batch.changes.isEmpty { entries.remove(at: i) } else { entries[i] = .ratingBatch(batch) }
     }
 }

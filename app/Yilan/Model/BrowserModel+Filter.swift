@@ -12,7 +12,7 @@ extension BrowserModel {
         let active = browseFilter.isActive
         return allItems.filter { item in
             guard filter.includes(item) else { return false }
-            if !active || item.url == stickyURL { return true }
+            if !active || item.url == stickyURL || stickyBatch.contains(item.url) { return true }
             return matchesBrowseFilter(item)
         }
     }
@@ -118,6 +118,10 @@ extension BrowserModel {
         guard browseFilter.rating.isActive else { return }
         let cur = current
         if let cur, !matchesBrowseFilter(cur) { stickyURL = cur.url }
+        // 图标视图多选时：选中的文件不再符合条件也暂留在原位（spec X7-05）
+        if isMultiSelection {
+            for item in items where grid.selection.contains(item.url) && !matchesBrowseFilter(item) { stickyBatch.insert(item.url) }
+        }
         let newItems = resultList()
         guard newItems != items else { return }
         items = newItems

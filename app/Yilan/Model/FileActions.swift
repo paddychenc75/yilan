@@ -5,6 +5,8 @@ import AppKit
 enum FileAction: Hashable, Sendable {
     case reveal, copy, copyPath
     case rotateLeft, rotateRight, edit, toggleInfo
+    /// 复制到文件夹… / 移动到文件夹…（spec R9）
+    case copyTo, moveTo
     case trash
     case open
 }
@@ -74,6 +76,12 @@ extension BrowserModel {
         }
         // 「⋯」菜单和 v0.3 一样不显示快捷键（spec M4-01）
         let keys = context != .more
+        // 「移到废纸篓」之前的一组（spec R9-01、X4-02、设计稿 98）
+        let transfer: [FileMenuItem] = [
+            item(.copyTo, String(localized: "复制到文件夹…"), nil, canTransfer),
+            item(.moveTo, String(localized: "移动到文件夹…"), nil, canTransfer),
+            .separator,
+        ]
         var items: [FileMenuItem] = [
             item(.reveal, String(localized: "在访达中显示"), keys ? MenuShortcut(key: "r", command: true, shift: true) : nil, hasFile),
             item(.copy, copyTitle, keys ? MenuShortcut(key: "c", command: true) : nil, hasFile),
@@ -95,8 +103,9 @@ extension BrowserModel {
             items += [
                 item(.toggleInfo, infoVisible ? String(localized: "隐藏信息") : String(localized: "显示信息"), MenuShortcut(key: "i"), hasFile),
                 .separator,
-                item(.trash, String(localized: "移到废纸篓"), .delete, canDelete),
             ]
+            items += transfer
+            items.append(item(.trash, String(localized: "移到废纸篓"), .delete, canDelete))
         case .gridItem:
             // 没有旋转和编辑（spec V4a）；多选菜单也没有「显示信息」
             if !multi {
@@ -105,6 +114,7 @@ extension BrowserModel {
                     .separator,
                 ]
             }
+            items += transfer
             items.append(item(.trash, trashTitle, .delete, canTrash))
         case .more:
             items += [
@@ -129,6 +139,8 @@ extension BrowserModel {
             case .copy: copySelection()
             case .copyPath: copySelectedPaths()
             case .trash: requestBatchDelete()
+            case .copyTo: requestTransfer(.copy)
+            case .moveTo: requestTransfer(.move)
             case .open: showOpenPanel()
             case .toggleInfo: toggleInfo()
             case .rotateLeft, .rotateRight, .edit: break
@@ -144,6 +156,8 @@ extension BrowserModel {
         case .edit: enterEdit()
         case .toggleInfo: toggleInfo()
         case .trash: requestDelete()
+        case .copyTo: requestTransfer(.copy)
+        case .moveTo: requestTransfer(.move)
         case .open: showOpenPanel()
         }
     }

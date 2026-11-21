@@ -2150,6 +2150,48 @@
         }
       }
     },
+    "复制 %lld 项到…" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Copy %lld Item to…"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Copy %lld Items to…"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "复制到文件夹…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy to Folder…"
+          }
+        }
+      }
+    },
+    "复制到这里" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy Here"
+          }
+        }
+      }
+    },
     "复原" : {
       "localizations" : {
         "en" : {
@@ -2403,12 +2445,34 @@
         }
       }
     },
+    "已停止：%lld 项已复制，%lld 项没有复制" : {
+      "comment" : "复制到文件夹被停止后的提示条",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stopped: %1$lld items copied, %2$lld not copied"
+          }
+        }
+      }
+    },
     "已停止：%lld 项已移到废纸篓，%lld 项没有移动" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Stopped: %1$lld items moved to the Trash, %2$lld not moved"
+          }
+        }
+      }
+    },
+    "已停止：%lld 项已移动，%lld 项没有移动" : {
+      "comment" : "移动到文件夹被停止后的提示条",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stopped: %1$lld items moved, %2$lld not moved"
           }
         }
       }
@@ -2441,6 +2505,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Created %@ next to the photo"
+          }
+        }
+      }
+    },
+    "已复制 %lld 项到“%@”" : {
+      "comment" : "复制到文件夹完成；%lld 是数量，%@ 是文件夹名",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied %1$lld items to “%2$@”"
+          }
+        }
+      }
+    },
+    "已复制 %lld 项到“%@”，其中 %lld 项重名，已加序号" : {
+      "comment" : "复制到文件夹完成；数量、文件夹名、重名数",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied %1$lld items to “%2$@”. %3$lld were renamed to avoid duplicates."
           }
         }
       }
@@ -2636,6 +2722,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Moved to Trash"
+          }
+        }
+      }
+    },
+    "已移动 %lld 项到“%@”" : {
+      "comment" : "移动到文件夹完成；%lld 是数量，%@ 是文件夹名",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moved %1$lld items to “%2$@”"
+          }
+        }
+      }
+    },
+    "已给 %lld 张图片评 %lld 星" : {
+      "comment" : "批量评星后的提示条：张数、星级",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rated %1$lld photos %2$lld stars"
+          }
+        }
+      }
+    },
+    "已给 %lld 张图片评 %lld 星，%lld 个视频已跳过" : {
+      "comment" : "批量评星后的提示条：张数、星级、跳过的视频数",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rated %1$lld photos %2$lld stars. Skipped %3$lld videos."
           }
         }
       }
@@ -3539,6 +3658,16 @@
         }
       }
     },
+    "撤销“移动到文件夹”" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Undo Move to Folder"
+          }
+        }
+      }
+    },
     "撤销“评星”" : {
       "localizations" : {
         "en" : {
@@ -4394,6 +4523,28 @@
         }
       }
     },
+    "有 %lld 个项目无法复制" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld item couldn’t be copied"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld items couldn’t be copied"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "有 %lld 个项目无法放回原位" : {
       "localizations" : {
         "en" : {
@@ -4431,6 +4582,50 @@
                 "stringUnit" : {
                   "state" : "translated",
                   "value" : "%lld items couldn’t be moved to the Trash"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "有 %lld 个项目无法移动" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld item couldn’t be moved"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld items couldn’t be moved"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "有 %lld 张的星级无法保存：此位置不可写" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Couldn’t save the rating for %lld photo: this location is read-only"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Couldn’t save the rating for %lld photos: this location is read-only"
                 }
               }
             }
@@ -5181,6 +5376,48 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Move to Trash"
+          }
+        }
+      }
+    },
+    "移动 %lld 项到…" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Move %lld Item to…"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "Move %lld Items to…"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "移动到文件夹…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move to Folder…"
+          }
+        }
+      }
+    },
+    "移动到这里" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move Here"
           }
         }
       }
@@ -5986,6 +6223,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "This video can’t be played."
+          }
+        }
+      }
+    },
+    "这些文件已经在这个文件夹里" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "These files are already in this folder"
           }
         }
       }

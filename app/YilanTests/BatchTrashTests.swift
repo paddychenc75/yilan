@@ -321,10 +321,12 @@ struct MultiSelectionMenuTests {
         let (model, _) = try makeGrid()
         pick(model, [0, 2, 3])
         let menu = model.fileMenu(.gridItem)
-        #expect(menu.compactMap(\.action) == [.reveal, .copy, .copyPath, .trash])
-        #expect(menu.filter { $0.action != nil }.map(\.title) == [
+        // 做了 R9：「分隔 ／ 将 N 项移到废纸篓」之前插入「分隔 ／ 复制到文件夹… ／ 移动到文件夹…」
+        #expect(menu.compactMap(\.action) == [.reveal, .copy, .copyPath, .copyTo, .moveTo, .trash])
+        #expect(menu.map { $0.action == nil ? "—" : $0.title } == [
             String(localized: "在访达中显示"), String(localized: "拷贝 \(3) 项"),
-            String(localized: "拷贝 \(3) 个文件路径"), String(localized: "将 \(3) 项移到废纸篓"),
+            String(localized: "拷贝 \(3) 个文件路径"), "—", String(localized: "复制到文件夹…"), String(localized: "移动到文件夹…"), "—",
+            String(localized: "将 \(3) 项移到废纸篓"),
         ])
     }
 
@@ -333,7 +335,7 @@ struct MultiSelectionMenuTests {
     func singleMenu() throws {
         let (model, _) = try makeGrid()
         pick(model, [2])
-        #expect(model.fileMenu(.gridItem).compactMap(\.action) == [.reveal, .copy, .copyPath, .toggleInfo, .trash])
+        #expect(model.fileMenu(.gridItem).compactMap(\.action) == [.reveal, .copy, .copyPath, .toggleInfo, .copyTo, .moveTo, .trash])
     }
 
     @Test("没有选中时「⋯」菜单里针对文件的几项置灰（spec M4-02）")

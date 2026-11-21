@@ -79,7 +79,8 @@ enum BatchTrash {
         let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)
         if attributes?[.immutable] as? Bool == true { return String(localized: "文件已锁定") }
         let ns = error as NSError
-        let posix = (ns.userInfo[NSUnderlyingErrorKey] as? NSError)?.code
+        // 复制 / 移动（spec R9）直接给的是系统错误码
+        let posix = ns.domain == NSPOSIXErrorDomain ? ns.code : (ns.userInfo[NSUnderlyingErrorKey] as? NSError)?.code
         if ns.domain == NSCocoaErrorDomain {
             switch ns.code {
             case NSFeatureUnsupportedError: return String(localized: "这个位置没有废纸篓")

@@ -304,10 +304,98 @@ extension BrowserModel {
         session.draggingFormation = .stack
     }
 
-    /// 多选时按数字键（spec X7）。这一版没做批量评星时：不改任何星级，给一句提示（spec X7-07）
+    // MARK: - 批量评星（spec X7）
+
+    /// 多选时按 1–5 / 0：选中的图片全部设成这个星级，视频跳过，已经是这个星级的不动（spec X7-01）。
+    /// 评星关掉时没有任何反应（spec X7-06）
     func rateSelection(_ value: Int) {
-        showToast(symbol: "star", text: String(localized: "一次只能给一张图片评星"), duration: 2)
+        guard ratingEnabled, isMultiSelection, !batchRunning, !batchModalOpen, pendingDelete == nil, edit == nil else { return }
+        let selected = selectedItems
+        let photos = selected.filter(RatingFileIO.isRatable)
+        let skipped = selected.count - photos.count
+        // 选中的全是视频：和单张一样，1–5 给一句提示，0 什么都不做
+        guard !photos.isEmpty else {
+            if value > 0 { showToast(symbol: "video", text: String(localized: "视频暂不支持评星"), solid: true, duration: 1.6) }
+            return
+        }
+        dismissHint(.shortcutsChanged)
+        let changes = photos.compactMap { item -> RatingChange? in
+            let old = ratings[item.url] ?? 0
+            return old == value ? nil : RatingChange(item: item, old: old, new: value)
+        }
+        // 整个位置不可写：一张都不改（spec X7-04、v0.3 S-14）
+        guard folderWritable else {
+            showBatchRatingFailure(changes.isEmpty ? photos.count : changes.count)
+            return
+        }
+        // 闪现和提示写实际改动的张数；一张都不用改时写选中的图片数
+        let shown = changes.isEmpty ? photos.count : changes.count
+        flash(value, count: shown)
+        if !changes.isEmpty {
+            serial += 1
+            let id = serial
+            // 整批一条撤销记录（spec X7-03）
+            undoHistory.push(.ratingBatch(RatingBatchUndo(id: id, changes: changes)))
+            ratingBatches[id] = RatingBatchProgress(pending: changes.count)
+            for change in changes { setRating(value, for: change.item, old: change.old, recordUndo: false, batch: id, refresh: false) }
+            // 一起刷新一次结果列表：不再符合筛选条件的全部暂留（spec X7-05）
+            ratingsDidChange()
+        }
+        let text = skipped > 0
+            ? String(localized: "已给 \(shown) 张图片评 \(value) 星，\(skipped) 个视频已跳过", comment: "批量评星后的提示条：张数、星级、跳过的视频数")
+            : String(localized: "已给 \(shown) 张图片评 \(value) 星", comment: "批量评星后的提示条：张数、星级")
+        showToast(symbol: "star", text: text,
+                  detail: changes.isEmpty ? nil : String(localized: "⌘Z 撤销", comment: "删除后提示条里可以点的链接"),
+                  action: changes.isEmpty ? nil : .undo, duration: 4)
     }
+
+    /// 批量评星里一个文件写完了（成功、失败或被后来的评星取代）。整批写完后：没写成的从撤销记录里拿掉，
+    /// 给一句汇总提示（spec X7-04）。失败的文件界面上的星级由 writeFinished 恢复原状
+    func batchRatingWriteFinished(_ id: Int, item: MediaItem, outcome: RatingWriter.Outcome, owned: Bool) {
+        guard var progress = ratingBatches[id] else { return }
+        progress.pending -= 1
+        if case .failed(let error) = outcome {
+            progress.failed.insert(item.url)
+            // 文件已经不在了：不算「无法保存」，只是撤销时不用管它
+            if error != .vanished { progress.reported += 1 }
+        }
+        guard progress.pending <= 0 else {
+            ratingBatches[id] = progress
+            return
+        }
+        ratingBatches[id] = nil
+        guard !progress.failed.isEmpty else { return }
+        undoHistory.dropFromRatingBatch(id, urls: progress.failed)
+        if owned, progress.reported > 0 { showBatchRatingFailure(progress.reported) }
+    }
+
+    /// 「有 N 张的星级无法保存：此位置不可写」（spec X7-04）
+    private func showBatchRatingFailure(_ count: Int) {
+        showToast(symbol: "exclamationmark.triangle",
+                  text: String(localized: "有 \(count) 张的星级无法保存：此位置不可写", comment: "批量评星有文件写不进去的提示条；%lld 是数量"),
+                  tone: .warning, solid: true, duration: 4)
+    }
+
+    /// ⌘Z 撤销批量评星：每张恢复成原来的星级（spec X7-03）。已经不在这个文件夹的跳过
+    func undoRatingBatch(_ batch: RatingBatchUndo) {
+        var touched = false
+        for change in batch.changes {
+            guard let item = allItems.first(where: { $0.url == change.item.url }) else { continue }
+            setRating(change.old, for: item, old: ratings[item.url] ?? change.new, recordUndo: false, refresh: false)
+            touched = true
+        }
+        if touched { ratingsDidChange() }
+    }
+}
+
+/// 一次批量评星的写盘进度（spec X7-04）
+struct RatingBatchProgress: Equatable {
+    /// 还没写完的文件数
+    var pending: Int
+    /// 没写成的文件（界面已恢复原星级，要从撤销记录里拿掉）
+    var failed: Set<URL> = []
+    /// 其中要告诉用户「无法保存」的个数（文件已经不在的不算）
+    var reported = 0
 }
 
 /// 拖出文件的来源（spec X8-03、X8-04）：拖到别的程序是拷贝；一览自己的窗口不接受

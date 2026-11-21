@@ -181,6 +181,12 @@ struct AppCommands: Commands {
                     .disabled(!model.canEditCurrent || model.isEditing || !model.mainWindowIsKey || model.isGrid)
             }
             Divider()
+            // 复制到 / 移动到文件夹（spec R9-01）：当前文件或选中的文件
+            Button("复制到文件夹…") { model.perform(.copyTo) }
+                .disabled(!model.canTransfer)
+            Button("移动到文件夹…") { model.perform(.moveTo) }
+                .disabled(!model.canTransfer)
+            Divider()
             // 只在主窗口在前时可用：设置窗口的输入框里按 ⌫ 是删字
             Button(model.menuTitle(.trash)) { model.perform(.trash) }
                 .keyboardShortcut(.delete, modifiers: [])

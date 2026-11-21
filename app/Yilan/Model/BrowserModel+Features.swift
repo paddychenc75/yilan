@@ -20,7 +20,12 @@ extension BrowserModel {
                 if hasOpenedFolder { loadRatings() }
             } else {
                 // spec T2-07：评星记录作废，之后 ⌘Z 不会改动任何星级
-                undoHistory.removeAll { if case .rating = $0 { true } else { false } }
+                undoHistory.removeAll {
+                    switch $0 {
+                    case .rating, .ratingBatch: true
+                    default: false
+                    }
+                }
                 ratingLoadTask?.cancel()
                 flashTask?.cancel()
                 ratingFlash = nil

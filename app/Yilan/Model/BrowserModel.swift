@@ -39,6 +39,10 @@ struct Toast: Equatable {
 
 enum ToastAction: Equatable {
     case undoDelete
+    /// 撤销批量评星、移动到文件夹
+    case undo
+    /// 复制完成后在访达里选中新文件（spec R9-07）
+    case reveal([URL])
     /// 撤销编辑保存（另存副本、替换原图、保存旋转）
     case undoEdit
 }
@@ -233,7 +237,12 @@ final class BrowserModel {
     var browseFilter = BrowseFilter()
     var filterPanelOpen = false
     /// 暂留：当前文件已经不符合条件，但留在结果里直到切走（spec F-01）
-    @ObservationIgnored var stickyURL: URL?
+    @ObservationIgnored var stickyURL: URL? {
+        // 暂留结束的各条路径（改条件、换类型、切走）同时结束批量评星的暂留
+        didSet { if stickyURL == nil { stickyBatch.removeAll() } }
+    }
+    /// 图标视图里批量评星后不再符合条件、暂留在原位的文件（spec X7-05）：选中集合变化时一起消失
+    @ObservationIgnored var stickyBatch: Set<URL> = []
     /// 结果变空前最后在看的文件：清除或放宽筛选后回到它（spec F1-03）
     @ObservationIgnored var emptyResultAnchor: MediaItem?
 
@@ -267,6 +276,8 @@ final class BrowserModel {
     /// 同一种写入失败 10 秒内不重复提示（spec S-14）
     @ObservationIgnored var lastWriteFailure: (error: RatingWriteError, at: Date)?
     @ObservationIgnored var hoveringVideoBar = false
+    /// 还在写盘的批量评星（spec X7-04）：编号 → 还剩几个、哪些没写成
+    @ObservationIgnored var ratingBatches: [Int: RatingBatchProgress] = [:]
 
     // MARK: 全屏（BrowserModel+FullScreen）
 
@@ -951,7 +962,10 @@ final class BrowserModel {
 
     func performToastAction(_ action: ToastAction) {
         switch action {
-        case .undoDelete, .undoEdit: Task { await undoLast() }
+        case .undoDelete, .undoEdit, .undo: Task { await undoLast() }
+        case .reveal(let urls):
+            let existing = urls.filter { FileManager.default.fileExists(atPath: $0.path) }
+            if !existing.isEmpty { NSWorkspace.shared.activateFileViewerSelecting(existing) }
         }
     }
 
