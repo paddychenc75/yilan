@@ -25,7 +25,9 @@ enum ShotRunner {
             if ShotHooks.view == "grid" {
                 if let raw = ShotHooks.gridSize, let size = GridSize(rawValue: raw) { model.setGridSize(size) }
                 model.setViewMode(.grid, remember: false)
-                if ShotHooks.select == "none" {
+                if ShotHooks.select == "all" {
+                    model.selectAllInGrid()
+                } else if ShotHooks.select == "none" {
                     model.deselectAllInGrid()
                 } else if let picks = ShotHooks.select?.split(separator: ",").compactMap({ Int($0) }), !picks.isEmpty {
                     for (n, index) in picks.enumerated() where model.items.indices.contains(index) {

@@ -27,6 +27,12 @@ private func exists(_ url: URL) -> Bool { FileManager.default.fileExists(atPath:
 
 private struct Refused: Error {}
 
+private final class Counter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = 0
+    func next() -> Int { lock.lock(); defer { lock.unlock() }; value += 1; return value }
+}
+
 @Suite("批量移到废纸篓：后台部分")
 struct BatchTrashRunTests {
     private func folderWithRaws() throws -> (URL, [MediaItem], SidecarIndex) {
@@ -229,6 +235,62 @@ struct BatchTrashModelTests {
         #expect(Set(model.selectedItems.map(\.name)) == [gone[0].name, gone[2].name])
         #expect(!model.canUndo)
         #expect(try Data(contentsOf: gone[1].url) == Data("occupied".utf8))
+    }
+
+    @Test("中途点停止：已移走的和没动的数量对得上，没动的保持选中，⌘Z 放回已移走的（spec X3-11）")
+    @MainActor
+    func stopMidway() async throws {
+        let (model, _) = try makeGrid()
+        model.selectAllInGrid()
+        let all = model.selectedItems
+        let counter = Counter()
+        await model.performBatchDelete(all, trash: { url in
+            // 第 3 个文件处理完后「点停止」
+            if counter.next() == 3 { Task { @MainActor in model.stopBatch() } }
+            Thread.sleep(forTimeInterval: 0.05)
+            return try TrashService.trash(url)
+        })
+        let left = model.items.count
+        #expect(left > 0 && left < all.count)
+        #expect(model.grid.selection.count == left)          // 没动的保持选中
+        #expect(model.items.allSatisfy { exists($0.url) })
+        #expect(model.toast?.text == String(localized: "已停止：\(all.count - left) 项已移到废纸篓，\(left) 项没有移动"))
+        #expect(!model.batchRunning)
+        await model.undoLast()
+        #expect(model.items.count == all.count && all.allSatisfy { exists($0.url) })
+    }
+
+    @Test("有筛选时全选并删除：眼前的每一张（包括暂留的）都删，没看到的不动（PRD 验收）")
+    @MainActor
+    func filteredSelectAll() async throws {
+        let (model, _) = try makeGrid(["aurora.jpg", "IMG_2034.jpg", "IMG_2052.jpg", "harbor_night.png"])
+        _ = await T5.waitFor { model.ratingsLoaded }
+        // 给两张打 3 星，筛「不低于 3 星」
+        for i in [0, 1] {
+            model.gridClick(model.items[i].url, command: false, shift: false)
+            model.rateCurrent(3, fromKeyboard: true)
+        }
+        await model.ratingWriter.waitUntilIdle()
+        _ = await T5.waitFor { model.pendingRatingWrites == 0 }
+        var f = BrowseFilter()
+        f.rating.mode = .stars(3)
+        model.setBrowseFilter(f)
+        try #require(model.items.count == 2)
+        // 把其中一张改成 1 星：不符合了，但暂留在眼前
+        model.gridClick(model.items[0].url, command: false, shift: false)
+        model.rateCurrent(1, fromKeyboard: true)
+        await model.ratingWriter.waitUntilIdle()
+        #expect(model.items.count == 2)
+        let hidden = model.allItems.filter { !model.items.contains($0) }
+        model.selectAllInGrid()
+        let seen = model.selectedItems
+        #expect(seen.count == 2)
+        model.requestBatchDelete()
+        #expect(model.pendingBatchDelete?.scope == .wholeFilter)
+        model.confirmBatchDelete()
+        _ = await T5.waitFor { !model.batchRunning && model.allItems.count == 2 }
+        #expect(seen.allSatisfy { !exists($0.url) })
+        #expect(hidden.count == 2 && hidden.allSatisfy { exists($0.url) })
     }
 
     @Test("小文件跟着照片进废纸篓，撤销时一起回来（spec X3-06）")

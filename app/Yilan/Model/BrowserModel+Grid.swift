@@ -134,8 +134,9 @@ extension BrowserModel {
     func setGridSelection(_ new: GridSelectionState, scrollToFocus: Bool = false) {
         guard isGrid else { return }
         var new = new
-        // 选中集合变了：暂留的文件这时才离开列表（spec V8-03）
-        if stickyURL != nil, new.selection != grid.selection {
+        // 选中换到别处：暂留的文件这时才离开列表（spec V8-03）。它自己还在选中里（比如全选）就继续留着，
+        // 眼前看到的每一张都要能被选中、被删除
+        if let sticky = stickyURL, new.selection != grid.selection, !new.selection.contains(sticky) {
             stickyURL = nil
             let old = itemURLs
             let fresh = resultList()
