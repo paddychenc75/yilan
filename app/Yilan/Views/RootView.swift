@@ -112,7 +112,15 @@ struct RootView: View {
     /// 编辑中图片区：上 76、下 92（窄窗 84）、左右 56（窄窗 40）
     private func editInsets(_ size: CGSize) -> NSEdgeInsets {
         let narrow = editNarrow(size)
-        return NSEdgeInsets(top: 76, left: narrow ? 40 : 56, bottom: narrow ? 84 : 92, right: narrow ? 40 : 56)
+        // 拉直的刻度尺开着时，图片区下边让到 150（设计稿 96、97）
+        let bottom: CGFloat = model.edit?.straightenOpen == true ? 150 : (narrow ? 84 : 92)
+        return NSEdgeInsets(top: 76, left: narrow ? 40 : 56, bottom: bottom, right: narrow ? 40 : 56)
+    }
+
+    /// 编辑中的裁切框设置（含拉直角度、拖刻度尺时的密参考线）
+    private var editCropConfig: CropOverlayView.Config? {
+        model.edit.map { .init(editedSize: $0.editedSize, crop: $0.crop, ratio: $0.ratioValue,
+                               angle: $0.angle, fineGrid: $0.straightening) }
     }
 
     /// 菜单、面板开着时：点别处关掉
@@ -128,9 +136,16 @@ struct RootView: View {
         }
     }
 
-    /// 底部编辑工具条，占原缩略图栏的位置（距底 20）
+    /// 底部编辑工具条，占原缩略图栏的位置（距底 20）；拉直的刻度尺在它上方 10（spec E6-02）
     private func editControls(_ session: EditSession, layout: StageLayout) -> some View {
-        EditToolbar(session: session, narrow: editNarrow(layout.size)) { model.rotate($0) }
+        let narrow = editNarrow(layout.size)
+        return VStack(spacing: 10) {
+            if session.straightenOpen {
+                StraightenRuler(session: session, width: narrow ? 340 : 440)
+                    .transition(.opacity)
+            }
+            EditToolbar(session: session, narrow: narrow) { model.rotate($0) }
+        }
             .padding(.bottom, 20)
             .frame(width: layout.size.width, height: layout.size.height, alignment: .bottom)
     }
@@ -169,7 +184,7 @@ struct RootView: View {
                               onNavigate: { _ in }, onZoomChanged: { model.zoomState = $0 },
                               onNeedsFullResolution: { model.requestFullResolution() },
                               onDisplayChanged: { model.displayDidChange(maxPixel: $0) },
-                              crop: model.edit.map { .init(editedSize: $0.editedSize, crop: $0.crop, ratio: $0.ratioValue) },
+                              crop: editCropConfig, straighten: model.edit?.angle ?? 0,
                               onCropChanged: { rect in model.edit?.crop = rect })
         }
         return ImageStage(
@@ -185,7 +200,7 @@ struct RootView: View {
             onZoomChanged: { model.zoomState = $0 },
             onNeedsFullResolution: { model.requestFullResolution() },
             onDisplayChanged: { model.displayDidChange(maxPixel: $0) },
-            crop: model.edit.map { .init(editedSize: $0.editedSize, crop: $0.crop, ratio: $0.ratioValue) },
+            crop: editCropConfig, straighten: model.edit?.angle ?? 0,
             onCropChanged: { rect in model.edit?.crop = rect }
         )
     }

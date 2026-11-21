@@ -3314,6 +3314,17 @@
         }
       }
     },
+    "拉直" : {
+      "comment" : "编辑工具条：拉直按钮和刻度尺的提示（TX-D0）",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Straighten"
+          }
+        }
+      }
+    },
     "拍摄" : {
       "comment" : "信息面板分组标题：拍摄参数",
       "localizations" : {

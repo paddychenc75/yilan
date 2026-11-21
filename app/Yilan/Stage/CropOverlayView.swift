@@ -11,6 +11,10 @@ final class CropOverlayView: NSView {
         var crop: PixelRect
         /// 要保持的宽 / 高（自由时 nil）
         var ratio: Double?
+        /// 拉直的角度（度，spec E6）：照片绕图片中心转了这么多，压暗范围跟着转，拖框不能露出空角
+        var angle: Double = 0
+        /// 正在拉直：参考线加密成横 9 竖 6（spec E6-05）
+        var fineGrid = false
     }
 
     var config: Config? {
@@ -75,25 +79,46 @@ final class CropOverlayView: NSView {
 
     // MARK: - 画
 
+    /// 转过 angle 度的图片范围（绕图片中心，正数顺时针；本视图 y 向下）
+    private func rotatedImagePath(_ angle: Double) -> NSBezierPath {
+        let t = CGFloat(angle) * .pi / 180, c = cos(t), s = sin(t)
+        let o = CGPoint(x: imageFrame.midX, y: imageFrame.midY)
+        let hw = imageFrame.width / 2, hh = imageFrame.height / 2
+        let path = NSBezierPath()
+        for (i, (x, y)) in [(-hw, -hh), (hw, -hh), (hw, hh), (-hw, hh)].enumerated() {
+            let p = CGPoint(x: o.x + x * c - y * s, y: o.y + x * s + y * c)
+            if i == 0 { path.move(to: p) } else { path.line(to: p) }
+        }
+        path.close()
+        return path
+    }
+
     override func draw(_ dirtyRect: NSRect) {
-        guard config != nil, imageFrame.width > 0 else { return }
+        guard let config, imageFrame.width > 0 else { return }
         let box = boxRect
-        // 框外压暗：只在图片范围内（圆角 4）
+        // 框外压暗：只在图片范围内（圆角 4）；拉直时是转过的照片范围
         NSGraphicsContext.saveGraphicsState()
-        NSBezierPath(roundedRect: imageFrame, xRadius: 4, yRadius: 4).addClip()
-        let dim = NSBezierPath(rect: imageFrame)
+        if config.angle == 0 {
+            NSBezierPath(roundedRect: imageFrame, xRadius: 4, yRadius: 4).addClip()
+        } else {
+            rotatedImagePath(config.angle).addClip()
+        }
+        let dim = NSBezierPath(rect: config.angle == 0 ? imageFrame : bounds.union(imageFrame))
         dim.append(NSBezierPath(rect: box))
         dim.windingRule = .evenOdd
         NSColor.black.withAlphaComponent(0.58).setFill()
         dim.fill()
         NSGraphicsContext.restoreGraphicsState()
 
-        // 三分线
-        NSColor.white.withAlphaComponent(0.38).setFill()
-        for i in 1...2 {
-            let x = (box.minX + box.width * CGFloat(i) / 3).rounded()
-            let y = (box.minY + box.height * CGFloat(i) / 3).rounded()
+        // 参考线：平时三分线；拖刻度尺时加密成横 9 竖 6（设计稿 96）
+        let columns = config.fineGrid ? 9 : 3, rows = config.fineGrid ? 6 : 3
+        NSColor.white.withAlphaComponent(config.fineGrid ? 0.28 : 0.38).setFill()
+        for i in 1..<columns {
+            let x = (box.minX + box.width * CGFloat(i) / CGFloat(columns)).rounded()
             NSRect(x: x, y: box.minY, width: 1, height: box.height).fill()
+        }
+        for i in 1..<rows {
+            let y = (box.minY + box.height * CGFloat(i) / CGFloat(rows)).rounded()
             NSRect(x: box.minX, y: y, width: box.width, height: 1).fill()
         }
         // 边框：外面 1pt 黑 25% 衬底，里面 1pt 白 90%
@@ -202,8 +227,10 @@ final class CropOverlayView: NSView {
         if ratio == nil, handle.isCorner, event.modifierFlags.contains(.shift) {
             ratio = Double(d.start.width) / Double(max(1, d.start.height))
         }
-        let rect = CropMath.drag(handle, start: d.start, dx: Double((p.x - d.startPoint.x) / k), dy: Double((p.y - d.startPoint.y) / k),
-                                 bounds: c.editedSize, ratio: ratio, minSide: minSide)
+        // 拉直过的照片：拖框不能露出空角（spec E6-04）；角度为 0 时和原来完全一样
+        let rect = StraightenMath.drag(handle, start: d.start, dx: Double((p.x - d.startPoint.x) / k),
+                                       dy: Double((p.y - d.startPoint.y) / k), bounds: c.editedSize, ratio: ratio,
+                                       minSide: minSide, angle: c.angle)
         guard rect != c.crop else { return }
         config?.crop = rect
         onCropChanged?(rect)

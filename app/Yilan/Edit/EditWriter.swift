@@ -113,12 +113,14 @@ struct EditPlan: Equatable, Sendable {
     let crop: PixelRect
     /// 最终输出尺寸
     let output: PixelSize
+    /// 拉直的角度（度，正数顺时针；spec E6）：照片绕转完之后的图的中心转，crop 在转之前的画布坐标里
+    var angle: Double = 0
 
     var turns: Int { ((quarterTurns % 4) + 4) % 4 }
     /// 转完之后的图的尺寸
     var editedSize: PixelSize { turns % 2 == 1 ? imageSize.swapped : imageSize }
-    /// 只旋转：没有裁切、没有缩小
-    var isRotationOnly: Bool { crop.covers(editedSize) && output == crop.size }
+    /// 只旋转：没有裁切、没有缩小、没有拉直
+    var isRotationOnly: Bool { angle == 0 && crop.covers(editedSize) && output == crop.size }
     var isUnchanged: Bool { isRotationOnly && turns == 0 }
 }
 
@@ -311,7 +313,7 @@ enum EditWriter {
 
     private static let ciContext = CIContext(options: [.cacheIntermediates: false])
 
-    /// 按计划画出结果：转正 → 旋转 → 裁切 → 缩小（技术方案 13.2）
+    /// 按计划画出结果：转正 → 旋转 → 拉直 → 裁切 → 缩小（技术方案 13.2）
     static func render(_ plan: EditPlan) throws -> CGImage {
         guard let src = CGImageSourceCreateWithURL(plan.source as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
               let raw = CGImageSourceCreateImageAtIndex(src, 0, [kCGImageSourceShouldCacheImmediately: true] as CFDictionary)
@@ -321,9 +323,20 @@ enum EditWriter {
         var ci = CIImage(cgImage: raw).oriented(CGImagePropertyOrientation(rawValue: o) ?? .up)
         for _ in 0..<plan.turns { ci = ci.oriented(.right) }
         ci = ci.transformed(by: CGAffineTransform(translationX: -ci.extent.minX, y: -ci.extent.minY))
+        // 转完 90° 之后的图的范围（拉直后图像范围变成无限大，换算裁切框要用转之前的）
+        let canvas = ci.extent
+        if plan.angle != 0 {
+            // 拉直（spec E6）：绕图的中心转。Core Image 是 y 向上，屏幕上的顺时针是负角度。
+            // 先把边缘像素向外延伸：裁切框只会因为取整碰到照片外不到 1 像素，这里补上边上的颜色，保证没有透明的角
+            let w = canvas.width, h = canvas.height
+            let turn = CGAffineTransform(translationX: w / 2, y: h / 2)
+                .rotated(by: -CGFloat(plan.angle) * .pi / 180)
+                .translatedBy(x: -w / 2, y: -h / 2)
+            ci = ci.clampedToExtent().transformed(by: turn)
+        }
         // 实际解出来的尺寸可能和标称差几个像素（RAW）：按比例换算裁切框
         let edited = plan.editedSize
-        let sx = ci.extent.width / CGFloat(edited.width), sy = ci.extent.height / CGFloat(edited.height)
+        let sx = canvas.width / CGFloat(edited.width), sy = canvas.height / CGFloat(edited.height)
         let c = plan.crop
         // Core Image 原点在左下
         let rect = CGRect(x: CGFloat(c.x) * sx, y: CGFloat(edited.height - c.y - c.height) * sy,

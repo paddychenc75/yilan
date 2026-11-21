@@ -94,6 +94,7 @@ struct SaveSplitButton: View {
             Button {
                 session.ratioMenuOpen = false
                 session.resizeOpen = false
+                session.straightenOpen = false
                 session.saveMenuOpen.toggle()
             } label: {
                 Image(systemName: "chevron.down")
@@ -170,7 +171,7 @@ struct SaveMenu: View {
 
 // MARK: - 底部工具条
 
-/// 底部编辑工具条（设计稿 .ebar）：比例、横竖、像素尺寸 | 左转、右转 | 缩小 | 复原
+/// 底部编辑工具条（设计稿 .ebar）：比例、横竖、像素尺寸 | 左转、右转、拉直 | 缩小 | 复原
 struct EditToolbar: View {
     @Bindable var session: EditSession
     let narrow: Bool
@@ -189,11 +190,12 @@ struct EditToolbar: View {
                 .monospacedDigit()
                 .foregroundStyle(.white)
                 .lineLimit(1)
-                .frame(width: 118)
+                .frame(width: narrow ? 96 : 118)
                 .help(Text("保存后的像素尺寸"))
             separator
             EditIconButton(symbol: "rotate.left", help: String(localized: "向左旋转（⇧R）")) { onRotate(-1) }
             EditIconButton(symbol: "rotate.right", help: String(localized: "向右旋转（R）")) { onRotate(1) }
+            StraightenButton(session: session, narrow: narrow)
             separator
             resizeButton
             if !narrow {
@@ -226,6 +228,7 @@ struct EditToolbar: View {
         EditDropButton(open: session.ratioMenuOpen, width: narrow ? 104 : 118) {
             session.saveMenuOpen = false
             session.resizeOpen = false
+            session.straightenOpen = false
             session.ratioMenuOpen.toggle()
         } label: {
             Image(systemName: "aspectratio").font(.system(size: 13.5))
@@ -251,6 +254,7 @@ struct EditToolbar: View {
         EditDropButton(open: session.resizeOpen, width: narrow ? 82 : 96) {
             session.saveMenuOpen = false
             session.ratioMenuOpen = false
+            session.straightenOpen = false
             session.resizeOpen.toggle()
         } label: {
             Image(systemName: "arrow.down.right.and.arrow.up.left").font(.system(size: 13))
@@ -269,6 +273,137 @@ struct EditToolbar: View {
                     .transition(.opacity)
             }
         }
+    }
+}
+
+// MARK: - 拉直（spec E6；设计稿 95–97）
+
+/// 工具条上的「拉直」：高 34 的胶囊，图标、文字「拉直」（窄窗口省掉）、角度（等宽字体，不是 0 时黄色）。
+/// 点它开关刻度尺，开着时底 白 22%
+struct StraightenButton: View {
+    @Bindable var session: EditSession
+    let narrow: Bool
+    @State private var hovering = false
+
+    var body: some View {
+        Button {
+            session.ratioMenuOpen = false
+            session.saveMenuOpen = false
+            session.resizeOpen = false
+            session.straightening = false
+            session.straightenOpen.toggle()
+        } label: {
+            HStack(spacing: 7) {
+                LevelIcon().frame(width: 15, height: 15)
+                if !narrow { Text("拉直").font(.system(size: 12)).foregroundStyle(Theme.text3).fixedSize() }
+                Text(verbatim: StraightenMath.label(session.angle))
+                    .font(Theme.mono(12))
+                    .monospacedDigit()
+                    .foregroundStyle(session.angle != 0 ? Theme.yellow : Color.white)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .frame(minWidth: 44, alignment: .trailing)
+            }
+            .foregroundStyle(.white)
+            .padding(.leading, narrow ? 10 : 12)
+            .padding(.trailing, 10)
+            .frame(height: 34)
+            .background(Capsule().fill(Color.white.opacity(session.straightenOpen ? 0.22 : (hovering ? 0.12 : 0))))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help(Text("拉直"))
+    }
+}
+
+/// 拉直图标（设计稿 ic('level')，24×24 画布，线宽 1.8）：一条斜线、上面一个向下的箭头、下面一条半透明的水平线
+struct LevelIcon: View {
+    private struct Lines: Shape {
+        let segments: [[CGPoint]]
+        func path(in rect: CGRect) -> Path {
+            let k = min(rect.width, rect.height) / 24
+            var path = Path()
+            for seg in segments {
+                path.addLines(seg.map { CGPoint(x: rect.minX + $0.x * k, y: rect.minY + $0.y * k) })
+            }
+            return path
+        }
+    }
+
+    var body: some View {
+        let style = StrokeStyle(lineWidth: 1.8 * 15 / 24, lineCap: .round, lineJoin: .round)
+        ZStack {
+            Lines(segments: [[CGPoint(x: 3, y: 16.5), CGPoint(x: 21, y: 12.5)],
+                             [CGPoint(x: 12, y: 4), CGPoint(x: 12, y: 10.5)],
+                             [CGPoint(x: 9.5, y: 8), CGPoint(x: 12, y: 10.5), CGPoint(x: 14.5, y: 8)]])
+                .stroke(style: style)
+            Lines(segments: [[CGPoint(x: 3, y: 20.5), CGPoint(x: 21, y: 20.5)]])
+                .stroke(style: style)
+                .opacity(0.5)
+        }
+    }
+}
+
+/// 刻度尺（设计稿 .ruler）：玻璃，宽 440（窄窗口 340）、高 44、圆角 22。指针固定在正中，刻度在下面左右移动：
+/// 每小格 1 度（8 点），每 5 度一条长刻度，量程 ±45。左右拖改变角度，按住 ⌥ 精细到 0.1 度；双击归零（spec E6-03）
+struct StraightenRuler: View {
+    @Bindable var session: EditSession
+    let width: CGFloat
+    /// 拖动中：没取整的角度和上一次的位移（⌥ 可以在拖动中途按下或松开）
+    @State private var dragAngle: Double?
+    @State private var lastX: CGFloat = 0
+
+    var body: some View {
+        let angle = session.angle
+        ZStack(alignment: .top) {
+            Canvas { ctx, size in
+                let mid = size.width / 2
+                let step = CGFloat(StraightenMath.pointsPerDegree)
+                for k in -45...45 {
+                    let x = (mid + CGFloat(Double(k) - angle) * step).rounded()
+                    guard x > -2, x < size.width + 2 else { continue }
+                    let major = k % 5 == 0
+                    let rect = major ? CGRect(x: x, y: 22, width: 1, height: 12) : CGRect(x: x, y: 25, width: 1, height: 9)
+                    ctx.fill(Path(rect), with: .color(.white.opacity(major ? 0.85 : 0.45)))
+                }
+            }
+            .mask(LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.22),
+                                         .init(color: .black, location: 0.78), .init(color: .clear, location: 1)],
+                                 startPoint: .leading, endPoint: .trailing))
+            RoundedRectangle(cornerRadius: 1).fill(Theme.yellow).frame(width: 2, height: 20).padding(.top, 18)
+            Text(verbatim: StraightenMath.label(angle))
+                .font(Theme.mono(11.5, .semibold))
+                .monospacedDigit()
+                .foregroundStyle(Theme.yellow)
+                .padding(.top, 4)
+        }
+        .frame(width: width, height: 44)
+        .regularGlass(Capsule())
+        .contentShape(Capsule())
+        .onTapGesture(count: 2) { session.setAngle(0) }
+        .gesture(
+            DragGesture(minimumDistance: 1)
+                .onChanged { value in
+                    if dragAngle == nil {
+                        dragAngle = session.angle
+                        lastX = 0
+                        session.straightening = true
+                    }
+                    let dx = value.translation.width - lastX
+                    lastX = value.translation.width
+                    let perPoint = (NSEvent.modifierFlags.contains(.option) ? 0.1 : 1) / StraightenMath.pointsPerDegree
+                    // 刻度跟着手走：往右拖，指针下的刻度变小；到头停住，往回拖马上有反应
+                    let next = min(max((dragAngle ?? 0) - Double(dx) * perPoint, -StraightenMath.maxAngle), StraightenMath.maxAngle)
+                    dragAngle = next
+                    session.setAngle(next)
+                }
+                .onEnded { _ in
+                    dragAngle = nil
+                    session.straightening = false
+                }
+        )
+        .help(Text("拉直"))
     }
 }
 

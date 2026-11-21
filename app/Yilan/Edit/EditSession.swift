@@ -22,11 +22,17 @@ final class EditSession {
     private(set) var portrait = false
     /// 缩小比例（0, 1]，以裁切后的尺寸为基准
     var scale: Double = 1
+    /// 拉直的角度（spec E6）：-45…45，0.1 度一档，正数顺时针。几何约定见 StraightenMath
+    private(set) var angle: Double = 0
 
     // 菜单、面板
     var ratioMenuOpen = false
     var saveMenuOpen = false
     var resizeOpen = false
+    /// 拉直的刻度尺开着（spec E6-02）
+    var straightenOpen = false
+    /// 正在拖刻度尺：裁切框里显示加密的参考线（spec E6-05）
+    var straightening = false
     var confirmReplace = false
     var saving = false
     var failure: EditSaveError?
@@ -53,11 +59,11 @@ final class EditSession {
     /// 当前要保持的宽 / 高（自由时 nil）
     var ratioValue: Double? { ratio.widthOverHeight(image: editedSize, portrait: portrait) }
     var canSwap: Bool { ratio.canSwap(image: editedSize) }
-    var isDirty: Bool { turns != startTurns || !crop.covers(editedSize) || scale < 1 || ratio != .free }
-    var anyPopupOpen: Bool { ratioMenuOpen || saveMenuOpen || resizeOpen }
+    var isDirty: Bool { turns != startTurns || !crop.covers(editedSize) || scale < 1 || ratio != .free || angle != 0 }
+    var anyPopupOpen: Bool { ratioMenuOpen || saveMenuOpen || resizeOpen || straightenOpen }
 
     var plan: EditPlan {
-        EditPlan(source: item.url, imageSize: imageSize, quarterTurns: turns, crop: crop, output: outputSize)
+        EditPlan(source: item.url, imageSize: imageSize, quarterTurns: turns, crop: crop, output: outputSize, angle: angle)
     }
 
     var target: EditTarget {
@@ -74,6 +80,8 @@ final class EditSession {
         ratioMenuOpen = false
         saveMenuOpen = false
         resizeOpen = false
+        straightenOpen = false
+        straightening = false
     }
 
     /// 旋转（spec ED-19）：裁切框跟着转，固定比例的横竖跟着换
@@ -99,6 +107,15 @@ final class EditSession {
         ratioMenuOpen = false
         portrait.toggle()
         if let value = ratioValue { crop = CropMath.swap(crop, ratio: value, bounds: editedSize) }
+        crop = StraightenMath.fit(crop, angle: angle, size: editedSize)
+    }
+
+    /// 拉直（spec E6-03、E6-04）：角度变大露出空角时裁切框按原比例缩小；角度变小时不自动放大
+    func setAngle(_ value: Double) {
+        let v = StraightenMath.clampAngle(value)
+        guard v != angle else { return }
+        angle = v
+        crop = StraightenMath.fit(crop, angle: v, size: editedSize)
     }
 
     /// 复原（spec ED-26）
@@ -107,6 +124,7 @@ final class EditSession {
         ratio = .free
         portrait = false
         scale = 1
+        angle = 0
         crop = PixelRect(size: editedSize)
         closePopups()
     }

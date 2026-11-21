@@ -42,6 +42,14 @@ final class ImageStageView: NSView {
         }
     }
 
+    /// 编辑模式的拉直角度（度，正数顺时针，spec E6）：照片绕图片中心再转这么多；只影响显示
+    var straighten: Double = 0 {
+        didSet {
+            guard oldValue != straighten else { return }
+            layoutImage(animated: false)
+        }
+    }
+
     /// 换图的同时改方向（原地改写的文件换上新内容）时不播放转动动画
     var animatesRotation = true
 
@@ -300,7 +308,7 @@ final class ImageStageView: NSView {
         container.bounds = bounds
         container.position = CGPoint(x: frame.midX, y: frame.midY)
         // 视图是翻转坐标（y 向下），正角度即顺时针
-        container.setAffineTransform(CGAffineTransform(rotationAngle: CGFloat(rotation) * .pi / 2))
+        container.setAffineTransform(CGAffineTransform(rotationAngle: CGFloat(rotation) * .pi / 2 + CGFloat(straighten) * .pi / 180))
         imageLayer.frame = container.bounds
         videoLayer?.frame = container.bounds
         let isFit = scale == nil
@@ -518,6 +526,8 @@ struct ImageStage: NSViewRepresentable {
     var onDisplayChanged: (Int) -> Void = { _ in }
     /// 编辑模式的裁切框；nil 表示在浏览
     var crop: CropOverlayView.Config? = nil
+    /// 编辑模式的拉直角度（度）
+    var straighten: Double = 0
     var onCropChanged: (PixelRect) -> Void = { _ in }
 
     final class Coordinator {
@@ -552,6 +562,7 @@ struct ImageStage: NSViewRepresentable {
         view.setVideoLayer(videoLayer)
         view.cropOverlay.onCropChanged = onCropChanged
         view.rotation = rotation
+        view.straighten = straighten
         view.cropConfig = crop
         view.fitInsets = insets
         if let cmd = zoomCommand, cmd.serial != context.coordinator.lastZoomSerial {

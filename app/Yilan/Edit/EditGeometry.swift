@@ -252,6 +252,111 @@ enum CropMath {
     }
 }
 
+// MARK: - 拉直
+
+/// 拉直（spec E6）的几何。约定（预览、裁切框、写出三处共用）：
+/// - 画布 = 转过 90° 之后的图（editedSize），左上原点、y 向下；裁切框是画布上的整数矩形。
+/// - 照片绕画布中心转 angle 度：正数顺时针，负数逆时针（屏幕上看）。
+/// - 裁切框必须同时在画布里、在转过的照片里，这样存出的图不会有空白的角。
+/// angle 为 0 时这里的函数都不改动裁切框，结果和没有拉直时完全一样
+enum StraightenMath {
+    static let maxAngle = 45.0
+    /// 刻度尺上每度多少点（spec E6-03）
+    static let pointsPerDegree = 8.0
+
+    /// 限制在 ±45 度内并取整到 0.1 度（和显示的数字一致）；不会得到 -0
+    static func clampAngle(_ angle: Double) -> Double {
+        guard angle.isFinite else { return 0 }
+        let v = (min(max(angle, -maxAngle), maxAngle) * 10).rounded() / 10
+        return v == 0 ? 0 : v
+    }
+
+    /// 工具条、刻度尺上的角度文字：「0.0°」「−3.2°」「+3.2°」（负号是 U+2212，和设计稿一致）
+    static func label(_ angle: Double) -> String {
+        let v = clampAngle(angle)
+        if v == 0 { return "0.0°" }
+        return (v < 0 ? "\u{2212}" : "+") + String(format: "%.1f°", abs(v))
+    }
+
+    /// 中心在 center、半宽 halfWidth、半高 halfHeight 的框，按原比例放大或缩小到多少倍时恰好碰到
+    /// 画布边或转过的照片边（照片边往里留 margin 像素）。小于 1 表示现在的框露出了空角；≤ 0 表示中心已经在照片外
+    static func maxScale(center: CGPoint, halfWidth: Double, halfHeight: Double, angle: Double, size: PixelSize,
+                         margin: Double = 0) -> Double {
+        let W = Double(size.width), H = Double(size.height)
+        guard halfWidth > 0, halfHeight > 0, W > 0, H > 0 else { return 0 }
+        let t = angle * .pi / 180, c = cos(t), s = sin(t)
+        let dx = Double(center.x) - W / 2, dy = Double(center.y) - H / 2
+        // 框的中心换回照片自己的坐标（转回 -angle）
+        let qx = c * dx + s * dy, qy = -s * dx + c * dy
+        // 框的四个角离中心最远的距离，在照片坐标的两个方向上
+        let ex = halfWidth * abs(c) + halfHeight * abs(s)
+        let ey = halfWidth * abs(s) + halfHeight * abs(c)
+        let inPhoto = min((W / 2 - margin - abs(qx)) / ex, (H / 2 - margin - abs(qy)) / ey)
+        let cx = Double(center.x), cy = Double(center.y)
+        let inCanvas = min(min(cx, W - cx) / halfWidth, min(cy, H - cy) / halfHeight)
+        return min(inPhoto, inCanvas)
+    }
+
+    /// 裁切框没有露出空角（允许 tolerance 像素的误差，写出时边缘再用边上的像素补齐）
+    static func contains(_ rect: PixelRect, angle: Double, size: PixelSize, tolerance: Double = 0.5) -> Bool {
+        guard rect.x >= 0, rect.y >= 0, rect.maxX <= size.width, rect.maxY <= size.height else { return false }
+        if angle == 0 { return true }
+        let k = maxScale(center: CGPoint(x: Double(rect.x) + Double(rect.width) / 2, y: Double(rect.y) + Double(rect.height) / 2),
+                         halfWidth: Double(rect.width) / 2, halfHeight: Double(rect.height) / 2,
+                         angle: angle, size: size, margin: -tolerance)
+        return k >= 1 - 1e-9
+    }
+
+    /// 不含空白角的最大内接矩形：保持原图宽高比，居中
+    static func largestInscribed(size: PixelSize, angle: Double) -> PixelRect {
+        fit(PixelRect(size: size), angle: angle, size: size)
+    }
+
+    /// 角度变了以后的裁切框（spec E6-04）：已经在照片里就原样不动（角度变小时不自动放大）；
+    /// 露出空角时按原比例绕框的中心缩小；框的中心已经转到照片外、或缩得比 minSide 还小时，改成画面中心
+    static func fit(_ rect: PixelRect, angle: Double, size: PixelSize, minSide: Int = 16) -> PixelRect {
+        if contains(rect, angle: angle, size: size) { return rect }
+        let w = Double(rect.width), h = Double(rect.height)
+        var center = CGPoint(x: Double(rect.x) + w / 2, y: Double(rect.y) + h / 2)
+        // 留 1 像素余量：取整后仍然不露角
+        var k = maxScale(center: center, halfWidth: w / 2, halfHeight: h / 2, angle: angle, size: size, margin: 1)
+        if k <= 0 || k * min(w, h) < Double(min(minSide, size.width, size.height)) {
+            center = CGPoint(x: Double(size.width) / 2, y: Double(size.height) / 2)
+            k = maxScale(center: center, halfWidth: w / 2, halfHeight: h / 2, angle: angle, size: size, margin: 1)
+        }
+        k = min(max(k, 0), 1)
+        let nw = max(1, Int((w * k).rounded(.down))), nh = max(1, Int((h * k).rounded(.down)))
+        let x = Int((Double(center.x) - Double(nw) / 2).rounded()), y = Int((Double(center.y) - Double(nh) / 2).rounded())
+        return CropMath.clamp(PixelRect(x: x, y: y, width: nw, height: nh), bounds: size)
+    }
+
+    /// 拉直后拖裁切框：先按没有拉直时的规则算（CropMath.drag），露出空角时沿拖动方向退回到刚好不露角的位置，
+    /// 再分别沿水平、竖直方向尽量走（贴着照片边滑动）。angle 为 0 时和 CropMath.drag 完全相同
+    static func drag(_ handle: CropHandle, start: PixelRect, dx: Double, dy: Double, bounds: PixelSize,
+                     ratio: Double?, minSide: Int, angle: Double) -> PixelRect {
+        func at(_ x: Double, _ y: Double) -> PixelRect {
+            CropMath.drag(handle, start: start, dx: x, dy: y, bounds: bounds, ratio: ratio, minSide: minSide)
+        }
+        let full = at(dx, dy)
+        guard angle != 0, !contains(full, angle: angle, size: bounds) else { return full }
+        guard contains(start, angle: angle, size: bounds) else { return fit(full, angle: angle, size: bounds) }
+        // 最大的 t ∈ [0, 1]，使 f(t) 不露角
+        func search(_ f: (Double) -> PixelRect) -> Double {
+            var lo = 0.0, hi = 1.0
+            for _ in 0..<20 {
+                let mid = (lo + hi) / 2
+                if contains(f(mid), angle: angle, size: bounds) { lo = mid } else { hi = mid }
+            }
+            return lo
+        }
+        let t = search { at(dx * $0, dy * $0) }
+        let x0 = dx * t, y0 = dy * t
+        let x1 = x0 + (dx - x0) * search { at(x0 + (dx - x0) * $0, y0) }
+        let y1 = y0 + (dy - y0) * search { at(x1, y0 + (dy - y0) * $0) }
+        return at(x1, y1)
+    }
+}
+
 // MARK: - 调整尺寸
 
 /// 调整尺寸（spec ED-20 ~ ED-25）：scale ∈ (0, 1]，以裁切后的尺寸为基准
