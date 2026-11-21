@@ -369,6 +369,16 @@
         }
       }
     },
+    "0.5 的新变化" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What’s new in 0.5"
+          }
+        }
+      }
+    },
     "1–99 之间的整数。" : {
       "localizations" : {
         "en" : {
@@ -2119,6 +2129,17 @@
         }
       }
     },
+    "在访达中显示“%@”" : {
+      "comment" : "空白处右键菜单",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show “%@” in Finder"
+          }
+        }
+      }
+    },
     "在适应窗口和 100% 之间切换" : {
       "localizations" : {
         "en" : {
@@ -3209,6 +3230,16 @@
         }
       }
     },
+    "打开设置" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings"
+          }
+        }
+      }
+    },
     "打星后自动跳到下一张" : {
       "localizations" : {
         "en" : {
@@ -3373,6 +3404,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Copy files (one, or everything selected)"
+          }
+        }
+      }
+    },
+    "按 G 切换到图标视图，一屏看很多张，可以选中多张一起删除或拷贝。在图片上点右键能直接操作。用不到的功能可以在“设置 › 功能”里关掉。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press G for Icon View to see many photos at once and select several to delete or copy together. Right-click a photo for quick actions. Turn off features you don’t use in Settings › Features."
           }
         }
       }

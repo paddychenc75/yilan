@@ -12,6 +12,36 @@ enum ContextMenuPresenter {
         menu.popUp(positioning: nil, at: point, in: nil)
     }
 
+    /// 不针对文件的菜单（图标视图空白处，spec M5-01）：可以打勾
+    struct Entry {
+        var title = ""
+        var shortcut: MenuShortcut? = nil
+        var checked = false
+        var enabled = true
+        var run: (@MainActor () -> Void)? = nil
+        static let separator = Entry()
+    }
+
+    static func show(entries: [Entry]) {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        for entry in entries {
+            guard let run = entry.run else {
+                menu.addItem(.separator())
+                continue
+            }
+            let item = NSMenuItem(title: entry.title, action: #selector(MenuTarget.fire(_:)), keyEquivalent: entry.shortcut?.key ?? "")
+            item.keyEquivalentModifierMask = entry.shortcut?.modifierMask ?? []
+            let target = MenuTarget(run)
+            item.target = target
+            item.representedObject = target
+            item.isEnabled = entry.enabled
+            item.state = entry.checked ? .on : .off
+            menu.addItem(item)
+        }
+        menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+    }
+
     static func make(_ items: [FileMenuItem], perform: @escaping @MainActor (FileAction) -> Void) -> NSMenu {
         let menu = NSMenu()
         menu.autoenablesItems = false

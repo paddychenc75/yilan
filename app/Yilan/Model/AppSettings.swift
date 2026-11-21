@@ -192,6 +192,16 @@ final class AppSettings {
         gridSize = GridSize(rawValue: defaults.integer(forKey: Key.gridSize)) ?? .default
     }
 
+    /// 上次运行的版本号；nil = 没记过（全新安装，或 v0.2 及更早）
+    var lastLaunchedVersion: String? { defaults.string(forKey: Key.lastLaunchedVersion) }
+
+    /// 要不要显示「0.5 的新变化」（spec T5-01）：从低于 0.5.0 的版本升级到 0.5.0 及以后，第一次启动。全新安装不显示
+    static func showsWhatsNew05(previous: String?, current: String, upgradedFromV02: Bool) -> Bool {
+        guard current.compare("0.5.0", options: .numeric) != .orderedAscending else { return false }
+        if let previous { return previous.compare("0.5.0", options: .numeric) == .orderedAscending }
+        return upgradedFromV02
+    }
+
     /// 从 v0.2 升级后第一次启动（spec K-10）：以前用过（存过任何设置或最近打开）、但没记过版本号。
     /// 调用一次后记下当前版本，之后都返回 false
     func consumeUpgradeFromV02(currentVersion: String) -> Bool {

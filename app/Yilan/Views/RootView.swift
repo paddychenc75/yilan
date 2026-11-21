@@ -677,6 +677,7 @@ struct RootView: View {
             if let hint = model.hint {
                 HintCardView(card: hint, onPrimary: {
                     if hint == .shortcutsChanged { SettingsWindow.shared.show(pane: .shortcuts) }
+                    if hint == .whatsNew { SettingsWindow.shared.show(pane: .features) }
                     model.dismissHint()
                 }, onClose: { model.dismissHint() })
                 .onHover { model.setHovering("hint", $0) }

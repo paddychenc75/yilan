@@ -230,7 +230,9 @@ struct FileDropDelegate: DropDelegate {
     let onOpen: (URL) -> Void
 
     func validateDrop(info: DropInfo) -> Bool {
-        info.hasItemsConforming(to: [.fileURL])
+        // 自己拖出去的文件不算「拖入打开」（spec X8-04）
+        guard BrowserModel.shared.gridDragging.isEmpty else { return false }
+        return info.hasItemsConforming(to: [.fileURL])
     }
 
     func dropEntered(info: DropInfo) {

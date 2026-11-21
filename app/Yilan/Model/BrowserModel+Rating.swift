@@ -16,6 +16,8 @@ enum HintCard: Equatable {
     case sidecarCreated(String, isRaw: Bool)
     /// 第一次显示相机预览图（spec C1-13）
     case cameraPreview
+    /// 从低于 0.5 的版本升级后第一次启动：新变化（spec T5-01）
+    case whatsNew
 }
 
 /// 评星：打星、写盘、读取、撤销、提示（spec 第 1–5、7 节）
@@ -339,9 +341,14 @@ extension BrowserModel {
     /// 启动时：从 v0.2 升级来的用户显示快捷键变化（spec K-10）。跑测试时不显示
     func showUpgradeNoticeIfNeeded() {
         guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
-        if settings.consumeUpgradeFromV02(currentVersion: AppInfo.version) {
+        let previous = settings.lastLaunchedVersion
+        let fromV02 = settings.consumeUpgradeFromV02(currentVersion: AppInfo.version)
+        if fromV02 {
             upgradeNoticeShown = true
             enqueueHint(.shortcutsChanged)
+        }
+        if AppSettings.showsWhatsNew05(previous: previous, current: AppInfo.version, upgradedFromV02: fromV02) {
+            enqueueHint(.whatsNew)
         }
     }
 

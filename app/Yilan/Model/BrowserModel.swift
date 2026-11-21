@@ -186,6 +186,7 @@ final class BrowserModel {
     /// 批量操作进行中用户要求退出：做完这一批再退（spec X3-08）
     @ObservationIgnored var terminateAfterBatch = false
 
+    @ObservationIgnored var gridDragSource: GridDragSource?
     /// 正在拖出窗口的文件：格子变淡（spec X8-03）
     internal(set) var gridDragging: Set<URL> = []
     /// 图标视图里选中的那一张的基本信息（信息条右边的尺寸，spec V1-10）

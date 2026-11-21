@@ -254,14 +254,72 @@ extension BrowserModel {
 
     // MARK: - 后面几步补上
 
-    /// 在空白处点右键（spec M5-01）
-    func showGridBlankMenu() {}
+    /// 在空白处点右键（spec M5-01）：选择不变
+    func showGridBlankMenu() {
+        guard canShowGridMenu, hasOpenedFolder else { return }
+        var entries: [ContextMenuPresenter.Entry] = [
+            .init(title: String(localized: "全选"), shortcut: MenuShortcut(key: "a", command: true), enabled: !items.isEmpty) { [weak self] in self?.selectAllInGrid() },
+            .separator,
+            // 当前视图打勾，G 只标在另一项上
+            .init(title: String(localized: "画廊视图"), shortcut: MenuShortcut(key: "g"), enabled: canSwitchView) { [weak self] in self?.setViewMode(.gallery) },
+            .init(title: String(localized: "图标视图"), checked: true) {},
+            .separator,
+            .init(title: String(localized: "放大缩略图"), shortcut: MenuShortcut(key: "+", command: true), enabled: gridSize != GridSize.allCases.last) { [weak self] in self?.stepGridSize(larger: true) },
+            .init(title: String(localized: "缩小缩略图"), shortcut: MenuShortcut(key: "-", command: true), enabled: gridSize != GridSize.allCases.first) { [weak self] in self?.stepGridSize(larger: false) },
+        ]
+        if let folder = folderURL {
+            entries += [.separator, .init(title: String(localized: "在访达中显示“\(folder.lastPathComponent)”", comment: "空白处右键菜单；%@ 是文件夹名")) {
+                NSWorkspace.shared.activateFileViewerSelecting([folder])
+            }]
+        }
+        ContextMenuPresenter.show(entries: entries)
+    }
 
-    /// 把选中的文件拖出窗口（spec X8）
-    func beginGridDrag(_ item: MediaItem, event: NSEvent, from view: NSView) {}
+    /// 把选中的文件拖出窗口（spec X8）：被拖的没选中时先改为只选中它；拖出去是拷贝，原文件不动，不带 .xmp
+    func beginGridDrag(_ item: MediaItem, event: NSEvent, from view: NSView) {
+        guard isGrid, !batchRunning, !batchModalOpen, pendingDelete == nil else { return }
+        if !grid.selection.contains(item.url) { gridClick(item.url, command: false, shift: false) }
+        let files = selectedItems.filter { FileManager.default.fileExists(atPath: $0.url.path) }
+        guard !files.isEmpty else { return }
+        // 被拖的那一张排最前，鼠标带着它和另外两张叠在一起（spec X8-02）
+        let ordered = [item] + files.filter { $0 != item }
+        let origin = view.convert(event.locationInWindow, from: nil)
+        let dragItems = ordered.enumerated().map { index, file -> NSDraggingItem in
+            let dragItem = NSDraggingItem(pasteboardWriter: file.url as NSURL)
+            let size = CGSize(width: 96, height: 64)
+            let offset = CGFloat(min(index, 2)) * 6
+            let frame = CGRect(x: origin.x - size.width / 2 + offset, y: origin.y - size.height / 2 + offset, width: size.width, height: size.height)
+            if index < 3, let image = ThumbnailStore.shared.cached(file)?.image {
+                dragItem.setDraggingFrame(frame, contents: NSImage(cgImage: image, size: size))
+            } else {
+                dragItem.setDraggingFrame(frame, contents: nil)
+            }
+            return dragItem
+        }
+        gridDragging = Set(files.map(\.url))
+        let source = GridDragSource { [weak self] in self?.gridDragging = [] }
+        gridDragSource = source
+        let session = view.beginDraggingSession(with: dragItems, event: event, source: source)
+        session.animatesToStartingPositionsOnCancelOrFail = true
+        session.draggingFormation = .stack
+    }
 
     /// 多选时按数字键（spec X7）。这一版没做批量评星时：不改任何星级，给一句提示（spec X7-07）
     func rateSelection(_ value: Int) {
         showToast(symbol: "star", text: String(localized: "一次只能给一张图片评星"), duration: 2)
+    }
+}
+
+/// 拖出文件的来源（spec X8-03、X8-04）：拖到别的程序是拷贝；一览自己的窗口不接受
+final class GridDragSource: NSObject, NSDraggingSource {
+    private let onEnd: @MainActor () -> Void
+    init(onEnd: @escaping @MainActor () -> Void) { self.onEnd = onEnd }
+
+    func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
+        context == .outsideApplication ? .copy : []
+    }
+
+    func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
+        MainActor.assumeIsolated { onEnd() }
     }
 }

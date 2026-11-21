@@ -43,9 +43,9 @@ actor ImagePipeline {
          decode: @escaping Decode = { try await ImageDecoder.decode($0, variant: $1) }) {
         self.decode = decode
         gate = DecodeGate(limit: queuedLimit)
-        // 屏幕尺寸的图约 30–70 MB，留出前后各 2 张 + 当前 + 少量历史的空间
-        cache.totalCostLimit = 900 * 1024 * 1024
-        cache.countLimit = 16
+        // 屏幕尺寸的图约 30–70 MB：前后各 2 张 + 当前 + 少量历史。F2-06：原来是 900 MB / 16 张
+        cache.totalCostLimit = 400 * 1024 * 1024
+        cache.countLimit = 8
     }
 
     static func key(_ item: MediaItem, _ variant: ImageDecoder.Variant) -> Key {

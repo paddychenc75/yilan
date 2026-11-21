@@ -34,6 +34,16 @@ enum ShotRunner {
                     if let focus = model.grid.focus { model.requestGridScroll(to: focus) }
                     if ShotHooks.deleteState == "batch" { model.requestBatchDelete() }
                 }
+                // 量内存用：从头滚到尾，每 0.12 秒滚一行
+                if CommandLine.arguments.contains("--perf-grid-scroll") {
+                    for index in stride(from: 0, to: model.items.count, by: max(model.gridColumns, 1)) {
+                        model.requestGridScroll(to: model.items[index].url)
+                        try? await Task.sleep(for: .milliseconds(120))
+                    }
+                    try? await Task.sleep(for: .seconds(2))
+                    print("[perf] grid scroll done")
+                    fflush(stdout)
+                }
             }
             if ShotHooks.openInfo { model.setInfoVisible(true) }
             // 评星截图：只对 /tmp 下的测试副本写盘
@@ -67,6 +77,7 @@ enum ShotRunner {
             if let state = ShotHooks.update { showUpdate(state, model: model) }
             switch ShotHooks.hint {
             case "shortcuts": model.enqueueHint(.shortcutsChanged)
+            case "whatsnew": model.enqueueHint(.whatsNew)
             case "xmp": model.enqueueHint(.sidecarCreated("DSC_0812.xmp", isRaw: true))
             default: break
             }
