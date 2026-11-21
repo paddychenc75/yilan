@@ -23,11 +23,36 @@ struct ShortcutsPane: View {
         var id: String { title.key }
     }
 
-    static let sections: [Section] = [
-        Section(title: "评星", rows: [
-            Shortcut(action: "设置星级", keys: [[.text("1")], [.text("5")]], separator: "–"),
-            Shortcut(action: "清除星级", keys: [[.text("0")]]),
-        ]),
+    /// 三个功能开关：关掉的功能对应的行不列出来（spec T2-05、T2-09、T2-12）
+    var rating = true
+    var filter = true
+    var edit = true
+
+    private var sections: [Section] { Self.sections(rating: rating, filter: filter, edit: edit) }
+
+    /// 全部功能都开着时的内容（测试、文案检查用）
+    static let sections: [Section] = sections(rating: true, filter: true, edit: true)
+
+    static func sections(rating: Bool, filter: Bool, edit: Bool) -> [Section] {
+        var result: [Section] = []
+        if rating {
+            result.append(Section(title: "评星", rows: [
+                Shortcut(action: "设置星级", keys: [[.text("1")], [.text("5")]], separator: "–"),
+                Shortcut(action: "清除星级", keys: [[.text("0")]]),
+            ]))
+        }
+        var rest = base
+        if !filter { rest = rest.map { s in Section(title: s.title, rows: s.rows.filter { $0.id != "打开 / 关闭筛选面板" }) } }
+        if !edit { rest = rest.map { s in Section(title: s.title, rows: s.rows.filter { $0.id != "编辑" }) } }
+        if !rating {
+            rest = rest.map { s in
+                Section(title: s.title, rows: s.rows.map { $0.id == "撤销上一次评星 / 删除" ? Shortcut(action: "撤销上一次删除", keys: $0.keys) : $0 })
+            }
+        }
+        return result + rest
+    }
+
+    private static let base: [Section] = [
         Section(title: "浏览", rows: [
             Shortcut(action: "上一个 / 下一个", keys: [[
                 .symbol("arrow.left", label: "←"), .symbol("arrow.right", label: "→"),
@@ -47,6 +72,8 @@ struct ShortcutsPane: View {
             Shortcut(action: "向右 / 向左旋转", keys: [[.text("R")], [.text("⇧R")]]),
         ]),
         Section(title: "文件", rows: [
+            Shortcut(action: "拷贝文件路径", keys: [[.text("⌥⌘C")]]),
+            Shortcut(action: "编辑", keys: [[.text("E")]]),
             Shortcut(action: "移到废纸篓", keys: [[.symbol("delete.left", label: "⌫")]]),
             Shortcut(action: "撤销上一次评星 / 删除", keys: [[.text("⌘Z")]]),
             Shortcut(action: "打开…", keys: [[.text("⌘O")]]),
@@ -60,7 +87,7 @@ struct ShortcutsPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            ForEach(Self.sections) { section in
+            ForEach(sections) { section in
                 VStack(alignment: .leading, spacing: 6) {
                     Text(section.title)
                         .font(.system(size: 11, weight: .semibold))

@@ -57,7 +57,7 @@ extension BrowserModel {
         NSPasteboard.general.clearContents()
         var lines = info.copyText().components(separatedBy: "\n")
         // 第二行加上星级（spec R3-08）
-        if let r = currentRating {
+        if ratingEnabled, let r = currentRating {
             let value = r > 0 ? String(localized: "\(r) 星", comment: "星级值") : String(localized: "未评星")
             lines.insert(String(localized: "评星：\(value)", comment: "拷贝信息里的星级行；%@ 是“4 星”或“未评星”"), at: min(1, lines.count))
         }

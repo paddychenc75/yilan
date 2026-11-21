@@ -30,7 +30,8 @@ extension BrowserModel {
 
     /// E、编辑按钮、菜单（spec ED-03）
     func enterEdit() {
-        guard edit == nil, canEditCurrent, let item = current, let shown = displayed, pendingDelete == nil else { return }
+        // 编辑关掉后 E、菜单都进不来（spec T2-12）
+        guard editEnabled, edit == nil, canEditCurrent, let item = current, let shown = displayed, pendingDelete == nil else { return }
         if filterPanelOpen { closeFilterPanel() }
         if infoVisible { setInfoVisible(false) }
         if video.isPlaying { video.pause() }
@@ -159,8 +160,10 @@ extension BrowserModel {
         let plan = s.plan, target = s.target, item = s.item
         if case .replace = mode, !target.canReplaceOriginal { return }
         s.saving = true
-        let rating = ratings[item.url] ?? 0
-        let ratingFromSidecar = ratingInfo[item.url]?.sidecar != nil
+        // 评星关掉时内存里没有星级：保存那一刻现读原图的（spec T2-08），不然副本会丢星
+        let knownRating: (value: Int, fromSidecar: Bool)? = ratingEnabled
+            ? (ratings[item.url] ?? 0, ratingInfo[item.url]?.sidecar != nil) : nil
+        let sidecarIndex = sidecars
         let mode2 = settings.ratingStorage
         let media = allItems
         let sidecarList = Array(sidecars.entries.values)
@@ -173,6 +176,13 @@ extension BrowserModel {
                 localChangeSerial += 1
             }
             let result = await Task.detached(priority: .userInitiated) { () -> Result<EditSaveOutcome, EditSaveError> in
+                let rating: Int, ratingFromSidecar: Bool
+                if let knownRating {
+                    (rating, ratingFromSidecar) = knownRating
+                } else {
+                    let info = RatingFileIO.read(item, sidecars: sidecarIndex)
+                    (rating, ratingFromSidecar) = (info.value, info.sidecar != nil)
+                }
                 do {
                     switch mode {
                     case .copy, .elsewhere:
@@ -192,7 +202,7 @@ extension BrowserModel {
                             do { write = try RatingFileIO.write(rating, for: fresh, mode: mode2, sidecars: index) }
                             catch { Log.app.error("编辑后的文件写星级失败：\(error.localizedDescription, privacy: .public)") }
                         }
-                        return .success(EditSaveOutcome(url: url, item: FolderScanner.item(at: url), rating: write, trash: nil))
+                        return .success(EditSaveOutcome(url: url, item: FolderScanner.item(at: url), rating: write, trash: nil, sourceRating: rating))
                     case .replace:
                         let entry = try EditWriter.replaceOriginal(plan, target: target, item: item)
                         // 内嵌的星级不会跟着重新编码：原来写在文件里的，重写一次（.xmp 小文件原样留着）
@@ -202,7 +212,7 @@ extension BrowserModel {
                             do { write = try RatingFileIO.write(rating, for: fresh, mode: mode2, sidecars: index) }
                             catch { Log.app.error("编辑后的文件写星级失败：\(error.localizedDescription, privacy: .public)") }
                         }
-                        return .success(EditSaveOutcome(url: item.url, item: FolderScanner.item(at: item.url), rating: write, trash: entry))
+                        return .success(EditSaveOutcome(url: item.url, item: FolderScanner.item(at: item.url), rating: write, trash: entry, sourceRating: rating))
                     }
                 } catch {
                     return .failure(EditSaveError.from(error, folder: folder))
@@ -210,7 +220,7 @@ extension BrowserModel {
             }.value
             switch result {
             case .success(let outcome):
-                editSaved(outcome, mode: mode, session: s, rating: rating)
+                editSaved(outcome, mode: mode, session: s, rating: outcome.sourceRating)
             case .failure(let error):
                 Log.app.error("编辑保存失败 \(item.name, privacy: .public)：\(error.message, privacy: .public)")
                 s.saving = false
@@ -378,7 +388,7 @@ extension BrowserModel {
     /// 胶囊要不要出现：浏览、转过、可编辑
     var showsSaveRotation: Bool {
         // 相机预览图：可以转着看，但不出「保存旋转」（spec C2-02）
-        edit == nil && rotation != 0 && current.map(Self.isEditable) == true && failure == nil && !showingCameraPreview
+        editEnabled && edit == nil && rotation != 0 && current.map(Self.isEditable) == true && failure == nil && !showingCameraPreview
     }
 
     /// 当前文件能只改方向标记（JPEG、HEIC/HEIF、TIFF）
@@ -445,4 +455,6 @@ struct EditSaveOutcome: Sendable {
     let item: MediaItem?
     let rating: RatingFileIO.WriteResult?
     let trash: TrashEntry?
+    /// 原图的星级（带到新文件上的那个值）
+    var sourceRating = 0
 }

@@ -494,6 +494,16 @@
         }
       }
     },
+    "一次全部设置" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All features"
+          }
+        }
+      }
+    },
     "一览" : {
       "localizations" : {
         "en" : {
@@ -913,7 +923,17 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "All off"
+            "value" : "Turn All Off"
+          }
+        }
+      }
+    },
+    "全部关闭后只看图：保留浏览、缩放、旋转显示和视频播放。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn everything off to keep only viewing: browsing, zoom, rotating the view and video playback."
           }
         }
       }
@@ -923,7 +943,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "All on"
+            "value" : "Turn All On"
           }
         }
       }
@@ -1357,12 +1377,32 @@
         }
       }
     },
+    "功能" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Features"
+          }
+        }
+      }
+    },
     "单声道" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mono"
+          }
+        }
+      }
+    },
+    "即时生效 · ⌘F 开关 · Esc 关闭" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Applies instantly · ⌘F to toggle · Esc to close"
           }
         }
       }
@@ -2908,7 +2948,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Undo Last Delete"
+            "value" : "Undo the last delete"
           }
         }
       }
@@ -2994,6 +3034,16 @@
         }
       }
     },
+    "改动立即生效，不用重新打开一览。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Changes apply immediately. No restart needed."
+          }
+        }
+      }
+    },
     "改原图方向" : {
       "localizations" : {
         "en" : {
@@ -3070,6 +3120,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Numbers sort by value: img2 comes before img10"
+          }
+        }
+      }
+    },
+    "数字键 1–5 和 0、缩略图栏里的五颗星、缩略图上的星标、按星级筛选" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keys 1–5 and 0, the stars in the thumbnail bar, star badges on thumbnails, filtering by rating"
           }
         }
       }
@@ -3657,6 +3717,16 @@
         }
       }
     },
+    "有一张图片正在编辑。先保存或取消编辑，才能关闭“编辑”或全部关闭。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A photo is being edited. Save or cancel the edit before turning off Editing or all features."
+          }
+        }
+      }
+    },
     "有新版本 %@" : {
       "localizations" : {
         "en" : {
@@ -4158,6 +4228,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ambient background"
+          }
+        }
+      }
+    },
+    "用不到的功能可以关掉。关掉后它会彻底消失：没有按钮，没有菜单项，快捷键也不响应。不会删除任何东西，已有的星级和文件保持原样，随时可以再打开。" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn off what you don’t use. A feature that is off disappears completely: no buttons, no menu items, no shortcuts. Nothing is deleted — your ratings and files stay as they are, and you can turn it back on at any time."
           }
         }
       }
@@ -4698,6 +4778,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Free"
+          }
+        }
+      }
+    },
+    "裁切、调整尺寸、保存旋转（E）。用 R / ⇧R 旋转显示不受影响" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crop, resize and Save Rotation (E). Rotating the view with R / ⇧R is not affected"
           }
         }
       }
@@ -5254,6 +5344,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Audio"
+          }
+        }
+      }
+    },
+    "顶部的“筛选”按钮和面板（⌘F）。“全部 / 图片 / 视频”不受影响" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Filter button and panel (⌘F). All / Photos / Videos is not affected"
           }
         }
       }

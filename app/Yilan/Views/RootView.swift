@@ -43,7 +43,7 @@ struct RootView: View {
                 overlays(layout)
                 updateSheet(size)
                 // 筛选面板画在提示卡片、提示条上面（spec R5-06）
-                if model.filterPanelOpen && model.hasOpenedFolder && topVisible {
+                if model.filterPanelOpen && model.filterEnabled && model.hasOpenedFolder && topVisible {
                     let widths = effectiveBarWidths
                     let tier = TopBarTier.choose(width: size.width, widths: widths,
                                                  hasZoom: showsZoomControl && model.zoomState != nil)
@@ -355,6 +355,8 @@ struct RootView: View {
     private var effectiveBarWidths: TopBarWidths {
         var widths = barWidths
         if model.currentIndex == nil { widths.counter = 0 }
+        // 筛选关掉后没有筛选按钮（spec T2-11）
+        if !model.filterEnabled { (widths.filterFull, widths.filterCount, widths.filterIcon) = (0, 0, 0) }
         if !model.hasOpenedFolder { widths.tools = 0 }
         return widths
     }
@@ -371,6 +373,7 @@ struct RootView: View {
             rotateSelected: model.rotation != 0,
             editUnsupported: model.editUnsupported,
             editBlockedByPreview: model.showingCameraPreview,
+            showsEdit: model.editEnabled,
             onEdit: { model.enterEdit() },
             onRotate: { model.rotate(-1) },
             onInfo: model.toggleInfo,
@@ -391,9 +394,11 @@ struct RootView: View {
     private func centerGroup(tier: TopBarTier) -> some View {
         HStack(spacing: TopBarTier.groupSpacing) {
             FilterControl(selection: model.filter, counts: model.filteredCounts, compact: tier.segSlim) { model.setFilter($0) }
-            FilterButton(filter: model.browseFilter, mode: tier.filter, open: model.filterPanelOpen) { model.toggleFilterPanel() }
-                .disabled(model.allItems.isEmpty)
-                .opacity(model.allItems.isEmpty ? 0.35 : 1)
+            if model.filterEnabled {
+                FilterButton(filter: model.browseFilter, mode: tier.filter, open: model.filterPanelOpen) { model.toggleFilterPanel() }
+                    .disabled(model.allItems.isEmpty)
+                    .opacity(model.allItems.isEmpty ? 0.35 : 1)
+            }
         }
     }
 
@@ -408,6 +413,7 @@ struct RootView: View {
         let left = min(panelAnchor ?? computed, max(8, size.width - FilterPanel.width - 8))
         FilterPanel(filter: model.browseFilter, type: model.filter, facets: model.filterFacets,
                     loadingRatings: !model.ratingsLoaded && model.browseFilter.rating.isActive,
+                    showsRating: model.ratingEnabled,
                     onRating: { model.setRatingCriterion($0) },
                     onComparison: { model.setRatingComparison($0) },
                     onToggleFormat: { model.toggleFormat($0) },
@@ -460,7 +466,7 @@ struct RootView: View {
             ZoomControl(state: sample, percentOnly: true) { _ in }
                 .fixedSize().measure { barWidths.zoomPercent = $0 }
             // 序号按最宽的情况量（带“· ★4”），切换缩略图栏时顶部栏不跳
-            CounterPill(index: total - 1, total: total, rating: 4)
+            CounterPill(index: total - 1, total: total, rating: model.ratingEnabled ? 4 : nil)
                 .fixedSize().measure { barWidths.counter = $0 }
             toolGroup(zoomInMenu: false)
                 .fixedSize().measure { barWidths.tools = $0 }
@@ -533,14 +539,15 @@ struct RootView: View {
                     rating: model.currentRating,
                     canRate: model.canRateCurrent,
                     // 视频：信息行中间不放星
-                    onRate: model.currentIsRatable ? { model.rateCurrent($0, fromKeyboard: false) } : nil,
+                    onRate: model.ratingEnabled && model.currentIsRatable ? { model.rateCurrent($0, fromKeyboard: false) } : nil,
+                    ratingEnabled: model.ratingEnabled,
                     items: model.items,
                     current: model.current,
                     meta: dockMeta,
                     width: fs ? min(Theme.dockFullScreenWidth, layout.size.width - 48)
                         : min(layout.size.width - 64, Theme.dockMaxWidth),
                     fresh: model.freshURLs,
-                    ratings: model.ratings,
+                    ratings: model.showsRatingUI ? model.ratings : [:],
                     onSelect: { model.select($0) }
                 )
                 .onHover {
@@ -595,7 +602,7 @@ struct RootView: View {
                     onCopy: model.copyInfo,
                     onCopyCoordinates: model.copyCoordinates,
                     rating: model.currentRating,
-                    showsRating: model.currentIsRatable,
+                    showsRating: model.currentIsRatable && model.showsRatingUI,
                     ratingLocation: model.current.map { model.ratingLocationDescription(for: $0) } ?? "",
                     canRate: model.canRateCurrent,
                     onRate: { model.rateCurrent($0, fromKeyboard: false) },

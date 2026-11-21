@@ -6,6 +6,8 @@ struct ThumbnailDock: View {
     var rating: Int? = nil
     var canRate = false
     var onRate: ((Int) -> Void)? = nil
+    /// 评星功能开着（关掉后信息行不留星的位置，spec T2-02）
+    var ratingEnabled = true
     let items: [MediaItem]
     let current: MediaItem?
     let meta: DockMeta
@@ -19,7 +21,7 @@ struct ThumbnailDock: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            MetaLine(meta: meta, rating: rating, canRate: canRate, onRate: onRate, stripHovered: hovered)
+            MetaLine(meta: meta, rating: rating, canRate: canRate, onRate: onRate, stripHovered: hovered, reservesStars: ratingEnabled)
             ThumbnailStrip(items: items, current: current, fresh: fresh, ratings: ratings, onSelect: onSelect)
                 .frame(height: 62)
         }
@@ -79,8 +81,10 @@ struct InfoRowLayout: Equatable {
     /// 尺寸和「大小 · 格式」之间的「·」多占的宽度
     static let separator: CGFloat = 14
 
-    static func decide(width: CGFloat, dims: CGFloat?, trailing: CGFloat, tag: CGFloat = 0, name: CGFloat = 0) -> InfoRowLayout {
-        let side = max(0, (width - starsWidth) / 2 - gap)
+    /// stars：中间要不要给五颗星留位置。评星关掉后不留（spec T2-02），两半各多出一些宽度
+    static func decide(width: CGFloat, dims: CGFloat?, trailing: CGFloat, tag: CGFloat = 0, name: CGFloat = 0,
+                       stars: Bool = true) -> InfoRowLayout {
+        let side = max(0, (width - (stars ? starsWidth : 0)) / 2 - (stars ? gap : gap / 2))
         var layout: InfoRowLayout
         if let d = dims {
             if d + separator + spacing + trailing <= side {
@@ -109,6 +113,8 @@ struct MetaLine: View {
     var onRate: ((Int) -> Void)? = nil
     /// 鼠标在缩略图栏里（没评的星描边变亮）
     var stripHovered = false
+    /// 中间给星留位置
+    var reservesStars = true
 
     /// 各段文字的实际宽度（隐藏测量），决定让位
     @State private var nameWidth: CGFloat = 0
@@ -120,7 +126,7 @@ struct MetaLine: View {
         GeometryReader { geo in
             let hasDims = meta.failed || meta.dimensions != nil
             let layout = InfoRowLayout.decide(width: geo.size.width, dims: hasDims ? dimsWidth : nil, trailing: trailingWidth,
-                                              tag: meta.tag == nil ? 0 : tagWidth, name: nameWidth)
+                                              tag: meta.tag == nil ? 0 : tagWidth, name: nameWidth, stars: reservesStars)
             ZStack {
                 HStack(spacing: 0) {
                     HStack(spacing: InfoRowLayout.spacing) {

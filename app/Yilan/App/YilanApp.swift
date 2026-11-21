@@ -138,8 +138,9 @@ struct AppCommands: Commands {
                 Button("清除菜单") { model.recents.clear() }
                     .disabled(recents.isEmpty)
             }
+            // 评星（spec MN-02）：快捷键 1–5、0。评星功能关掉后整个子菜单不出现（spec T2-03）
+            if model.ratingEnabled {
             Divider()
-            // 评星（spec MN-02）：快捷键 1–5、0
             Menu("评星") {
                 ForEach(1...5, id: \.self) { n in
                     Button(String(localized: "\(n) 星", comment: "文件 › 评星 子菜单")) { model.rateCurrent(n, fromKeyboard: false) }
@@ -150,6 +151,7 @@ struct AppCommands: Commands {
                     .keyboardShortcut("0", modifiers: [])
             }
             .disabled(!model.currentIsRatable || !model.mainWindowIsKey || model.pendingDelete != nil || model.isEditing)
+            }
         }
         CommandGroup(after: .newItem) {
             Divider()
@@ -164,10 +166,12 @@ struct AppCommands: Commands {
             Button("向左旋转") { model.rotate(-1) }
                 .keyboardShortcut("r", modifiers: [.shift])
                 .disabled(model.current == nil)
-            // 编辑：裁切、旋转、调整尺寸（spec ED-03）
-            Button("编辑") { model.enterEdit() }
-                .keyboardShortcut("e", modifiers: [])
-                .disabled(!model.canEditCurrent || model.isEditing || !model.mainWindowIsKey)
+            // 编辑：裁切、旋转、调整尺寸（spec ED-03）；编辑功能关掉后不出现（spec T2-12）
+            if model.editEnabled {
+                Button("编辑") { model.enterEdit() }
+                    .keyboardShortcut("e", modifiers: [])
+                    .disabled(!model.canEditCurrent || model.isEditing || !model.mainWindowIsKey)
+            }
             Divider()
             // 只在主窗口在前时可用：设置窗口的输入框里按 ⌫ 是删字
             Button("移到废纸篓") { model.requestDelete() }
@@ -188,13 +192,15 @@ struct AppCommands: Commands {
             filterToggle("只看图片", .images, key: "2")
             filterToggle("只看视频", .videos, key: "3")
             Divider()
-            // 筛选（spec F-10）
-            Button("筛选…") { model.toggleFilterPanel() }
-                .keyboardShortcut("f")
-                .disabled(!model.hasOpenedFolder || model.allItems.isEmpty || model.isEditing)
-            Button("清除筛选") { model.clearBrowseFilter() }
-                .disabled(!model.browseFilter.isActive || model.isEditing)
-            Divider()
+            // 筛选（spec F-10）；筛选功能关掉后不出现（spec T2-09）
+            if model.filterEnabled {
+                Button("筛选…") { model.toggleFilterPanel() }
+                    .keyboardShortcut("f")
+                    .disabled(!model.hasOpenedFolder || model.allItems.isEmpty || model.isEditing)
+                Button("清除筛选") { model.clearBrowseFilter() }
+                    .disabled(!model.browseFilter.isActive || model.isEditing)
+                Divider()
+            }
             // 数字键让给评星：⌘9 适应窗口、⌘0 实际大小、Z 切换（spec 4.2）
             Button("适应窗口") { model.zoom(.fit) }.keyboardShortcut("9")
             Button("实际大小") { model.zoom(.actualSize) }.keyboardShortcut("0")

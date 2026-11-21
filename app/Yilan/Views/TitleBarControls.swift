@@ -100,6 +100,8 @@ struct ToolGroup: View {
     var editUnsupported = true
     /// 置灰的原因是相机预览图（spec C2-01）：提示换一句
     var editBlockedByPreview = false
+    /// 编辑功能开着；关掉后没有编辑按钮（spec T2-12）
+    var showsEdit = true
     var onEdit: () -> Void = {}
     let onRotate: () -> Void
     let onInfo: () -> Void
@@ -123,7 +125,9 @@ struct ToolGroup: View {
             ToolButton(symbol: "arrow.counterclockwise", help: "向左旋转（⇧R）", selected: rotateSelected, action: onRotate)
                 .disabled(!enabled)
             // 编辑（spec ED-01、ED-02）：不支持时不用 disabled，好让悬停提示照常出现
-            EditEntryButton(unsupported: editUnsupported, previewOnly: editBlockedByPreview, action: onEdit)
+            if showsEdit {
+                EditEntryButton(unsupported: editUnsupported, previewOnly: editBlockedByPreview, action: onEdit)
+            }
             ToolButton(symbol: "info.circle", help: "信息（I）", selected: infoSelected, action: onInfo)
                 .disabled(!enabled)
             Menu {

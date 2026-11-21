@@ -23,7 +23,7 @@ extension BrowserModel {
     // MARK: - 状态
 
     /// 当前文件的星级（还没读出来时 nil；视频永远 nil）
-    var currentRating: Int? { current.flatMap { $0.kind == .image ? ratings[$0.url] : nil } }
+    var currentRating: Int? { ratingEnabled ? current.flatMap { $0.kind == .image ? ratings[$0.url] : nil } : nil }
 
     /// 当前文件是图片（v0.3 只给图片评星）
     var currentIsRatable: Bool { current.map(RatingFileIO.isRatable) ?? false }
@@ -43,7 +43,8 @@ extension BrowserModel {
 
     /// 给当前文件打星（键盘 1–5 / 0、点五星、菜单）
     func rateCurrent(_ value: Int, fromKeyboard: Bool) {
-        guard let item = current, pendingDelete == nil, edit == nil else { return }
+        // 评星关掉：不评、不提示（spec T2-03）
+        guard ratingEnabled, let item = current, pendingDelete == nil, edit == nil else { return }
         // 视频：1–5 给一句提示，0 什么都不做；不写、不进撤销记录
         guard RatingFileIO.isRatable(item) else {
             if value > 0 { showToast(symbol: "video", text: String(localized: "视频暂不支持评星"), solid: true, duration: 1.6) }
@@ -196,6 +197,8 @@ extension BrowserModel {
     /// 按离当前位置的远近在后台读，4 路并行，每读完一批交回主线程
     func loadRatings() {
         ratingLoadTask?.cancel()
+        // 评星关掉后不读星级（spec T2-06）
+        guard ratingEnabled else { ratingsLoaded = true; return }
         let all = allItems
         let index = sidecars
         let center = current.flatMap { all.firstIndex(of: $0) } ?? 0
@@ -266,6 +269,7 @@ extension BrowserModel {
 
     /// 文件夹同步发现这些文件的星级可能被其他软件改了：重新读（spec R4-06）
     func rereadRatings(_ items: [MediaItem]) {
+        guard ratingEnabled else { return }
         guard !items.isEmpty else { return }
         let index = sidecars
         Task {

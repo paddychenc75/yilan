@@ -30,6 +30,10 @@ final class AppSettings {
         static let editRawFormat = "editRawFormat"
         /// 第一次显示相机预览图的说明已经出现过（spec C1-13）
         static let didShowCameraPreviewHint = "didShowCameraPreviewHint"
+        /// 功能开关（spec T1-03）：默认都开
+        static let featureRating = "featureRating"
+        static let featureFilter = "featureFilter"
+        static let featureEdit = "featureEdit"
     }
 
     /// 设置里“默认显示”的选项：沿用上次，或者固定一种
@@ -83,6 +87,35 @@ final class AppSettings {
     var editRawFormat: RawExportFormat { didSet { defaults.set(editRawFormat.rawValue, forKey: Key.editRawFormat) } }
     var didShowCameraPreviewHint: Bool { didSet { defaults.set(didShowCameraPreviewHint, forKey: Key.didShowCameraPreviewHint) } }
 
+    /// 功能开关（spec 第 8 节）。关掉后这项功能的入口和快捷键都不再出现，不改动任何用户文件
+    var featureRating: Bool { didSet { featureDidSet(.rating, Key.featureRating, featureRating, oldValue) } }
+    var featureFilter: Bool { didSet { featureDidSet(.filter, Key.featureFilter, featureFilter, oldValue) } }
+    var featureEdit: Bool { didSet { featureDidSet(.edit, Key.featureEdit, featureEdit, oldValue) } }
+    /// 开关变了之后要做的收尾（清筛选条件、丢弃撤销记录等，由 BrowserModel 接）
+    @ObservationIgnored var featureChanged: ((Feature, Bool) -> Void)?
+
+    private func featureDidSet(_ feature: Feature, _ key: String, _ value: Bool, _ old: Bool) {
+        guard value != old else { return }
+        defaults.set(value, forKey: key)
+        featureChanged?(feature, value)
+    }
+
+    func isEnabled(_ feature: Feature) -> Bool {
+        switch feature {
+        case .rating: featureRating
+        case .filter: featureFilter
+        case .edit: featureEdit
+        }
+    }
+
+    func setEnabled(_ feature: Feature, _ value: Bool) {
+        switch feature {
+        case .rating: featureRating = value
+        case .filter: featureFilter = value
+        case .edit: featureEdit = value
+        }
+    }
+
     @ObservationIgnored private let defaults: UserDefaults
     /// 设置存放的域名（判断“以前用过一览”时只看这个域，不看全局域）
     @ObservationIgnored private let domainName: String?
@@ -105,6 +138,9 @@ final class AppSettings {
             Key.flashRatingOnStage: true,
             Key.autoCheckUpdates: true,
             Key.didShowSidecarHint: false,
+            Key.featureRating: true,
+            Key.featureFilter: true,
+            Key.featureEdit: true,
         ])
         loopVideo = defaults.bool(forKey: Key.loopVideo)
         autoplayVideo = defaults.bool(forKey: Key.autoplayVideo)
@@ -128,6 +164,9 @@ final class AppSettings {
         didShowSidecarHint = defaults.bool(forKey: Key.didShowSidecarHint)
         editRawFormat = defaults.string(forKey: Key.editRawFormat).flatMap(RawExportFormat.init(rawValue:)) ?? .jpeg
         didShowCameraPreviewHint = defaults.bool(forKey: Key.didShowCameraPreviewHint)
+        featureRating = defaults.bool(forKey: Key.featureRating)
+        featureFilter = defaults.bool(forKey: Key.featureFilter)
+        featureEdit = defaults.bool(forKey: Key.featureEdit)
     }
 
     /// 从 v0.2 升级后第一次启动（spec K-10）：以前用过（存过任何设置或最近打开）、但没记过版本号。
@@ -161,6 +200,11 @@ final class AppSettings {
     func saveFilter(_ filter: MediaFilter) {
         defaults.set(filter.rawValue, forKey: MediaFilter.defaultsKey)
     }
+}
+
+/// 可以在「设置 › 功能」里关掉的功能（spec T1）
+enum Feature: String, CaseIterable, Sendable {
+    case rating, filter, edit
 }
 
 /// 设置和最近打开存放的位置。

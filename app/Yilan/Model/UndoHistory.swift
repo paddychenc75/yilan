@@ -41,6 +41,9 @@ struct UndoHistory: Equatable {
 
     mutating func removeAll() { entries.removeAll() }
 
+    /// 功能被关掉时丢弃它的记录（spec T2-07、T2-14）
+    mutating func removeAll(where shouldRemove: (Entry) -> Bool) { entries.removeAll(where: shouldRemove) }
+
     /// 记录里保存旋转留着的原文件副本
     var rotationBackups: [RotationBackup] {
         entries.compactMap { if case .edit(.rotation(_, _, _, let b?)) = $0 { b } else { nil } }

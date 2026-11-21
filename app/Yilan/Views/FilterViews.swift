@@ -81,6 +81,8 @@ struct FilterPanel: View {
     let facets: FilterFacets
     /// 星级还在后台读取（spec R4-08）
     let loadingRatings: Bool
+    /// 评星功能开着；关掉后面板里没有「星级」分区（spec T2-04）
+    var showsRating = true
     let onRating: (RatingCriterion.Mode) -> Void
     var onComparison: (RatingCriterion.Comparison) -> Void = { _ in }
     let onToggleFormat: (FormatGroup) -> Void
@@ -91,7 +93,7 @@ struct FilterPanel: View {
             header
             ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 14) {
-                    ratingSection
+                    if showsRating { ratingSection }
                     if !facets.presentFormats.isEmpty { formatSection }
                 }
             }
@@ -216,7 +218,7 @@ struct FilterPanel: View {
                     .foregroundStyle(filter.isActive ? Theme.link : Theme.text3)
                     .disabled(!filter.isActive)
                 Spacer()
-                Text(type == .videos ? "⌘F 开关 · Esc 关闭" : "数字键选星级 · ⌘F 开关 · Esc 关闭").font(.system(size: 11)).foregroundStyle(Theme.text3)
+                Text(!showsRating ? "即时生效 · ⌘F 开关 · Esc 关闭" : type == .videos ? "⌘F 开关 · Esc 关闭" : "数字键选星级 · ⌘F 开关 · Esc 关闭").font(.system(size: 11)).foregroundStyle(Theme.text3)
             }
         }
     }

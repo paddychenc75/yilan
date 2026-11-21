@@ -6,12 +6,13 @@ import SwiftUI
 /// 英文比中文长：控件不改尺寸，放不下时用更短的英文说法
 struct SettingsView: View {
     enum Pane: String, CaseIterable, Identifiable {
-        case general, browsing, video, formats, cache, shortcuts
+        case general, browsing, features, video, formats, cache, shortcuts
         var id: String { rawValue }
         var title: LocalizedStringResource {
             switch self {
             case .general: "通用"
             case .browsing: "浏览"
+            case .features: "功能"
             case .video: "视频"
             case .formats: "文件格式"
             case .cache: "缓存与性能"
@@ -22,6 +23,7 @@ struct SettingsView: View {
             switch self {
             case .general: "gearshape.fill"
             case .browsing: "photo"
+            case .features: "switch.2"
             case .video: "video.fill"
             case .formats: "doc.fill"
             case .cache: "clock.fill"
@@ -33,6 +35,7 @@ struct SettingsView: View {
             switch self {
             case .general: Color(hex: 0x8E8E93)
             case .browsing: Color(hex: 0x0A84FF)
+            case .features: Color(hex: 0x30B0C7)
             case .video: Color(hex: 0xFF9F0A)
             case .formats: Color(hex: 0x30D158)
             case .cache: Color(hex: 0xBF5AF2)
@@ -152,9 +155,10 @@ struct SettingsView: View {
                 switch pane {
                 case .general: generalPane
                 case .browsing: browsingPane
+                case .features: FeaturesPane(settings: settings)
                 case .video: videoPane
                 case .formats: formatsPane
-                case .shortcuts: ShortcutsPane()
+                case .shortcuts: ShortcutsPane(rating: settings.featureRating, filter: settings.featureFilter, edit: settings.featureEdit)
                 case .cache: placeholder
                 }
             }
@@ -261,6 +265,8 @@ struct SettingsView: View {
                 SettingsMenu(selection: .constant(0), options: [(0, "在适应窗口和 100% 之间切换")])
             }
         }
+        // 评星关掉后，和评星有关的选项整组收起（spec T2-05）
+        if settings.featureRating {
         SettingsGroup {
             SettingsRow("评星时在画面上闪现星级", note: "默认打开。按 0–5 评星后，画面底部居中闪现约 1 秒五星；关掉后画面上不出现任何东西，反馈只在缩略图栏信息行里") {
                 SettingsSwitch(isOn: $settings.flashRatingOnStage)
@@ -270,6 +276,7 @@ struct SettingsView: View {
             }
         }
         ratingStorageGroup
+        }
         SettingsGroup {
             SettingsRow("自动隐藏控件", note: "鼠标静止一段时间后，只显示图片") {
                 SettingsSwitch(isOn: $settings.autoHideControls)
