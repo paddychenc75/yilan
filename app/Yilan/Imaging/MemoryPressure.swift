@@ -22,6 +22,7 @@ enum MemoryPressureMonitor {
 
     static func trim() {
         ThumbnailStore.shared.trimMemory()
+        ThumbnailStore.large.trimMemory()
         Task { await ImagePipeline.shared.trimMemory() }
     }
 }

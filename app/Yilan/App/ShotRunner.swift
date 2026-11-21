@@ -6,7 +6,7 @@ enum ShotRunner {
     static func run(model: BrowserModel) {
         #if DEBUG
         guard ShotHooks.openInfo || ShotHooks.deleteState != nil || ShotHooks.fullScreenState != nil || ShotHooks.dumpMenus
-                || ShotHooks.windowSize != nil || ShotHooks.anyRatingShot
+                || ShotHooks.windowSize != nil || ShotHooks.anyRatingShot || ShotHooks.view != nil
         else { return }
         Task { @MainActor in
             // 等文件夹打开、当前文件显示出来（最多 5 秒）
@@ -22,6 +22,18 @@ enum ShotRunner {
                 try? await Task.sleep(for: .seconds(1.2))
             }
             if ShotHooks.stripHidden { model.stripVisible = false }
+            if ShotHooks.view == "grid" {
+                if let raw = ShotHooks.gridSize, let size = GridSize(rawValue: raw) { model.setGridSize(size) }
+                model.setViewMode(.grid, remember: false)
+                if ShotHooks.select == "none" {
+                    model.deselectAllInGrid()
+                } else if let picks = ShotHooks.select?.split(separator: ",").compactMap({ Int($0) }), !picks.isEmpty {
+                    for (n, index) in picks.enumerated() where model.items.indices.contains(index) {
+                        model.gridClick(model.items[index].url, command: n > 0, shift: false)
+                    }
+                    if let focus = model.grid.focus { model.requestGridScroll(to: focus) }
+                }
+            }
             if ShotHooks.openInfo { model.setInfoVisible(true) }
             // 评星截图：只对 /tmp 下的测试副本写盘
             if let n = ShotHooks.rating, let item = model.current, isTemporary(item.url) {

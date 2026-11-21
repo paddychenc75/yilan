@@ -54,12 +54,21 @@ enum FileMenuContext: Equatable, Sendable {
     case single
     /// 右上角「⋯」（spec M4-01）
     case more
+    /// 图标视图里对着选中的文件点右键：一张时是「图标视图单张菜单」，多张时是「多选菜单」（spec M2-04、X4-02）
+    case gridItem
 }
 
 extension BrowserModel {
     /// 这个场合的菜单清单
     func fileMenu(_ context: FileMenuContext) -> [FileMenuItem] {
-        let hasFile = current != nil
+        // 图标视图里作用于选中的文件（spec M4-02）：多选时文字带数量，没有选中时置灰
+        let multi = isMultiSelection
+        let count = grid.selection.count
+        let hasFile = multi || current != nil
+        let copyTitle = multi ? String(localized: "拷贝 \(count) 项", comment: "菜单：拷贝多个文件；%lld 是数量") : String(localized: "拷贝", comment: "菜单：把文件拷贝到剪贴板")
+        let pathTitle = multi ? String(localized: "拷贝 \(count) 个文件路径", comment: "菜单；%lld 是数量") : String(localized: "拷贝文件路径")
+        let trashTitle = multi ? String(localized: "将 \(count) 项移到废纸篓", comment: "菜单；%lld 是数量") : String(localized: "移到废纸篓")
+        let canTrash = multi ? canBatchDelete : canDelete
         let item = { (action: FileAction, title: String, shortcut: MenuShortcut?, enabled: Bool) in
             FileMenuItem(kind: .action(action), title: title, shortcut: shortcut, enabled: enabled)
         }
@@ -67,8 +76,8 @@ extension BrowserModel {
         let keys = context != .more
         var items: [FileMenuItem] = [
             item(.reveal, String(localized: "在访达中显示"), keys ? MenuShortcut(key: "r", command: true, shift: true) : nil, hasFile),
-            item(.copy, String(localized: "拷贝", comment: "菜单：把文件拷贝到剪贴板"), keys ? MenuShortcut(key: "c", command: true) : nil, hasFile),
-            item(.copyPath, String(localized: "拷贝文件路径"), keys ? MenuShortcut(key: "c", command: true, option: true) : nil, hasFile),
+            item(.copy, copyTitle, keys ? MenuShortcut(key: "c", command: true) : nil, hasFile),
+            item(.copyPath, pathTitle, keys ? MenuShortcut(key: "c", command: true, option: true) : nil, hasFile),
             .separator,
         ]
         switch context {
@@ -88,9 +97,18 @@ extension BrowserModel {
                 .separator,
                 item(.trash, String(localized: "移到废纸篓"), .delete, canDelete),
             ]
+        case .gridItem:
+            // 没有旋转和编辑（spec V4a）；多选菜单也没有「显示信息」
+            if !multi {
+                items += [
+                    item(.toggleInfo, infoVisible ? String(localized: "隐藏信息") : String(localized: "显示信息"), MenuShortcut(key: "i"), hasFile),
+                    .separator,
+                ]
+            }
+            items.append(item(.trash, trashTitle, .delete, canTrash))
         case .more:
             items += [
-                item(.trash, String(localized: "移到废纸篓"), nil, canDelete),
+                item(.trash, trashTitle, nil, canTrash),
                 .separator,
                 item(.open, String(localized: "打开…"), nil, true),
             ]
@@ -99,6 +117,19 @@ extension BrowserModel {
     }
 
     func perform(_ action: FileAction) {
+        // 多选：作用于全部选中的文件（spec X4）
+        if isMultiSelection {
+            switch action {
+            case .reveal: NSWorkspace.shared.activateFileViewerSelecting(selectedItems.map(\.url))
+            case .copy: copySelection()
+            case .copyPath: copySelectedPaths()
+            case .trash: requestBatchDelete()
+            case .open: showOpenPanel()
+            case .toggleInfo: toggleInfo()
+            case .rotateLeft, .rotateRight, .edit: break
+            }
+            return
+        }
         switch action {
         case .reveal: revealCurrentInFinder()
         case .copy: copyCurrentFile()
@@ -150,7 +181,7 @@ extension BrowserModel {
     /// 菜单栏「编辑 › 拷贝」（spec MB-02）：主窗口在前且焦点不在文字上时拷贝文件，否则交给文字
     func copyFromMenu() {
         if mainWindowIsKey, !textFieldHasFocus, edit == nil {
-            copyCurrentFile()
+            if isGrid { copySelection() } else { copyCurrentFile() }
         } else {
             NSApp.sendAction(#selector(NSText.copy(_:)), to: nil, from: nil)
         }
@@ -163,8 +194,21 @@ extension BrowserModel {
     /// 「拷贝」菜单项现在作用于文件（否则是文字的拷贝，交给系统判断）
     var copyActsOnFiles: Bool { mainWindowIsKey && !textFieldHasFocus && edit == nil }
 
+    /// 多选时「拷贝 N 个文件路径」：每行一个完整路径，按列表顺序（spec X4-04）
+    func copySelectedPaths(pasteboard: NSPasteboard = .general) {
+        let paths = selectedItems.map(\.url.path)
+        guard !paths.isEmpty else { return }
+        pasteboard.clearContents()
+        pasteboard.setString(paths.joined(separator: "\n"), forType: .string)
+    }
+
+    /// 图标视图里能不能弹右键菜单
+    var canShowGridMenu: Bool {
+        isGrid && edit == nil && pendingDelete == nil && !batchRunning && UpdateChecker.shared.sheetRelease == nil
+    }
+
     /// 能不能弹右键菜单（spec M1-05、M1-08）：有当前文件，没有在编辑，没有确认框和更新说明
     var canShowContextMenu: Bool {
-        current != nil && edit == nil && pendingDelete == nil && UpdateChecker.shared.sheetRelease == nil
+        !isGrid && current != nil && edit == nil && pendingDelete == nil && UpdateChecker.shared.sheetRelease == nil
     }
 }

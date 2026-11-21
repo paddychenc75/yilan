@@ -19,13 +19,16 @@ extension BrowserModel {
     /// 超过 120 毫秒还没读完，先显示“文件”组的基本信息
     func refreshInfo() {
         infoTask?.cancel()
-        guard infoVisible, let item = current else {
-            if current == nil { info = nil }
+        // 图标视图里面板没开也要读：信息条右边显示尺寸（spec V1-10）
+        guard infoVisible || viewMode == .grid, let item = current else {
+            if current == nil { info = nil; gridMeta = nil }
             return
         }
+        if gridMeta?.url != item.url { gridMeta = nil }
         let key = Self.cacheKey(item)
         if let cached = metadataCache[key] {
             info = InfoContent.make(cached)
+            gridMeta = cached
             return
         }
         infoTask = Task {
@@ -41,6 +44,7 @@ extension BrowserModel {
             if metadataCache.count > 300 { metadataCache.removeAll() }
             metadataCache[key] = meta
             info = InfoContent.make(meta)
+            if viewMode == .grid { gridMeta = meta }
         }
     }
 

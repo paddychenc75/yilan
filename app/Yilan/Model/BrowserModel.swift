@@ -174,6 +174,13 @@ final class BrowserModel {
     /// 列表变化把唯一选中的那一张去掉了：接下来 select() 给的那一张顶上（单张删除后的落点，spec V4-06）
     @ObservationIgnored var gridLostOnlySelection = false
 
+    /// 正在拖出窗口的文件：格子变淡（spec X8-03）
+    internal(set) var gridDragging: Set<URL> = []
+    /// 图标视图里选中的那一张的基本信息（信息条右边的尺寸，spec V1-10）
+    internal(set) var gridMeta: MediaMetadata?
+    /// 这次运行里显示过相机预览图的文件（图标视图信息条上的标签，spec V1-10）
+    internal(set) var cameraPreviewSeen: Set<URL> = []
+
     // MARK: 信息面板（BrowserModel+Info）
 
     /// 面板开着时切换文件也保持打开
@@ -750,6 +757,7 @@ final class BrowserModel {
     /// 第一次显示相机预览图：出一张说明卡（spec C1-13），这台电脑上只出一次
     private func noteCameraPreviewShown(_ item: MediaItem) {
         Log.app.info("系统无法解码 \(item.name, privacy: .public)，显示相机预览图")
+        cameraPreviewSeen.insert(item.url)
         guard !settings.didShowCameraPreviewHint else { return }
         settings.didShowCameraPreviewHint = true
         enqueueHint(.cameraPreview)
@@ -786,6 +794,7 @@ final class BrowserModel {
         let pipeline = self.pipeline
         Task { await pipeline.forget(urls) }
         ThumbnailStore.shared.forget(urls)
+        ThumbnailStore.large.forget(urls)
         for url in urls { ambientCache.removeObject(forKey: url as NSURL) }
         forgetMetadata(for: urls)
     }

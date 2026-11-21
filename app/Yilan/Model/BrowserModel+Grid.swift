@@ -36,6 +36,7 @@ extension BrowserModel {
             suspendStage()
             cameFromGrid = false
             withAnimation(.easeInOut(duration: 0.25)) { viewMode = .grid }
+            noteMouseActivity()   // 图标视图里控件始终显示（spec V1-18）
             // 选中集合变成只有当前这一张，并滚到完整可见（spec SEL-03）
             grid = .single(cur?.url)
             gridKnownURLs = itemURLs
@@ -272,5 +273,68 @@ extension BrowserModel {
         let selected = selectedItems
         guard !selected.isEmpty else { return }
         copyFiles(selected)
+    }
+}
+
+// MARK: - 信息条、计数、面板上的汇总（spec V1-10 至 V1-15、V10-04、V10-05）
+
+/// 图标视图里一组文件的汇总
+struct GridSummary: Equatable, Sendable {
+    var count = 0
+    var images = 0
+    var videos = 0
+    var bytes: Int64 = 0
+
+    init(_ items: [MediaItem]) {
+        count = items.count
+        for item in items {
+            if item.kind == .video { videos += 1 } else { images += 1 }
+            bytes += item.fileSize
+        }
+    }
+
+    /// 「已选 5 项」
+    var selectedText: String { String(localized: "已选 \(count) 项", comment: "多选时的计数；%lld 是数量") }
+
+    /// 「4 张图片 · 1 个视频」；只有一种时只写那一种
+    var composition: String {
+        var parts: [String] = []
+        if images > 0 { parts.append(String(localized: "\(images) 张图片", comment: "多选的构成；%lld 是数量")) }
+        if videos > 0 { parts.append(String(localized: "\(videos) 个视频", comment: "多选的构成；%lld 是数量")) }
+        return parts.joined(separator: " · ")
+    }
+
+    var sizeText: String { Formatting.fileSize(bytes) }
+    /// 「共 86.4 MB」
+    var totalText: String { String(localized: "共 \(sizeText)", comment: "信息条上的总大小；%@ 是大小") }
+}
+
+extension BrowserModel {
+    /// 选中文件的汇总（多选时用）
+    var selectionSummary: GridSummary { GridSummary(selectedItems) }
+    /// 眼前列表的汇总（没有选中时用）
+    var listSummary: GridSummary { GridSummary(items) }
+
+    /// 「46 个项目」：文件夹里的总数，不随筛选变（spec V1-15）
+    var folderCountText: String { String(localized: "\(allItems.count) 个项目", comment: "图标视图标题下面、信息条上的项目数；%lld 是数量") }
+
+    /// 没有选中时信息条左边文件夹名后面的文字：筛选生效时「显示 12 / 共 46 个项目」（spec V1-12）
+    var listCountText: String {
+        items.count == allItems.count
+            ? folderCountText
+            : String(localized: "显示 \(items.count) / 共 \(allItems.count) 个项目", comment: "筛选生效时信息条上的项目数")
+    }
+
+    /// 信息条右边：「5712 × 3808 · 3.9 MB · HEIF」，拆成尺寸和其余两段（窗口窄时尺寸先让位）
+    var gridItemTrailing: (dims: String?, rest: String)? {
+        guard let item = current else { return nil }
+        let meta = gridMeta?.url == item.url ? gridMeta : nil
+        var dims: String?
+        if let w = meta?.pixelWidth, let h = meta?.pixelHeight, w > 0, h > 0 { dims = "\(w) × \(h)" }
+        var parts: [String] = []
+        if item.kind == .video, let d = ThumbnailStore.shared.cached(item)?.duration { parts.append(Formatting.duration(d)) }
+        parts.append(Formatting.fileSize(item.fileSize))
+        parts.append(item.formatName)
+        return (dims, parts.joined(separator: " · "))
     }
 }

@@ -53,11 +53,18 @@ enum ShotHooks {
     static let editCrop: [Double]? = value("shot-crop").map { $0.split(separator: ",").compactMap { Double($0) } }
     static let editRatio: String? = value("shot-ratio")
     static let editResize: Int? = value("shot-resize").flatMap(Int.init)
+    /// `--shot-view=grid`：切到图标视图；`--shot-select=2,5,7`：选中这几个（从 0 数）；`--shot-select=none`：不选；`--shot-grid-size=196`
+    static let view: String? = value("shot-view")
+    static let select: String? = value("shot-select")
+    static let gridSize: Int? = value("shot-grid-size").flatMap(Int.init)
     static let windowSize: CGSize? = value("shot-window").flatMap { text in
         let parts = text.split(separator: "x").compactMap { Double($0) }
         return parts.count == 2 ? CGSize(width: parts[0], height: parts[1]) : nil
     }
     #else
+    static let view: String? = nil
+    static let select: String? = nil
+    static let gridSize: Int? = nil
     static let settingsPane: String? = nil
     static let hoverFraction: Double? = nil
     static let dropPath: String? = nil

@@ -20,6 +20,11 @@ enum ThumbnailCacheKey {
     static func make(for item: MediaItem) -> String {
         make(path: item.url.standardizedFileURL.path, modificationDate: item.modificationDate, fileSize: item.fileSize)
     }
+
+    /// 大缩略图（图标视图最大两档用，spec V5-04）另存一份：文件名后面带尺寸；320 的沿用原来的名字，旧缓存不失效
+    static func fileName(for item: MediaItem, maxPixel: Int) -> String {
+        maxPixel == ThumbnailGenerator.maxPixel ? make(for: item) + ".jpg" : make(for: item) + "-\(maxPixel).jpg"
+    }
 }
 
 /// 一张缩略图（不可变）
@@ -40,6 +45,8 @@ final class Thumbnail: @unchecked Sendable {
 enum ThumbnailGenerator {
     /// 缩略图长边像素：76 × 52 的格子在 2x 屏幕、选中放大 1.12 倍时仍然清晰
     static let maxPixel = 320
+    /// 图标视图最大两档（缩略图区宽 196、232）用的大缩略图：2 倍屏上也清楚（spec V5-04）
+    static let largeMaxPixel = 640
 
     static let directory: URL = {
         let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
@@ -48,34 +55,34 @@ enum ThumbnailGenerator {
         return dir
     }()
 
-    static func cacheURL(for item: MediaItem) -> URL {
-        directory.appendingPathComponent(ThumbnailCacheKey.make(for: item) + ".jpg")
+    static func cacheURL(for item: MediaItem, maxPixel: Int = maxPixel) -> URL {
+        directory.appendingPathComponent(ThumbnailCacheKey.fileName(for: item, maxPixel: maxPixel))
     }
 
     /// 先读磁盘缓存，没有再生成并写入
-    static func thumbnail(for item: MediaItem) async -> Thumbnail {
-        let url = cacheURL(for: item)
+    static func thumbnail(for item: MediaItem, maxPixel: Int = maxPixel) async -> Thumbnail {
+        let url = cacheURL(for: item, maxPixel: maxPixel)
         if let cached = readCache(url) {
             touch(url)
             return cached
         }
         if Task.isCancelled { return Thumbnail(image: nil, duration: nil) }
-        let made = await generate(item)
+        let made = await generate(item, maxPixel: maxPixel)
         if let image = made.image { writeCache(url, image: image, duration: made.duration) }
         return made
     }
 
-    static func generate(_ item: MediaItem) async -> Thumbnail {
+    static func generate(_ item: MediaItem, maxPixel: Int = maxPixel) async -> Thumbnail {
         guard item.fileSize > 0 else { return Thumbnail(image: nil, duration: nil) }
         switch item.format {
         case .video:
-            return await videoThumbnail(item)
+            return await videoThumbnail(item, maxPixel: maxPixel)
         case .svg:
             let image = try? ImageDecoder.decodeSVG(item, maxPixel: maxPixel).image
             return Thumbnail(image: image, duration: nil)
         case .standard, .raw, .gif:
             guard let source = CGImageSourceCreateWithURL(item.url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
-                  CGImageSourceGetCount(source) > 0 else { return Thumbnail(image: cameraPreviewThumbnail(item), duration: nil) }
+                  CGImageSourceGetCount(source) > 0 else { return Thumbnail(image: cameraPreviewThumbnail(item, maxPixel: maxPixel), duration: nil) }
             // 有内嵌缩略图且足够大就直接用（RAW、相机 JPEG 都有），否则从原图缩小
             let options: [CFString: Any] = [
                 kCGImageSourceCreateThumbnailFromImageIfAbsent: true,
@@ -84,20 +91,21 @@ enum ThumbnailGenerator {
                 kCGImageSourceThumbnailMaxPixelSize: maxPixel,
             ]
             var image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
-            // 内嵌缩略图太小（比如 160 × 120）时，改用完整图缩小，保证清晰
-            if let i = image, max(i.width, i.height) < 200, item.format != .raw {
+            // 内嵌缩略图太小（比如 160 × 120）时，改用完整图缩小，保证清晰。大缩略图：小于要的一半也重取（RAW 也是）
+            if let i = image, max(i.width, i.height) < 200 && item.format != .raw
+                || (maxPixel > Self.maxPixel && max(i.width, i.height) < maxPixel / 2) {
                 var always = options
                 always[kCGImageSourceCreateThumbnailFromImageAlways] = true
                 image = CGImageSourceCreateThumbnailAtIndex(source, 0, always as CFDictionary) ?? i
             }
             // 系统解不了这张 RAW（spec C1-15）：用相机存在文件里的预览图
-            if image == nil { image = cameraPreviewThumbnail(item) }
+            if image == nil { image = cameraPreviewThumbnail(item, maxPixel: maxPixel) }
             return Thumbnail(image: image, duration: nil)
         }
     }
 
     /// RAW 的缩略图生成不出来时，取文件里的内嵌 JPEG 缩小；别的格式不试
-    static func cameraPreviewThumbnail(_ item: MediaItem) -> CGImage? {
+    static func cameraPreviewThumbnail(_ item: MediaItem, maxPixel: Int = maxPixel) -> CGImage? {
         guard item.format == .raw else { return nil }
         let orientation = CGImageSourceCreateWithURL(item.url as CFURL, nil).flatMap { source -> Int? in
             guard CGImageSourceGetCount(source) > 0 else { return nil }
@@ -114,7 +122,7 @@ enum ThumbnailGenerator {
         return CMTime(seconds: min(duration * 0.4, 6), preferredTimescale: 600)
     }
 
-    static func videoThumbnail(_ item: MediaItem) async -> Thumbnail {
+    static func videoThumbnail(_ item: MediaItem, maxPixel: Int = maxPixel) async -> Thumbnail {
         let asset = AVURLAsset(url: item.url)
         let duration = try? await asset.load(.duration)
         let generator = AVAssetImageGenerator(asset: asset)
@@ -235,6 +243,10 @@ actor AsyncLimiter {
 @MainActor
 final class ThumbnailStore {
     static let shared = ThumbnailStore()
+    /// 图标视图最大两档用的大缩略图（长边 640）。数量少一些：一张约 1 MB
+    static let large = ThumbnailStore(maxPixel: ThumbnailGenerator.largeMaxPixel, countLimit: 800, costLimit: 200 * 1024 * 1024)
+
+    let maxPixel: Int
 
     /// 文件的哪个版本：路径相同、修改时间或大小不同就是另一个版本
     struct Version: Hashable {
@@ -259,9 +271,11 @@ final class ThumbnailStore {
     private var inFlight: [URL: (version: Version, task: Task<Thumbnail?, Never>)] = [:]
     private let limiter = AsyncLimiter(limit: max(2, ProcessInfo.processInfo.activeProcessorCount / 2))
 
-    init() {
-        memory.countLimit = 3000   // 320px 的缩略图约 0.3 MB，3000 张约 1 GB 上限，实际由系统按需回收
-        memory.totalCostLimit = 400 * 1024 * 1024
+    /// 320px 的缩略图约 0.3 MB；成本上限 250 MB（F2-06：原来是 400 MB）
+    init(maxPixel: Int = ThumbnailGenerator.maxPixel, countLimit: Int = 3000, costLimit: Int = 250 * 1024 * 1024) {
+        self.maxPixel = maxPixel
+        memory.countLimit = countLimit
+        memory.totalCostLimit = costLimit
     }
 
     /// 内存里这个文件、这个版本的缩略图
@@ -290,13 +304,14 @@ final class ThumbnailStore {
             task = running.task
         } else {
             let limiter = self.limiter
+            let maxPixel = self.maxPixel
             task = Task.detached(priority: .utility) {
                 await limiter.acquire()
                 if Task.isCancelled {
                     await limiter.release()
                     return nil
                 }
-                let result = await ThumbnailGenerator.thumbnail(for: item)
+                let result = await ThumbnailGenerator.thumbnail(for: item, maxPixel: maxPixel)
                 await limiter.release()
                 return Task.isCancelled && result.failed ? nil : result
             }

@@ -70,17 +70,20 @@ struct CounterPill: View {
     var rating: Int? = nil
     /// 缩略图栏隐藏或全屏时，「相机预览图」标签跟在计数后面（spec C1-08）
     var tag: String? = nil
+    /// 放不下时只显示第几个（spec TB-04），悬停显示完整文字
+    var short = false
 
     var body: some View {
         HStack(spacing: 0) {
-            Text(verbatim: "\(Formatting.count(index + 1)) / \(Formatting.count(total))")
-            if let rating, rating > 0 {
+            Text(verbatim: short ? Formatting.count(index + 1) : "\(Formatting.count(index + 1)) / \(Formatting.count(total))")
+            if let rating, rating > 0, !short {
                 Text(verbatim: " · ").foregroundStyle(Theme.text3)
                 StarShape().fill(Theme.Brand.sun).frame(width: 11, height: 11).padding(.trailing, 3)
                 Text(verbatim: "\(rating)")
             }
-            if let tag { PreviewTag(text: tag).padding(.leading, 8) }
+            if let tag, !short { PreviewTag(text: tag).padding(.leading, 8) }
         }
+            .help(short ? "\(Formatting.count(index + 1)) / \(Formatting.count(total))" : "")
             .font(Theme.mono(12))
             .foregroundStyle(.white)
             .padding(.horizontal, 14)
@@ -102,6 +105,8 @@ struct ToolGroup: View {
     var editBlockedByPreview = false
     /// 编辑功能开着；关掉后没有编辑按钮（spec T2-12）
     var showsEdit = true
+    /// 图标视图里没有旋转（spec V4a-01）
+    var showsRotate = true
     var onEdit: () -> Void = {}
     let onRotate: () -> Void
     let onInfo: () -> Void
@@ -119,8 +124,10 @@ struct ToolGroup: View {
     var body: some View {
         HStack(spacing: 2) {
             // 按钮图标是逆时针箭头，点按向左转；R 向右转、⇧R 向左转（菜单“文件 › 向右旋转”）
-            ToolButton(symbol: "arrow.counterclockwise", help: "向左旋转（⇧R）", selected: rotateSelected, action: onRotate)
-                .disabled(!enabled)
+            if showsRotate {
+                ToolButton(symbol: "arrow.counterclockwise", help: "向左旋转（⇧R）", selected: rotateSelected, action: onRotate)
+                    .disabled(!enabled)
+            }
             // 编辑（spec ED-01、ED-02）：不支持时不用 disabled，好让悬停提示照常出现
             if showsEdit {
                 EditEntryButton(unsupported: editUnsupported, previewOnly: editBlockedByPreview, action: onEdit)

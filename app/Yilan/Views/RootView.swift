@@ -13,6 +13,10 @@ struct RootView: View {
     @State private var drop: DropSummary?
     /// 顶部栏控件的实测宽度（中英文不同），决定收缩到哪一档
     @State private var barWidths = TopBarWidths()
+    /// 图标视图里计数和工具组的实测宽度
+    @State private var gridCounterWidth: CGFloat = 96
+    @State private var gridCounterShortWidth: CGFloat = 60
+    @State private var gridToolsWidth: CGFloat = 70
     @State private var updater = UpdateChecker.shared
 
     var body: some View {
@@ -20,6 +24,12 @@ struct RootView: View {
             let size = geo.size
             let layout = StageLayout(size: size, fullScreen: model.isFullScreen, panelOpen: showsInfoPanel)
             ZStack {
+              if model.isGrid {
+                // 图标视图：纯色背景，不用环境光（spec V1-09）
+                GridStage.background
+                gridStage(layout)
+                    .transition(.opacity)
+              } else {
                 Theme.stage
                 // 出错时没有可用的图片颜色：用设计稿“无法打开”画板的青绿环境光
                 // 设置里关掉“环境光背景”时，看图只用纯黑舞台；欢迎、出错等卡片仍用设计稿的渐变
@@ -38,13 +48,14 @@ struct RootView: View {
                 } else {
                     stageControls(layout)
                 }
+              }
                 topBar(layout)
                 cards(size)
                 overlays(layout)
                 updateSheet(size)
                 // 筛选面板画在提示卡片、提示条上面（spec R5-06）
                 if model.filterPanelOpen && model.filterEnabled && model.hasOpenedFolder && topVisible {
-                    let widths = effectiveBarWidths
+                    let widths = effectiveBarWidths(size)
                     let tier = TopBarTier.choose(width: size.width, widths: widths,
                                                  hasZoom: showsZoomControl && model.zoomState != nil)
                     filterPanel(size: size, tier: tier, widths: widths)
@@ -83,7 +94,15 @@ struct RootView: View {
         .onDrop(of: [.fileURL], delegate: FileDropDelegate(summary: $drop) { model.open($0) })
     }
 
-    private var showsInfoPanel: Bool { model.infoVisible && model.current != nil && model.edit == nil }
+    /// 图标视图里没有选中、多选时面板也能开（spec V10-04、V10-05）
+    private var showsInfoPanel: Bool {
+        model.infoVisible && model.edit == nil && (model.current != nil || (model.isGrid && model.hasOpenedFolder))
+    }
+
+    /// 视图切换控件：打开了文件夹才有（spec V2-04）；窗口窄时缩成一个按钮
+    private func switchWidth(_ size: CGSize) -> CGFloat {
+        model.hasOpenedFolder ? ViewSwitch.width(single: size.width < ViewSwitch.narrowBelow) : 0
+    }
 
     // MARK: - 编辑模式（spec 21）
 
@@ -246,11 +265,12 @@ struct RootView: View {
         let compact = size.width < Theme.compactWidth
         let visible = topVisible
         let zoom = showsZoomControl ? model.zoomState : nil
-        let widths = effectiveBarWidths
+        let widths = effectiveBarWidths(size)
         let tier = TopBarTier.choose(width: size.width, widths: widths, hasZoom: zoom != nil)
         let center = tier.centerWidth(widths)
+        let switchW = switchWidth(size)
         // 文件名最多到筛选组左边再留 14，长名字截断，不和中间重叠
-        let titleMax = max(0, size.width / 2 - center / 2 - TopBarTier.gap - 86)
+        let titleMax = max(0, size.width / 2 - center / 2 - TopBarTier.gap - 86 - (switchW > 0 ? switchW + 14 : 0))
         let _ = ShotHooks.logTopBar(width: size.width, widths: widths, tier: tier)
         ZStack(alignment: .top) {
           if let session = model.edit {
@@ -262,9 +282,13 @@ struct RootView: View {
             // 标题栏（高 56）：红绿灯是系统的，这里只放文件名和右侧控件
             HStack(spacing: 14) {
                 Color.clear.frame(width: 52, height: 12)   // 红绿灯占位
+                if switchW > 0 {
+                    ViewSwitch(mode: model.viewMode, single: size.width < ViewSwitch.narrowBelow) { model.setViewMode($0) }
+                        .onHover { model.setHovering("viewSwitch", $0) }
+                }
                 if !compact {
                     VStack(alignment: .leading, spacing: 1) {
-                        (model.current.map { Text(verbatim: $0.name) } ?? Text("一览"))
+                        titleText
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(.white)
                             .shadow(color: .black.opacity(0.5), radius: 4, y: 1)
@@ -284,10 +308,13 @@ struct RootView: View {
                     if let zoom, tier.zoom != .menu {
                         ZoomControl(state: zoom, percentOnly: tier.zoom == .percent, note: cameraPreviewZoomNote) { model.zoom($0) }
                     }
-                    if let i = model.currentIndex {
+                    if model.isGrid {
+                        if let content = gridCounter { GridCounterPill(content: content, short: tier.counterShort) }
+                    } else if let i = model.currentIndex {
                         CounterPill(index: i, total: model.items.count,
                                     rating: !model.stripVisible || layout.fullScreen ? model.currentRating : nil,
-                                    tag: (!model.stripVisible || layout.fullScreen) && model.showingCameraPreview ? Self.previewTagText : nil)
+                                    tag: (!model.stripVisible || layout.fullScreen) && model.showingCameraPreview ? Self.previewTagText : nil,
+                                    short: tier.counterShort)
                     }
                     // 欢迎界面不显示工具组（设计稿“首次启动 · 欢迎”）
                     if model.hasOpenedFolder {
@@ -306,10 +333,10 @@ struct RootView: View {
                     .onHover { model.setHovering("filter", $0) }
                     .padding(.top, 10)
                     .frame(maxWidth: .infinity, alignment: tier.leftAligned ? .leading : .center)
-                    .padding(.leading, tier.leftAligned ? TopBarTier.leftEdge : 0)
+                    .padding(.leading, tier.leftAligned ? TopBarTier.leftEdge(widths) : 0)
             }
             // 浏览时转过：工具组下方 4pt 的「保存旋转」胶囊（spec ED-41）
-            if model.showsSaveRotation, let item = model.current {
+            if model.showsSaveRotation, !model.isGrid, let item = model.current {
                 SaveRotationChip(lossless: model.currentSupportsLosslessRotation, menuOpen: model.rotationMenuOpen,
                                  copyName: EditNaming.baseName(item.url.deletingPathExtension().lastPathComponent, attempt: 1)
                                     + "." + (item.format == .raw ? (model.settings.editRawFormat == .heif ? "heic" : "jpg") : item.url.pathExtension),
@@ -352,9 +379,15 @@ struct RootView: View {
     }
 
     /// 测量视图一直在量；没有序号、没有工具组时按 0 算
-    private var effectiveBarWidths: TopBarWidths {
+    private func effectiveBarWidths(_ size: CGSize) -> TopBarWidths {
         var widths = barWidths
-        if model.currentIndex == nil { widths.counter = 0 }
+        widths.viewSwitch = switchWidth(size)
+        if model.isGrid {
+            // 图标视图：计数和工具组是另一副样子（spec V1-14、V4a-01）
+            widths.counter = gridCounter == nil ? 0 : gridCounterWidth
+            widths.counterShort = gridCounter == nil ? 0 : gridCounterShortWidth
+            widths.tools = gridToolsWidth
+        } else if model.currentIndex == nil { widths.counter = 0; widths.counterShort = 0 }
         // 筛选关掉后没有筛选按钮（spec T2-11）
         if !model.filterEnabled { (widths.filterFull, widths.filterCount, widths.filterIcon) = (0, 0, 0) }
         if !model.hasOpenedFolder { widths.tools = 0 }
@@ -363,17 +396,20 @@ struct RootView: View {
 
     /// 缩放控件只在有可显示的图片时出现（spec E1-07）
     private var showsZoomControl: Bool {
-        model.current != nil && model.failure == nil && model.displayedItem == model.current
+        !model.isGrid && model.current != nil && model.failure == nil && model.displayedItem == model.current
     }
 
-    private func toolGroup(zoomInMenu: Bool) -> ToolGroup {
-        ToolGroup(
-            enabled: model.current != nil && model.failure == nil,
+    private func toolGroup(zoomInMenu: Bool, grid: Bool? = nil) -> ToolGroup {
+        let grid = grid ?? model.isGrid
+        return ToolGroup(
+            // 图标视图里信息按钮一直可用（spec TB-05）
+            enabled: grid || (model.current != nil && model.failure == nil),
             infoSelected: showsInfoPanel,
             rotateSelected: model.rotation != 0,
             editUnsupported: model.editUnsupported,
             editBlockedByPreview: model.showingCameraPreview,
-            showsEdit: model.editEnabled,
+            showsEdit: model.editEnabled && !grid,
+            showsRotate: !grid,
             onEdit: { model.enterEdit() },
             onRotate: { model.rotate(-1) },
             onInfo: model.toggleInfo,
@@ -403,7 +439,7 @@ struct RootView: View {
     @ViewBuilder
     private func filterPanel(size: CGSize, tier: TopBarTier, widths: TopBarWidths) -> some View {
         let center = tier.centerWidth(widths)
-        let groupLeft = tier.leftAligned ? TopBarTier.leftEdge : size.width / 2 - center / 2
+        let groupLeft = tier.leftAligned ? TopBarTier.leftEdge(widths) : size.width / 2 - center / 2
         let buttonLeft = groupLeft + (tier.segSlim ? widths.segSlim : widths.segFull) + TopBarTier.groupSpacing
         let computed = max(8, min(buttonLeft, size.width - FilterPanel.width - 8))
         // 打开期间位置不动：按钮上的摘要变长变短会让按钮挪动，面板仍留在打开时的位置（窗口变窄时仍不出界）
@@ -465,8 +501,16 @@ struct RootView: View {
             // 序号按最宽的情况量（带“· ★4”），切换缩略图栏时顶部栏不跳
             CounterPill(index: total - 1, total: total, rating: model.ratingEnabled ? 4 : nil)
                 .fixedSize().measure { barWidths.counter = $0 }
-            toolGroup(zoomInMenu: false)
+            CounterPill(index: total - 1, total: total, short: true)
+                .fixedSize().measure { barWidths.counterShort = $0 }
+            toolGroup(zoomInMenu: false, grid: false)
                 .fixedSize().measure { barWidths.tools = $0 }
+            toolGroup(zoomInMenu: false, grid: true)
+                .fixedSize().measure { gridToolsWidth = $0 }
+            if let content = gridCounter {
+                GridCounterPill(content: content).fixedSize().measure { gridCounterWidth = $0 }
+                GridCounterPill(content: content, short: true).fixedSize().measure { gridCounterShortWidth = $0 }
+            }
         }
         .opacity(0)
         .frame(width: 0, height: 0, alignment: .topLeading)
@@ -594,8 +638,18 @@ struct RootView: View {
                 let top = layout.fullScreen ? (model.fullScreenTopRevealed ? menuBarHeight + InfoPanel.top : 16) : InfoPanel.top
                 // 面板浮在上面，但不能盖住缩略图栏和视频控制条：最多到它们上沿再留 12；
                 // 缩略图栏关掉、或全屏时底部控件没出现，可以到距底 16。放不下的内容在面板里滚动
-                let chromeTop = StageLayout.bottomChromeTop(isVideo: isVideo, stripVisible: model.stripVisible,
-                                                            shown: layout.fullScreen ? bottomVisible : true)
+                // 图标视图：到信息条上沿（距底 16 + 高 40）
+                let chromeTop = model.isGrid ? 16 + GridInfoBar.height
+                    : StageLayout.bottomChromeTop(isVideo: isVideo, stripVisible: model.stripVisible,
+                                                  shown: layout.fullScreen ? bottomVisible : true)
+                if model.isGrid, model.current == nil {
+                    gridSummaryPanel
+                        .onHover { model.setHovering("info", $0) }
+                        .padding(.top, top)
+                        .padding(.trailing, InfoPanel.trailing)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .transition(.opacity.combined(with: .offset(x: 24)))
+                } else {
                 InfoPanel(
                     item: model.current,
                     content: model.info,
@@ -616,6 +670,7 @@ struct RootView: View {
                 .padding(.trailing, InfoPanel.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .transition(.opacity.combined(with: .offset(x: 24)))
+                }
             }
 
             // 提示卡片（快捷键变化、.xmp 说明）：顶部栏下面，不压暗、不挡操作
@@ -647,7 +702,7 @@ struct RootView: View {
                 // 编辑保存后的提示条：缩略图栏上方 16（设计稿 edit 08）
                 EditToastView(toast: toast, maxWidth: size.width - 64) { model.performToastAction($0) }
                     .onHover { model.toastHovered = $0 }
-                    .padding(.bottom, model.stripVisible && !layout.fullScreen ? Theme.imageInsetBottom + 16 : 40)
+                    .padding(.bottom, model.isGrid ? 16 + GridInfoBar.height + 16 : model.stripVisible && !layout.fullScreen ? Theme.imageInsetBottom + 16 : 40)
                     .frame(width: size.width, height: size.height, alignment: .bottom)
                     .transition(.opacity)
                     .id(toast.serial)
@@ -688,7 +743,14 @@ struct RootView: View {
         .animation(.easeOut(duration: 0.2), value: model.isDecodingRaw)
     }
 
+    /// 标题：画廊视图是当前文件名；图标视图是文件夹名（spec V1-15）
+    private var titleText: Text {
+        if model.isGrid, let folder = model.folderURL { return Text(verbatim: folder.lastPathComponent) }
+        return model.current.map { Text(verbatim: $0.name) } ?? Text("一览")
+    }
+
     private var subtitle: String {
+        if model.isGrid, model.folderURL != nil { return model.folderCountText }
         guard let folder = model.folderURL else { return model.hasOpenedFolder ? "" : String(localized: "欢迎", comment: "欢迎界面时标题栏的副标题") }
         return folder.lastPathComponent
     }
@@ -719,6 +781,90 @@ struct RootView: View {
     private var cameraPreviewZoomNote: String? {
         guard model.showingCameraPreview, let s = model.displayedPixelSize else { return nil }
         return String(localized: "相机预览图 · \("\(Int(s.width)) × \(Int(s.height))")", comment: "缩放菜单最上面的小字；%@ 是预览图的宽 × 高")
+    }
+
+    // MARK: - 图标视图（设计稿 11）
+
+    /// 网格可用的宽度：信息面板打开时减去面板和间距，缩略图不被面板盖住（spec V10-02）
+    private func gridWidth(_ size: CGSize) -> CGFloat {
+        showsInfoPanel ? max(200, size.width - InfoPanel.width - InfoPanel.trailing) : size.width
+    }
+
+    private func gridStage(_ layout: StageLayout) -> some View {
+        let size = layout.size
+        let width = gridWidth(size)
+        return ZStack(alignment: .topLeading) {
+            GridCollection(model: model, items: model.items, selection: model.grid.selection,
+                           ratings: model.showsRatingUI ? model.ratings : [:], size: model.gridSize,
+                           viewport: CGSize(width: width, height: size.height), scrollRequest: model.gridScrollRequest,
+                           dimmed: model.gridDragging)
+                .frame(width: width, height: size.height)
+            // 顶部和底部各一段渐暗（spec V1-09）
+            VStack(spacing: 0) {
+                LinearGradient(stops: [.init(color: GridStage.color.opacity(0.96), location: 0.3), .init(color: GridStage.color.opacity(0), location: 1)],
+                               startPoint: .top, endPoint: .bottom).frame(height: 74)
+                Spacer(minLength: 0)
+                LinearGradient(stops: [.init(color: GridStage.color.opacity(0.94), location: 0.2), .init(color: GridStage.color.opacity(0), location: 1)],
+                               startPoint: .bottom, endPoint: .top).frame(height: 86)
+            }
+            .allowsHitTesting(false)
+            if model.hasOpenedFolder {
+                gridInfoBar
+                    .frame(width: min(size.width - 64, Theme.dockMaxWidth))
+                    .padding(.bottom, 16)
+                    .frame(width: size.width, height: size.height, alignment: .bottom)
+            }
+            // 按键评星的闪现：信息条上方（spec V4-04）
+            StarBar(rating: model.ratingFlash?.value ?? model.currentRating ?? 0, enabled: true, flash: model.ratingFlash)
+                .frame(width: size.width, height: size.height, alignment: .bottom)
+                .padding(.bottom, 16 + GridInfoBar.height + 12)
+                .opacity(model.ratingFlash != nil && model.pendingDelete == nil ? 1 : 0)
+                .allowsHitTesting(false)
+                .animation(.easeOut(duration: 0.2), value: model.ratingFlash != nil)
+        }
+        .frame(width: size.width, height: size.height, alignment: .topLeading)
+    }
+
+    private var gridInfoBar: GridInfoBar {
+        let folder = model.folderURL?.lastPathComponent ?? ""
+        if model.isMultiSelection {
+            let s = model.selectionSummary
+            return GridInfoBar(left: .summary(title: s.selectedText, detail: s.composition), trailing: s.totalText,
+                               size: model.gridSize, onSize: { model.setGridSize($0) })
+        }
+        guard let item = model.current else {
+            return GridInfoBar(left: .summary(title: folder, detail: model.listCountText),
+                               trailing: model.items.isEmpty ? "" : model.listSummary.totalText,
+                               size: model.gridSize, onSize: { model.setGridSize($0) })
+        }
+        let trailing = model.gridItemTrailing
+        let ratable = model.ratingEnabled && model.currentIsRatable
+        return GridInfoBar(left: .file(name: item.name, tag: model.cameraPreviewSeen.contains(item.url) ? Self.previewTagText : nil),
+                           rating: model.currentRating, canRate: model.canRateCurrent,
+                           onRate: ratable ? { model.rateCurrent($0, fromKeyboard: false) } : nil,
+                           dims: trailing?.dims, trailing: trailing?.rest ?? "",
+                           size: model.gridSize, onSize: { model.setGridSize($0) })
+    }
+
+    /// 右上角的计数（spec V1-14）；空列表时不显示
+    private var gridCounter: GridCounterPill.Content? {
+        guard model.isGrid, model.hasOpenedFolder, !model.items.isEmpty else { return nil }
+        if model.isMultiSelection { return .selected(model.grid.selection.count) }
+        if let i = model.currentIndex { return .position(index: i, total: model.items.count) }
+        return .total(model.items.count)
+    }
+
+    /// 多选、没有选中时的信息面板（spec V10-04、V10-05）
+    private var gridSummaryPanel: GridSummaryPanel {
+        if model.isMultiSelection {
+            let s = model.selectionSummary
+            return GridSummaryPanel(title: s.selectedText, lines: [s.composition], totalSize: s.sizeText,
+                                    onClose: { model.setInfoVisible(false) }, onReveal: { model.perform(.reveal) })
+        }
+        return GridSummaryPanel(title: model.folderURL?.lastPathComponent ?? "", lines: [model.folderCountText],
+                                totalSize: GridSummary(model.allItems).sizeText,
+                                onClose: { model.setInfoVisible(false) },
+                                onReveal: { if let folder = model.folderURL { NSWorkspace.shared.activateFileViewerSelecting([folder]) } })
     }
 
     // MARK: - 卡片
@@ -757,6 +903,12 @@ struct RootView: View {
             }
         }
     }
+}
+
+/// 图标视图的背景色（设计稿 .gstage：#0c0c0e）
+enum GridStage {
+    static let color = Color(red: 12 / 255, green: 12 / 255, blue: 14 / 255)
+    static var background: some View { color }
 }
 
 /// 舞台布局规则（设计稿 08 · 信息面板）：信息面板在任何窗口宽度下都浮在图片上。
@@ -886,7 +1038,7 @@ final class EventMonitors {
         // 大图区的右键菜单（spec M1）。在窗口层面接：箭头、播放按钮、出错卡片这些盖在大图上的控件上点右键也要弹（spec M1-03）
         tokens.append(NSEvent.addLocalMonitorForEvents(matching: [.rightMouseDown, .leftMouseDown]) { event in
             guard ContextClick.matches(event), let w = window(), event.window === w, w.attachedSheet == nil,
-                  let content = w.contentView, model.canShowContextMenu else { return event }
+                  let content = w.contentView, !model.isGrid, model.canShowContextMenu else { return event }
             let size = content.bounds.size
             let p = event.locationInWindow
             guard StageZones.isStage(x: p.x, yFromTop: size.height - p.y, size: size, stripVisible: model.stripVisible,
