@@ -17,12 +17,14 @@ struct ThumbnailDock: View {
     /// 星级（左上角角标，spec R3-01）
     var ratings: [URL: Int] = [:]
     let onSelect: (Int) -> Void
+    /// 在第几张缩略图上点了右键（spec M2-01）
+    var onContext: (Int) -> Void = { _ in }
     @State private var hovered = ShotHooks.stripHover
 
     var body: some View {
         VStack(spacing: 6) {
             MetaLine(meta: meta, rating: rating, canRate: canRate, onRate: onRate, stripHovered: hovered, reservesStars: ratingEnabled)
-            ThumbnailStrip(items: items, current: current, fresh: fresh, ratings: ratings, onSelect: onSelect)
+            ThumbnailStrip(items: items, current: current, fresh: fresh, ratings: ratings, onSelect: onSelect, onContext: onContext)
                 .frame(height: 62)
         }
         .padding(EdgeInsets(top: 9, leading: 12, bottom: 10, trailing: 12))
@@ -201,6 +203,7 @@ struct ThumbnailStrip: View {
     let fresh: Set<URL>
     var ratings: [URL: Int] = [:]
     let onSelect: (Int) -> Void
+    var onContext: (Int) -> Void = { _ in }
 
     @State private var fadeLeading = false
     @State private var fadeTrailing = false
@@ -218,6 +221,7 @@ struct ThumbnailStrip: View {
                                           badgeZone: (fadeLeading ? 28 : 0)...(geo.size.width - (fadeTrailing ? 28 : 0)))
                                 .id(item.id)
                                 .onTapGesture { onSelect(index) }
+                                .onRightClick { onContext(index) }
                         }
                     }
                     .padding(.horizontal, 8)

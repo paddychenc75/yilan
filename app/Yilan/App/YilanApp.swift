@@ -187,6 +187,17 @@ struct AppCommands: Commands {
                 .keyboardShortcut("z", modifiers: [.command, .shift])
                 .disabled(model.mainWindowIsKey)
         }
+        // 编辑 › 拷贝、全选（spec MB-01、MB-02）：换掉系统默认的剪切 / 拷贝 / 粘贴 / 删除 / 全选一组。
+        // 焦点在文字输入框里时照样是文字的拷贝和全选
+        CommandGroup(replacing: .pasteboard) {
+            Button("拷贝") { model.copyFromMenu() }
+                .keyboardShortcut("c")
+                .disabled(model.copyActsOnFiles && model.current == nil)
+            Divider()
+            Button("全选") { model.selectAllFromMenu() }
+                .keyboardShortcut("a")
+                .disabled(model.copyActsOnFiles)
+        }
         CommandGroup(before: .toolbar) {
             filterToggle("全部", .all, key: "1")
             filterToggle("只看图片", .images, key: "2")

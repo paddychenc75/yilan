@@ -877,6 +877,16 @@
         }
       }
     },
+    "全选" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select All"
+          }
+        }
+      }
+    },
     "全部" : {
       "localizations" : {
         "en" : {
@@ -2089,6 +2099,37 @@
         }
       }
     },
+    "已拷贝 %1$lld 项，另有 %2$lld 项已经不在原处" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied %1$lld items. %2$lld more are no longer there."
+          }
+        }
+      }
+    },
+    "已拷贝 %lld 项，可以粘贴到访达或其他应用" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied %lld items. Paste them in Finder or another app."
+          }
+        }
+      }
+    },
+    "已拷贝“%@”" : {
+      "comment" : "拷贝一个文件后的提示；%@ 是文件名",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied “%@”"
+          }
+        }
+      }
+    },
     "已改 %lld 种。你在系统确认框里选择了保留原来的应用，已停止，剩下 %lld 种没有改。" : {
       "localizations" : {
         "en" : {
@@ -2803,6 +2844,17 @@
         }
       }
     },
+    "拷贝" : {
+      "comment" : "菜单：把文件拷贝到剪贴板",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy"
+          }
+        }
+      }
+    },
     "拷贝信息" : {
       "localizations" : {
         "en" : {
@@ -3414,6 +3466,16 @@
         }
       }
     },
+    "无法拷贝：文件已经不在原处" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can’t copy: the file is no longer there"
+          }
+        }
+      }
+    },
     "无法撤销：%@" : {
       "comment" : "%@ 是原因",
       "localizations" : {
@@ -3573,6 +3635,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Yesterday %@"
+          }
+        }
+      }
+    },
+    "显示信息" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Info"
           }
         }
       }
@@ -5294,6 +5366,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Flash"
+          }
+        }
+      }
+    },
+    "隐藏信息" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide Info"
           }
         }
       }

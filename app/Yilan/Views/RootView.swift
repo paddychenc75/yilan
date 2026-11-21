@@ -377,11 +377,8 @@ struct RootView: View {
             onEdit: { model.enterEdit() },
             onRotate: { model.rotate(-1) },
             onInfo: model.toggleInfo,
-            onReveal: model.revealCurrentInFinder,
-            onCopyPath: model.copyCurrentPath,
-            canTrash: model.canDelete,
-            onTrash: { model.requestDelete() },
-            onOpen: model.showOpenPanel,
+            moreItems: model.fileMenu(.more),
+            onAction: { model.perform($0) },
             zoomState: model.zoomState,
             zoomInMenu: zoomInMenu,
             onZoom: { model.zoom($0) },
@@ -548,7 +545,13 @@ struct RootView: View {
                         : min(layout.size.width - 64, Theme.dockMaxWidth),
                     fresh: model.freshURLs,
                     ratings: model.showsRatingUI ? model.ratings : [:],
-                    onSelect: { model.select($0) }
+                    onSelect: { model.select($0) },
+                    // 缩略图上点右键：先切到那一张，再弹菜单（spec M2-01）
+                    onContext: { index in
+                        guard model.canShowContextMenu else { return }
+                        model.select(index)
+                        ContextMenuPresenter.show(model.fileMenu(.single), upward: true) { model.perform($0) }
+                    }
                 )
                 .onHover {
                     model.setHovering("dock", $0)
@@ -792,6 +795,24 @@ struct StageLayout {
     }
 }
 
+/// 窗口里哪一块算「大图区」（右键菜单用，spec M1-01）：顶部栏、缩略图栏、信息面板以外的地方
+enum StageZones {
+    static func isStage(x: CGFloat, yFromTop: CGFloat, size: CGSize, stripVisible: Bool, infoVisible: Bool, fullScreen: Bool) -> Bool {
+        guard x >= 0, x <= size.width, yFromTop >= 0, yFromTop <= size.height else { return false }
+        // 顶部栏
+        if !fullScreen, yFromTop < Theme.titleBarHeight { return false }
+        // 缩略图栏（它自己的缩略图各有右键，spec M2）
+        if stripVisible {
+            let dockWidth = fullScreen ? min(Theme.dockFullScreenWidth, size.width - 48) : min(size.width - 64, Theme.dockMaxWidth)
+            let inDockX = abs(x - size.width / 2) <= dockWidth / 2
+            if inDockX, yFromTop > size.height - Theme.imageInsetBottom + 8 { return false }
+        }
+        // 信息面板
+        if infoVisible, x > size.width - InfoPanel.trailing - InfoPanel.width, yFromTop > InfoPanel.top - 8 { return false }
+        return true
+    }
+}
+
 /// 环境光背景：当前图片模糊后铺满窗口，再叠一层暗角（设计稿 .amb + .vig）
 struct AmbientBackground: View {
     let image: CGImage?
@@ -861,6 +882,17 @@ final class EventMonitors {
             // 只处理主窗口里、没有弹出面板时的按键
             guard let w = window(), event.window === w, w.attachedSheet == nil else { return event }
             return model.handleKey(event) ? nil : event
+        } as Any)
+        // 大图区的右键菜单（spec M1）。在窗口层面接：箭头、播放按钮、出错卡片这些盖在大图上的控件上点右键也要弹（spec M1-03）
+        tokens.append(NSEvent.addLocalMonitorForEvents(matching: [.rightMouseDown, .leftMouseDown]) { event in
+            guard ContextClick.matches(event), let w = window(), event.window === w, w.attachedSheet == nil,
+                  let content = w.contentView, model.canShowContextMenu else { return event }
+            let size = content.bounds.size
+            let p = event.locationInWindow
+            guard StageZones.isStage(x: p.x, yFromTop: size.height - p.y, size: size, stripVisible: model.stripVisible,
+                                     infoVisible: model.infoVisible, fullScreen: model.isFullScreen) else { return event }
+            ContextMenuPresenter.show(model.fileMenu(.single)) { model.perform($0) }
+            return nil
         } as Any)
         tokens.append(NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged, .scrollWheel, .leftMouseDown]) { event in
             if let w = window(), event.window === w {

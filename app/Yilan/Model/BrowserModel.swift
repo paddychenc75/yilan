@@ -920,6 +920,11 @@ final class BrowserModel {
             case "0": zoom(.actualSize); return true   // ⌘0 实际大小（spec K-02）
             case "9": zoom(.fit); return true          // ⌘9 适应窗口
             case "f": toggleFilterPanel(); return true // ⌘F 筛选面板（spec K-06）；筛选关掉时没有反应
+            // ⌘C 拷贝当前文件（spec M3-05）；焦点在文字输入框里时留给文字。⌥⌘C 是拷贝路径，走菜单
+            case "c" where mods == [.command] && !event.modifierFlags.contains(.shift):
+                guard !textFieldHasFocus else { return false }
+                copyCurrentFile()
+                return true
             case "1": setFilter(.all); return true
             case "2": setFilter(.images); return true
             case "3": setFilter(.videos); return true

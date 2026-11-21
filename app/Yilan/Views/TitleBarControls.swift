@@ -105,12 +105,9 @@ struct ToolGroup: View {
     var onEdit: () -> Void = {}
     let onRotate: () -> Void
     let onInfo: () -> Void
-    let onReveal: () -> Void
-    let onCopyPath: () -> Void
-    /// 移到废纸篓（和按 ⌫ 一样，走删除前确认和 ⌘Z 撤销）；没有当前文件时置灰
-    var canTrash = false
-    var onTrash: () -> Void = {}
-    let onOpen: () -> Void
+    /// 「⋯」菜单里针对文件的项目（和右键菜单同一份清单，spec M4）
+    var moreItems: [FileMenuItem] = []
+    var onAction: (FileAction) -> Void = { _ in }
     /// 窗口很窄时缩放控件收进这里（spec E1-10 ⑤）
     var zoomState: ZoomState? = nil
     var zoomInMenu = false
@@ -141,13 +138,14 @@ struct ToolGroup: View {
                     }
                     Divider()
                 }
-                Button("在访达中显示", action: onReveal).disabled(!enabled)
-                Button("拷贝文件路径", action: onCopyPath).disabled(!enabled)
-                Divider()
-                // 不加 ⌫ 快捷键：菜单栏「文件 › 移到废纸篓」已经注册了 ⌫，这里再注册会按一次删两次
-                Button("移到废纸篓", action: onTrash).disabled(!canTrash)
-                Divider()
-                Button("打开…", action: onOpen)
+                // 不加快捷键：菜单栏已经注册了 ⌫ 等快捷键，这里再注册会按一次执行两次
+                ForEach(Array(moreItems.enumerated()), id: \.offset) { _, entry in
+                    if let action = entry.action {
+                        Button(entry.title) { onAction(action) }.disabled(!entry.enabled)
+                    } else {
+                        Divider()
+                    }
+                }
             } label: {
                 ToolButtonLabel(symbol: "ellipsis")
                     .overlay(alignment: .topTrailing) {
