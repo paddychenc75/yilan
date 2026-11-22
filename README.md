@@ -10,6 +10,8 @@
 
 <p align="center"><img src="docs/screenshots/en-browse.jpg" width="820" alt="Browsing a folder with the thumbnail strip"></p>
 
+<p align="center"><img src="docs/screenshots/en-grid.jpg" width="820" alt="Icon view with several photos selected"></p>
+
 <table>
   <tr>
     <td><img src="docs/screenshots/en-info.jpg" alt="Info panel with EXIF"></td>
@@ -28,6 +30,7 @@
 - Zoom, pan, double-click to toggle fit-to-window and actual size, rotate
 - New in v0.2: info panel (press I: file info and EXIF), move to Trash with ⌘Z undo, full screen (press F), live folder sync (new files are highlighted), and a keyboard shortcuts page in Settings
 - New in v0.3: star ratings (press 1 to 5; stored in a small `.xmp` file next to the photo, the photo is never changed), filter by rating and format (⌘F), basic editing (press E: crop, rotate, resize; saved as a copy by default), save rotation, a zoom control in the top bar, update reminders, and setting Yilan as the default app from Settings
+- New in v0.5: icon view (press G: thumbnails fill the window, like Finder), multiple selection with batch delete, copy, rating and copy / move to folder, right-click menus, copy files with ⌘C, straighten in the editor, Simple Mode (one switch that leaves only viewing and basic file actions), and a camera-preview fallback for RAW files your macOS cannot decode yet. RAW files are view-only: use Export as JPEG (⇧⌘E) to get an editable copy
 - UI languages: Simplified Chinese and English
 
 ## Requirements
