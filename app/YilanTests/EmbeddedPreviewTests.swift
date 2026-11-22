@@ -256,7 +256,7 @@ struct NewFormatTests {
         #expect(SupportedFormats.displayName(forExtension: ext).hasSuffix(" RAW"))
     }
 
-    @Test("新 RAW 和原来的 RAW 一样受保护：星级只写小文件、不能原地旋转、编辑另存成 JPEG", arguments: newRaw)
+    @Test("新 RAW 和原来的 RAW 一样受保护：星级只写小文件、不能编辑（只能导出为 JPEG，spec C3-04、C6-01）", arguments: newRaw)
     func protected(_ ext: String) {
         let url = URL(fileURLWithPath: "/tmp/yilan-fake/IMG_0001.\(ext.uppercased())")
         let item = MediaItem(url: url, format: SupportedFormats.format(forExtension: ext)!, fileSize: 100,
@@ -265,10 +265,11 @@ struct NewFormatTests {
         #expect(FormatGroup.of(item) == .raw)
         let index = SidecarIndex(folder: url.deletingLastPathComponent(), sidecars: [], media: [item])
         #expect(index.writeURL(for: item).lastPathComponent == "IMG_0001.xmp")
-        // 编辑只能另存成 JPEG / HEIF，不会沿用原格式，也就不会替换原文件
-        let target = EditTarget.decide(for: item, sourceType: nil, hasAlpha: false, rawChoice: .jpeg)
-        #expect(target.pathExtension == "jpg")
-        #expect(!target.canReplaceOriginal)
+        // 不能进编辑；导出固定是 JPEG，不会沿用原格式，也就不会替换原文件
+        #expect(!BrowserModel.isEditable(item))
+        let target = EditTarget.decide(for: item, sourceType: nil, hasAlpha: false)
+        #expect(target == EditTarget.rawExport && !target.canReplaceOriginal)
+        #expect(ExportNaming.exportURL(for: url, exists: { _ in false }).pathExtension == "jpg")
     }
 
     @Test(".hif 是 HEIF 图片")

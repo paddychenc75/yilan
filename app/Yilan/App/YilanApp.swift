@@ -179,6 +179,10 @@ struct AppCommands: Commands {
                 Button("编辑") { model.enterEdit() }
                     .keyboardShortcut("e", modifiers: [])
                     .disabled(!model.canEditCurrent || model.isEditing || !model.mainWindowIsKey || model.isGrid)
+                // 导出为 JPEG（spec C6-03）：一直有；不是 RAW、出错卡片、多选、正在编辑、正在导出时置灰。简洁模式里没有（spec C6-12）
+                Button("导出为 JPEG") { model.exportCurrentAsJPEG() }
+                    .keyboardShortcut("e", modifiers: [.command, .shift])
+                    .disabled(!model.canExportCurrent || !model.mainWindowIsKey)
             }
             // 复制到 / 移动到文件夹（spec R9-01）：当前文件或选中的文件。简洁模式里没有
             if model.transferEnabled {

@@ -15,6 +15,8 @@ enum EditUndo: Equatable, Sendable {
     case replace(TrashEntry)
     /// 保存旋转改了原图的方向标记：撤销 = 放回保存前的原文件（backup，F2-03）；没有副本时把方向标记改回 old
     case rotation(url: URL, old: Int, new: Int, backup: RotationBackup?)
+    /// RAW 导出为 JPEG（spec C6-10）：撤销 = 导出的 JPEG（和为它新建的 .xmp）进废纸篓，回到原来的 RAW
+    case export(original: MediaItem, created: URL, sidecar: URL?)
 }
 
 /// 一次批量评星（spec X7-03）：整批一条记录，撤销时每张恢复成各自原来的星级

@@ -15,7 +15,7 @@ import Foundation
 /// `--shot-hint=shortcuts|xmp` 显示提示卡片；`--shot-strip=hidden` 隐藏缩略图栏；
 /// `--shot-seed-ratings` 给 /tmp 下的副本按固定规律评星；`--shot-filter=t:videos,r4,ru,f:jpeg+heic` 设筛选
 /// （t: 类型，r4 不低于 4 星，e3 等于 3 星，ru 未评星，f: 格式）；`--shot-filter-panel` 打开筛选面板。
-/// 编辑模式（spec 21）：`--shot-edit=default|ratio|rotated|resize|savemenu|replace|raw|saved|rotation|failed`，
+/// 编辑模式（spec 21）：`--shot-edit=default|ratio|rotated|resize|savemenu|replace|saved|rotation|failed`，
 /// 配合 `--shot-crop=0.3,0.16,0.46,0.62`（裁切框占图片的比例 x,y,w,h）、`--shot-ratio=square|r4x3|r3x2|r16x9|original`、
 /// `--shot-resize=40`（缩小到 40%）。saved 会真的另存副本（只对 /tmp 下的测试副本生效）。
 enum ShotHooks {

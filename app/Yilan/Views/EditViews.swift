@@ -136,19 +136,8 @@ struct SaveMenu: View {
         EditMenuPanel(minWidth: 250) {
             switch target.reason {
             case .raw:
-                EditMenuRow(title: String(localized: "存为 JPEG 副本"), subtitle: copyName(.jpeg),
-                            checked: session.rawChoice == .jpeg, shortcut: session.rawChoice == .jpeg ? "↩" : nil) {
-                    session.rawChoice = .jpeg
-                    onSave()
-                }
-                EditMenuRow(title: String(localized: "存为 HEIF 副本"),
-                            subtitle: String(localized: "\(copyName(.heif)) · 文件更小", comment: "RAW 保存菜单：%@ 是副本文件名"),
-                            checked: session.rawChoice == .heif, shortcut: session.rawChoice == .heif ? "↩" : nil) {
-                    session.rawChoice = .heif
-                    onSave()
-                }
-                EditMenuSeparator()
-                EditMenuRow(title: String(localized: "替换原图"), subtitle: String(localized: "RAW 原图不能改写"), enabled: false) {}
+                // RAW 不能进编辑（spec C6-01），走不到这里
+                EmptyView()
             case .unwritable(let format):
                 let text = target.isPNG ? String(localized: "存为 PNG 副本") : String(localized: "存为 JPEG 副本")
                 let why = target.isPNG
@@ -160,7 +149,7 @@ struct SaveMenu: View {
                             enabled: false) {}
             case .same:
                 EditMenuRow(title: String(localized: "另存为副本"),
-                            subtitle: String(localized: "\(copyName(nil)) · 原图不动", comment: "保存菜单：%@ 是副本文件名"),
+                            subtitle: String(localized: "\(copyName) · 原图不动", comment: "保存菜单：%@ 是副本文件名"),
                             checked: true, shortcut: "↩", action: onSave)
                 EditMenuRow(title: String(localized: "替换原图…"), subtitle: String(localized: "原图移到废纸篓，⌘Z 可找回"),
                             shortcut: "⌥↩", action: onReplace)
@@ -949,27 +938,23 @@ enum EditTexts {
         r == .original ? String(localized: "原始", comment: "比例按钮上：原始比例的简称") : ratioName(r)
     }
 
-    /// 保存按钮左半的文字（spec ED-27、ED-33、ED-34）
+    /// 保存按钮左半的文字（spec ED-27、ED-34）
     @MainActor
     static func saveLabel(_ s: EditSession) -> String {
         let t = s.target
         switch t.reason {
         case .same: return String(localized: "存为副本")
         case .raw, .unwritable:
-            if t.isHEIF { return String(localized: "存为 HEIF") }
             if t.isPNG { return String(localized: "存为 PNG") }
             return String(localized: "存为 JPEG")
         }
     }
 
-    /// 副本文件名（菜单小字）：RAW 时按选的格式
+    /// 副本文件名（菜单小字）
     @MainActor
-    static func copyName(_ s: EditSession) -> (RawExportFormat?) -> String {
-        { format in
-            let ext: String
-            if let format { ext = format == .heif ? "heic" : "jpg" } else { ext = s.target.pathExtension }
-            let base = s.item.url.deletingPathExtension().lastPathComponent
-            return EditNaming.baseName(base, attempt: 1) + (ext.isEmpty ? "" : ".\(ext)")
-        }
+    static func copyName(_ s: EditSession) -> String {
+        let ext = s.target.pathExtension
+        let base = s.item.url.deletingPathExtension().lastPathComponent
+        return EditNaming.baseName(base, attempt: 1) + (ext.isEmpty ? "" : ".\(ext)")
     }
 }

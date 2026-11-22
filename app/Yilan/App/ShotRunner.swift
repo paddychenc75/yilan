@@ -182,7 +182,7 @@ enum ShotRunner {
             model.rotationMenuOpen = true
             return
         }
-        // RAW：等完整解码（预览图的尺寸和完整版相同，不影响编辑）
+        // 等大图显示出来（RAW 不能编辑，spec C6-01）
         for _ in 0..<50 where !model.canEditCurrent { try? await Task.sleep(for: .milliseconds(100)) }
         model.enterEdit()
         guard let s = model.edit else { return }
@@ -207,7 +207,7 @@ enum ShotRunner {
         switch state {
         case "ratio": s.ratioMenuOpen = true
         case "resize": s.resizeOpen = true
-        case "savemenu", "raw": s.saveMenuOpen = true
+        case "savemenu": s.saveMenuOpen = true
         case "replace": s.confirmReplace = true
         case "failed": s.failure = .notWritable(folder: s.item.url.deletingLastPathComponent().lastPathComponent)
         case "saved":

@@ -300,6 +300,7 @@ extension BrowserModel {
         case .edit(.copy)?: String(localized: "撤销“另存副本”")
         case .edit(.replace)?: String(localized: "撤销“替换原图”")
         case .edit(.rotation)?: String(localized: "撤销“保存旋转”")
+        case .edit(.export)?: String(localized: "撤销“导出为 JPEG”")
         case nil: String(localized: "撤销")
         }
     }

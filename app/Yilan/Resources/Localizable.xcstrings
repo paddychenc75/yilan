@@ -22,23 +22,34 @@
         }
       }
     },
-    "%@ · 文件更小" : {
-      "comment" : "RAW 保存菜单：%@ 是副本文件名",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ · smaller file"
-          }
-        }
-      }
-    },
     "%@ 发布" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Released %@"
+          }
+        }
+      }
+    },
+    "%@ 导出" : {
+      "comment" : "RAW 导出为 JPEG 的文件名（不含扩展名）；%@ 是原文件名",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ exported"
+          }
+        }
+      }
+    },
+    "%@ 导出 %lld" : {
+      "comment" : "RAW 导出为 JPEG 的文件名，重名时带序号；%1$@ 是原文件名，%2$lld 是序号",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ exported %lld"
           }
         }
       }
@@ -432,22 +443,22 @@
         }
       }
     },
+    "RAW 不能直接编辑。先「导出为 JPEG」，再编辑导出的那一张" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RAW files can’t be edited directly. Export as JPEG first, then edit the copy"
+          }
+        }
+      }
+    },
     "RAW 使用系统自带的解码，支持的相机型号以 macOS 为准。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "RAW files use the system decoder; supported camera models depend on macOS."
-          }
-        }
-      }
-    },
-    "RAW 原图不能改写" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "RAW originals can't be rewritten"
           }
         }
       }
@@ -2242,26 +2253,6 @@
         }
       }
     },
-    "存为 HEIF" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Save as HEIF"
-          }
-        }
-      }
-    },
-    "存为 HEIF 副本" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Save HEIF Copy"
-          }
-        }
-      }
-    },
     "存为 JPEG" : {
       "localizations" : {
         "en" : {
@@ -2348,6 +2339,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Fujifilm"
+          }
+        }
+      }
+    },
+    "导出为 JPEG" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export as JPEG"
           }
         }
       }
@@ -2541,6 +2542,17 @@
         }
       }
     },
+    "已导出为「%@」" : {
+      "comment" : "RAW 导出为 JPEG 成功；%@ 是新文件名",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exported as “%@”"
+          }
+        }
+      }
+    },
     "已将 %lld 项移到废纸篓" : {
       "localizations" : {
         "en" : {
@@ -2589,6 +2601,17 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "已把相机预览图导出为「%@」" : {
+      "comment" : "导出相机预览图成功；%@ 是新文件名",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exported the camera preview as “%@”"
           }
         }
       }
@@ -3443,6 +3466,16 @@
         }
       }
     },
+    "把 RAW 导出为 JPEG" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Export RAW as JPEG"
+          }
+        }
+      }
+    },
     "拉直" : {
       "comment" : "编辑工具条：拉直按钮和刻度尺的提示（TX-D0）",
       "localizations" : {
@@ -3644,6 +3677,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Undo Save Copy"
+          }
+        }
+      }
+    },
+    "撤销“导出为 JPEG”" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Undo Export as JPEG"
           }
         }
       }
@@ -4198,6 +4241,17 @@
         }
       }
     },
+    "无法导出：%@" : {
+      "comment" : "导出为 JPEG 失败；%@ 是原因",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t export: %@"
+          }
+        }
+      }
+    },
     "无法打开“%@”" : {
       "localizations" : {
         "en" : {
@@ -4499,16 +4553,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Replace"
-          }
-        }
-      }
-    },
-    "替换原图" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Replace Original"
           }
         }
       }
@@ -4911,6 +4955,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Copying"
+          }
+        }
+      }
+    },
+    "正在导出为 JPEG…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exporting as JPEG…"
           }
         }
       }

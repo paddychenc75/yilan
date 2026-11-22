@@ -43,7 +43,8 @@ struct ShortcutsPane: View {
         }
         var rest = base
         if !filter { rest = rest.map { s in Section(title: s.title, rows: s.rows.filter { $0.id != "打开 / 关闭筛选面板" }) } }
-        if !edit { rest = rest.map { s in Section(title: s.title, rows: s.rows.filter { $0.id != "编辑" }) } }
+        // 导出为 JPEG 跟编辑一起开关（简洁模式里不列，spec C6-13）
+        if !edit { rest = rest.map { s in Section(title: s.title, rows: s.rows.filter { $0.id != "编辑" && $0.id != "把 RAW 导出为 JPEG" }) } }
         if !rating {
             rest = rest.map { s in
                 Section(title: s.title, rows: s.rows.map { $0.id == "撤销上一次评星 / 删除（批量删除一次全部撤销）" ? Shortcut(action: "撤销上一次删除", keys: $0.keys) : $0 })
@@ -84,6 +85,7 @@ struct ShortcutsPane: View {
             Shortcut(action: "拷贝文件（一个或选中的全部）", keys: [[.text("⌘C")]]),
             Shortcut(action: "拷贝文件路径", keys: [[.text("⌥⌘C")]]),
             Shortcut(action: "编辑", keys: [[.text("E")]]),
+            Shortcut(action: "把 RAW 导出为 JPEG", keys: [[.text("⇧⌘E")]]),
             Shortcut(action: "移到废纸篓（一张或选中的全部）", keys: [[.symbol("delete.left", label: "⌫")]]),
             Shortcut(action: "撤销上一次评星 / 删除（批量删除一次全部撤销）", keys: [[.text("⌘Z")]]),
             Shortcut(action: "打开…", keys: [[.text("⌘O")]]),

@@ -28,8 +28,9 @@ extension BrowserModel {
                 return (items, SidecarIndex.scan(folder: folder, media: items))
             }.value
             guard !Task.isCancelled, folder == folderURL, let scanned else { return }
-            // 扫描期间一览自己删除、恢复了文件或写了星级：结果可能已经过时，重新扫一次
-            if serial != localChangeSerial || trashBusy || pendingRatingWrites > 0 {
+            // 扫描期间一览自己删除、恢复了文件或写了星级：结果可能已经过时，重新扫一次。
+            // 正在导出 JPEG 时也等它做完（spec C6-09：新文件由导出自己放进列表）
+            if serial != localChangeSerial || trashBusy || pendingRatingWrites > 0 || exportingURL != nil {
                 folderDidChange()
                 return
             }

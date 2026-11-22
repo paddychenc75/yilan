@@ -39,17 +39,14 @@ final class EditSession {
 
     /// 原图的类型、透明通道、方向（后台读出后填上）
     var source: EditWriter.SourceInfo?
-    /// RAW 存成 JPEG 还是 HEIF（spec ED-33）
-    var rawChoice: RawExportFormat
 
-    init(item: MediaItem, imageSize: PixelSize, turns: Int, rawChoice: RawExportFormat) {
+    init(item: MediaItem, imageSize: PixelSize, turns: Int) {
         self.item = item
         self.imageSize = imageSize
         let t = ((turns % 4) + 4) % 4
         startTurns = t
         self.turns = t
         crop = PixelRect(size: t % 2 == 1 ? imageSize.swapped : imageSize)
-        self.rawChoice = rawChoice
     }
 
     // MARK: - 派生
@@ -68,7 +65,7 @@ final class EditSession {
 
     var target: EditTarget {
         EditTarget.decide(for: item, sourceType: source?.typeIdentifier ?? Self.guessType(item.url),
-                          hasAlpha: source?.hasAlpha ?? false, rawChoice: rawChoice)
+                          hasAlpha: source?.hasAlpha ?? false)
     }
 
     /// 还没读出原图类型时按扩展名猜

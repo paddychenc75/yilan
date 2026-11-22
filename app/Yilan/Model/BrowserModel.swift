@@ -239,6 +239,8 @@ final class BrowserModel {
     @ObservationIgnored var localChangeSerial = 0
     /// 正在移到废纸篓或放回：期间再按 ⌫ / ⌘Z 不重复执行
     @ObservationIgnored var trashBusy = false
+    /// 正在导出为 JPEG 的 RAW（spec C6-08）：一次只导出一张，期间「导出为 JPEG」置灰
+    var exportingURL: URL?
 
     // MARK: 文件夹变化同步（BrowserModel+Sync）
 

@@ -26,8 +26,6 @@ final class AppSettings {
         static let ratingStorage = "ratingStorageMode"
         static let lastLaunchedVersion = "lastLaunchedVersion"
         static let didShowSidecarHint = "didShowSidecarHint"
-        /// 编辑 RAW 时存 JPEG 还是 HEIF（spec ED-33）
-        static let editRawFormat = "editRawFormat"
         /// 第一次显示相机预览图的说明已经出现过（spec C1-13）
         static let didShowCameraPreviewHint = "didShowCameraPreviewHint"
         /// 功能开关（spec T1-03）：默认都开
@@ -91,7 +89,6 @@ final class AppSettings {
     var ratingStorage: RatingStorageMode { didSet { defaults.set(ratingStorage.rawValue, forKey: Key.ratingStorage) } }
     /// 第一次为 RAW 创建 .xmp 的提示已经出现过（spec S-17）
     var didShowSidecarHint: Bool { didSet { defaults.set(didShowSidecarHint, forKey: Key.didShowSidecarHint) } }
-    var editRawFormat: RawExportFormat { didSet { defaults.set(editRawFormat.rawValue, forKey: Key.editRawFormat) } }
     var didShowCameraPreviewHint: Bool { didSet { defaults.set(didShowCameraPreviewHint, forKey: Key.didShowCameraPreviewHint) } }
 
     /// 功能开关（spec 第 8 节）。关掉后这项功能的入口和快捷键都不再出现，不改动任何用户文件
@@ -194,7 +191,6 @@ final class AppSettings {
         autoCheckUpdates = defaults.bool(forKey: Key.autoCheckUpdates)
         ratingStorage = defaults.string(forKey: Key.ratingStorage).flatMap(RatingStorageMode.init(rawValue:)) ?? .sidecar
         didShowSidecarHint = defaults.bool(forKey: Key.didShowSidecarHint)
-        editRawFormat = defaults.string(forKey: Key.editRawFormat).flatMap(RawExportFormat.init(rawValue:)) ?? .jpeg
         didShowCameraPreviewHint = defaults.bool(forKey: Key.didShowCameraPreviewHint)
         let simple = defaults.bool(forKey: Key.simpleMode)
         simpleMode = simple

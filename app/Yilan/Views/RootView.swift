@@ -407,7 +407,7 @@ struct RootView: View {
             if model.showsSaveRotation, !model.isGrid, let item = model.current {
                 SaveRotationChip(lossless: model.currentSupportsLosslessRotation, menuOpen: model.rotationMenuOpen,
                                  copyName: EditNaming.baseName(item.url.deletingPathExtension().lastPathComponent, attempt: 1)
-                                    + "." + (item.format == .raw ? (model.settings.editRawFormat == .heif ? "heic" : "jpg") : item.url.pathExtension),
+                                    + "." + item.url.pathExtension,
                                  onSave: { model.saveRotation() },
                                  onToggleMenu: { model.rotationMenuOpen.toggle() },
                                  onRotateOriginal: { model.saveRotation(toOriginal: true) },
@@ -476,6 +476,7 @@ struct RootView: View {
             rotateSelected: model.rotation != 0,
             editUnsupported: model.editUnsupported,
             editBlockedByPreview: model.showingCameraPreview,
+            editBlockedByRaw: model.editBlockedByRaw,
             showsEdit: model.editEnabled && !grid,
             showsRotate: !grid,
             onEdit: { model.enterEdit() },

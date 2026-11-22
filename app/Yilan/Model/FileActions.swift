@@ -5,6 +5,8 @@ import AppKit
 enum FileAction: Hashable, Sendable {
     case reveal, copy, copyPath
     case rotateLeft, rotateRight, edit, toggleInfo
+    /// RAW 导出为 JPEG（spec C6-03）
+    case exportJPEG
     /// 复制到文件夹… / 移动到文件夹…（spec R9）
     case copyTo, moveTo
     case trash
@@ -76,6 +78,10 @@ extension BrowserModel {
         }
         // 「⋯」菜单和 v0.3 一样不显示快捷键（spec M4-01）
         let keys = context != .more
+        // 导出为 JPEG（spec C6-03、C6-12）：只在当前是 RAW 时有；多选、简洁模式里没有
+        let export: [FileMenuItem] = !showsExportItem ? [] : [
+            item(.exportJPEG, String(localized: "导出为 JPEG"), keys ? MenuShortcut(key: "e", command: true, shift: true) : nil, canExportCurrent),
+        ]
         // 「移到废纸篓」之前的一组（spec R9-01、X4-02、设计稿 98）
         // 简洁模式里整组消失
         let transfer: [FileMenuItem] = !transferEnabled ? [] : [
@@ -101,6 +107,8 @@ extension BrowserModel {
             if editEnabled {
                 items.append(item(.edit, String(localized: "编辑"), MenuShortcut(key: "e"), canEditCurrent))
             }
+            // 紧跟在「编辑」的位置之后（spec C6-03）
+            items += export
             items += [
                 item(.toggleInfo, infoVisible ? String(localized: "隐藏信息") : String(localized: "显示信息"), MenuShortcut(key: "i"), hasFile),
                 .separator,
@@ -108,8 +116,9 @@ extension BrowserModel {
             items += transfer
             items.append(item(.trash, String(localized: "移到废纸篓"), .delete, canDelete))
         case .gridItem:
-            // 没有旋转和编辑（spec V4a）；多选菜单也没有「显示信息」
+            // 没有旋转和编辑（spec V4a）；多选菜单也没有「显示信息」。导出在「显示信息」之前（spec C6-03）
             if !multi {
+                items += export
                 items += [
                     item(.toggleInfo, infoVisible ? String(localized: "隐藏信息") : String(localized: "显示信息"), MenuShortcut(key: "i"), hasFile),
                     .separator,
@@ -118,6 +127,8 @@ extension BrowserModel {
             items += transfer
             items.append(item(.trash, trashTitle, .delete, canTrash))
         case .more:
+            // 导出在「移到废纸篓」之前（spec C6-03）
+            items += export
             items += [
                 item(.trash, trashTitle, nil, canTrash),
                 .separator,
@@ -144,7 +155,7 @@ extension BrowserModel {
             case .moveTo: requestTransfer(.move)
             case .open: showOpenPanel()
             case .toggleInfo: toggleInfo()
-            case .rotateLeft, .rotateRight, .edit: break
+            case .rotateLeft, .rotateRight, .edit, .exportJPEG: break   // 一次只导出一张（spec C6-12）
             }
             return
         }
@@ -155,6 +166,7 @@ extension BrowserModel {
         case .rotateLeft: rotate(-1)
         case .rotateRight: rotate(1)
         case .edit: enterEdit()
+        case .exportJPEG: exportCurrentAsJPEG()
         case .toggleInfo: toggleInfo()
         case .trash: requestDelete()
         case .copyTo: requestTransfer(.copy)

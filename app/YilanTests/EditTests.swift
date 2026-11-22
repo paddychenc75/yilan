@@ -59,10 +59,10 @@ private func plan(_ url: URL, turns: Int = 0, crop: PixelRect? = nil, scale: Dou
     return EditPlan(source: url, imageSize: size, quarterTurns: turns, crop: c, output: ResizeMath.output(crop: c.size, scale: scale))
 }
 
-private func target(_ url: URL, raw: RawExportFormat = .jpeg) throws -> EditTarget {
+private func target(_ url: URL) throws -> EditTarget {
     let item = try MetaFixtures.item(url)
     let info = EditWriter.sourceInfo(url)
-    return EditTarget.decide(for: item, sourceType: info.typeIdentifier, hasAlpha: info.hasAlpha, rawChoice: raw)
+    return EditTarget.decide(for: item, sourceType: info.typeIdentifier, hasAlpha: info.hasAlpha)
 }
 
 // MARK: - 几何
@@ -192,7 +192,7 @@ struct EditGeometryTests {
     @MainActor
     func session() throws {
         let item = MediaItem(url: URL(fileURLWithPath: "/tmp/x.jpg"), format: .standard, fileSize: 1, modificationDate: .now)
-        let s = EditSession(item: item, imageSize: PixelSize(width: 4000, height: 3000), turns: 0, rawChoice: .jpeg)
+        let s = EditSession(item: item, imageSize: PixelSize(width: 4000, height: 3000), turns: 0)
         #expect(!s.isDirty && s.outputSize == PixelSize(width: 4000, height: 3000))
         s.setRatio(.r16x9)
         #expect(s.crop.size == PixelSize(width: 4000, height: 2250) && !s.portrait)
@@ -206,7 +206,7 @@ struct EditGeometryTests {
         s.reset()
         #expect(!s.isDirty && s.crop == PixelRect(size: s.editedSize) && s.turns == 0)
         // 从浏览时的旋转开始（spec ED-03）
-        let r = EditSession(item: item, imageSize: PixelSize(width: 4000, height: 3000), turns: 1, rawChoice: .jpeg)
+        let r = EditSession(item: item, imageSize: PixelSize(width: 4000, height: 3000), turns: 1)
         #expect(r.editedSize == PixelSize(width: 3000, height: 4000) && !r.isDirty)
     }
 }
@@ -242,24 +242,22 @@ struct EditNamingTests {
         #expect(next.lastPathComponent == second + ".jpg")
     }
 
-    @Test("输出格式：原格式、WebP 改 JPEG（带透明改 PNG）、RAW 存 JPEG 或 HEIF")
+    @Test("输出格式：原格式、WebP 改 JPEG（带透明改 PNG）、RAW 固定 JPEG（spec C6-04）")
     func targets() {
         func item(_ name: String) -> MediaItem {
             let url = URL(fileURLWithPath: "/tmp/\(name)")
             return MediaItem(url: url, format: SupportedFormats.format(forExtension: url.pathExtension)!, fileSize: 1, modificationDate: .now)
         }
         let writable: Set<String> = ["public.jpeg", "public.png", "public.heic", "public.tiff", "com.microsoft.bmp"]
-        let jpg = EditTarget.decide(for: item("a.JPG"), sourceType: "public.jpeg", hasAlpha: false, rawChoice: .jpeg, writable: writable)
+        let jpg = EditTarget.decide(for: item("a.JPG"), sourceType: "public.jpeg", hasAlpha: false, writable: writable)
         #expect(jpg == EditTarget(typeIdentifier: "public.jpeg", pathExtension: "JPG", reason: .same) && jpg.canReplaceOriginal)
-        let webp = EditTarget.decide(for: item("a.webp"), sourceType: "org.webmproject.webp", hasAlpha: false, rawChoice: .jpeg, writable: writable)
+        let webp = EditTarget.decide(for: item("a.webp"), sourceType: "org.webmproject.webp", hasAlpha: false, writable: writable)
         #expect(webp.isJPEG && webp.pathExtension == "jpg" && webp.reason == .unwritable("WebP") && !webp.canReplaceOriginal)
-        let alpha = EditTarget.decide(for: item("a.webp"), sourceType: "org.webmproject.webp", hasAlpha: true, rawChoice: .jpeg, writable: writable)
+        let alpha = EditTarget.decide(for: item("a.webp"), sourceType: "org.webmproject.webp", hasAlpha: true, writable: writable)
         #expect(alpha.isPNG && alpha.pathExtension == "png")
-        let raw = EditTarget.decide(for: item("a.ARW"), sourceType: "com.sony.arw-raw-image", hasAlpha: false, rawChoice: .jpeg, writable: writable)
-        #expect(raw.isJPEG && raw.reason == .raw && !raw.canReplaceOriginal)
-        let rawHeif = EditTarget.decide(for: item("a.NEF"), sourceType: nil, hasAlpha: false, rawChoice: .heif, writable: writable)
-        #expect(rawHeif.isHEIF && rawHeif.pathExtension == "heic")
-        let heif = EditTarget.decide(for: item("a.heif"), sourceType: "public.heif", hasAlpha: false, rawChoice: .jpeg, writable: writable)
+        let raw = EditTarget.decide(for: item("a.ARW"), sourceType: "com.sony.arw-raw-image", hasAlpha: false, writable: writable)
+        #expect(raw == EditTarget.rawExport && raw.isJPEG && raw.pathExtension == "jpg" && raw.reason == .raw && !raw.canReplaceOriginal)
+        let heif = EditTarget.decide(for: item("a.heif"), sourceType: "public.heif", hasAlpha: false, writable: writable)
         #expect(heif.isHEIF && heif.pathExtension == "heif" && heif.reason == .same)
         // 本机实测：WebP 系统写不出
         #expect(!EditTarget.writableTypes.contains("org.webmproject.webp"))
@@ -267,14 +265,16 @@ struct EditNamingTests {
                 && !EditTarget.supportsOrientationOnly("public.png"))
     }
 
-    @Test("视频、GIF、SVG 不能编辑")
+    @Test("视频、GIF、SVG、RAW 不能编辑（spec ED-02、C6-01）")
     func editable() {
         func item(_ name: String) -> MediaItem {
             let url = URL(fileURLWithPath: "/tmp/\(name)")
             return MediaItem(url: url, format: SupportedFormats.format(forExtension: url.pathExtension)!, fileSize: 1, modificationDate: .now)
         }
-        #expect(BrowserModel.isEditable(item("a.jpg")) && BrowserModel.isEditable(item("a.ARW")) && BrowserModel.isEditable(item("a.webp")))
+        #expect(BrowserModel.isEditable(item("a.jpg")) && BrowserModel.isEditable(item("a.webp")) && BrowserModel.isEditable(item("a.heic")))
         #expect(!BrowserModel.isEditable(item("a.gif")) && !BrowserModel.isEditable(item("a.svg")) && !BrowserModel.isEditable(item("a.mov")))
+        // 所有 RAW，包括系统能完整解码的
+        for ext in ["ARW", "nef", "CR3", "dng", "RAF", "srw", "x3f"] { #expect(!BrowserModel.isEditable(item("a.\(ext)"))) }
     }
 
     @Test("排序：副本紧跟在原图后面")
@@ -461,24 +461,6 @@ struct EditWriterTests {
         let t = try target(url)
         try FileManager.default.removeItem(at: url)
         #expect(throws: EditSaveError.vanished) { try EditWriter.saveCopy(p, target: t) }
-    }
-
-    @Test("RAW 编辑后存出 JPEG 或 HEIF，RAW 本身不变（本机有样张时）")
-    func raw() throws {
-        guard let name = MetaFixtures.rawSamples.first(where: { $0.uppercased().hasSuffix("ARW") || $0.uppercased().hasSuffix("DNG") }) else { return }
-        let dir = try MetaFixtures.copy([name], from: MetaFixtures.raw)
-        let url = dir.appendingPathComponent(name)
-        let sha = try MetaFixtures.sha(url)
-        let size = try #require(EditWriter.orientedSize(url))
-        let crop = PixelRect(x: 100, y: 100, width: size.width / 2, height: size.height / 2)
-        for (format, ext) in [(RawExportFormat.jpeg, "jpg"), (.heif, "heic")] {
-            let t = try target(url, raw: format)
-            let out = try EditWriter.saveCopy(try plan(url, crop: crop, scale: 0.5), target: t)
-            #expect(out.pathExtension == ext)
-            #expect(EditWriter.orientedSize(out) == ResizeMath.output(crop: crop.size, scale: 0.5))
-            #expect(exif(out, kCGImagePropertyExifDateTimeOriginal) != nil)
-        }
-        #expect(try MetaFixtures.sha(url) == sha)
     }
 }
 

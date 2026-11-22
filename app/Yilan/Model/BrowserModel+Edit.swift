@@ -8,9 +8,9 @@ extension BrowserModel {
 
     var isEditing: Bool { edit != nil }
 
-    /// 可编辑：图片，且不是 GIF、SVG（spec ED-02）
+    /// 可编辑：图片，且不是 GIF、SVG（spec ED-02）、不是 RAW（spec C6-01：RAW 只看不改，要编辑先导出为 JPEG）
     nonisolated static func isEditable(_ item: MediaItem) -> Bool {
-        item.kind == .image && item.format != .gif && item.format != .svg
+        item.kind == .image && item.format != .gif && item.format != .svg && item.format != .raw
     }
 
     /// 当前文件现在能进入编辑：可编辑、没出错、大图已经显示
@@ -26,6 +26,9 @@ extension BrowserModel {
         return !Self.isEditable(item) || failure != nil || showingCameraPreview
     }
 
+    /// 编辑按钮置灰的原因是 RAW：悬停提示先导出（spec C6-01）。相机预览图状态仍用它自己的提示（TX-09），由界面先判断
+    var editBlockedByRaw: Bool { current?.format == .raw }
+
     // MARK: - 进入、退出
 
     /// E、编辑按钮、菜单（spec ED-03）
@@ -38,8 +41,7 @@ extension BrowserModel {
         rotationMenuOpen = false
         dismissHint()
         hideToast()
-        let session = EditSession(item: item, imageSize: PixelSize(shown.pixelSize), turns: rotation,
-                                  rawChoice: settings.editRawFormat)
+        let session = EditSession(item: item, imageSize: PixelSize(shown.pixelSize), turns: rotation)
         withAnimation(.easeOut(duration: 0.2)) { edit = session }
         noteMouseActivity()
         let url = item.url
@@ -239,7 +241,6 @@ extension BrowserModel {
     /// 保存成功：退出编辑，显示新文件，提示可撤销（spec ED-37、ED-38）
     private func editSaved(_ outcome: EditSaveOutcome, mode: EditSaveMode, session s: EditSession, rating: Int) {
         let original = s.item
-        if s.item.format == .raw { settings.editRawFormat = s.rawChoice }   // RAW 选过的格式记住（spec ED-33）
         if edit === s { withAnimation(.easeOut(duration: 0.2)) { edit = nil } }
         // 替换原图：新图解码好之前，旧画面按编辑时转的方向留着（裁切、缩小要等新图换上才看得到）
         if case .replace = mode, outcome.item != nil { rotation = s.turns } else { rotation = 0 }
@@ -274,8 +275,8 @@ extension BrowserModel {
         }
     }
 
-    /// 新文件的星级写好了：更新界面和小文件索引
-    private func noteRatingWrite(_ write: RatingFileIO.WriteResult?, url: URL, rating: Int) {
+    /// 新文件的星级写好了：更新界面和小文件索引（编辑另存、RAW 导出共用）
+    func noteRatingWrite(_ write: RatingFileIO.WriteResult?, url: URL, rating: Int) {
         guard let write else { return }
         ownWrites.record(write.stamps())
         for touched in write.touched where touched.pathExtension.lowercased() == "xmp" { sidecars.noteWritten(touched) }
@@ -288,7 +289,7 @@ extension BrowserModel {
         ratingsDidChange()
     }
 
-    private func isInCurrentFolder(_ url: URL) -> Bool {
+    func isInCurrentFolder(_ url: URL) -> Bool {
         guard let folder = folderURL else { return false }
         return url.deletingLastPathComponent().resolvingSymlinksInPath().path == folder.resolvingSymlinksInPath().path
     }
@@ -307,7 +308,8 @@ extension BrowserModel {
         undoHistory.pop()
         hideToast()
         switch entry {
-        case .copy(let original, let created, let sidecar):
+        // RAW 导出的撤销和另存副本一样（spec C6-10）
+        case .copy(let original, let created, let sidecar), .export(let original, let created, let sidecar):
             let result = await Task.detached(priority: .userInitiated) { () -> Result<Void, Error> in
                 Result {
                     _ = try TrashService.trash(created)
@@ -387,7 +389,7 @@ extension BrowserModel {
 
     /// 胶囊要不要出现：浏览、转过、可编辑
     var showsSaveRotation: Bool {
-        // 相机预览图：可以转着看，但不出「保存旋转」（spec C2-02）
+        // 相机预览图：可以转着看，但不出「保存旋转」（spec C2-02）；RAW 都不出（isEditable，spec C6-02）
         editEnabled && edit == nil && rotation != 0 && current.map(Self.isEditable) == true && failure == nil && !showingCameraPreview
     }
 
@@ -443,7 +445,7 @@ extension BrowserModel {
             return
         }
         // 另存副本：等于在编辑模式里只转了方向就保存
-        let session = EditSession(item: item, imageSize: PixelSize(shown.pixelSize), turns: turns, rawChoice: settings.editRawFormat)
+        let session = EditSession(item: item, imageSize: PixelSize(shown.pixelSize), turns: turns)
         session.source = EditWriter.sourceInfo(item.url)
         performEditSave(.copy, session: session)
     }

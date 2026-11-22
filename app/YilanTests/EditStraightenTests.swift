@@ -50,7 +50,7 @@ private func names(_ folder: URL) -> Set<String> {
 private func target(_ url: URL) throws -> EditTarget {
     let item = try MetaFixtures.item(url)
     let info = EditWriter.sourceInfo(url)
-    return EditTarget.decide(for: item, sourceType: info.typeIdentifier, hasAlpha: info.hasAlpha, rawChoice: .jpeg)
+    return EditTarget.decide(for: item, sourceType: info.typeIdentifier, hasAlpha: info.hasAlpha)
 }
 
 /// 全图 plan（和 EditTests 里的写法相同）
@@ -210,7 +210,7 @@ struct StraightenGeometryTests {
     @MainActor
     func session() {
         let item = MediaItem(url: URL(fileURLWithPath: "/tmp/x.jpg"), format: .standard, fileSize: 1, modificationDate: .now)
-        let s = EditSession(item: item, imageSize: PixelSize(width: 4000, height: 3000), turns: 0, rawChoice: .jpeg)
+        let s = EditSession(item: item, imageSize: PixelSize(width: 4000, height: 3000), turns: 0)
         s.setAngle(-3.2)
         #expect(s.angle == -3.2 && s.isDirty)
         #expect(s.crop == StraightenMath.largestInscribed(size: s.editedSize, angle: -3.2))
@@ -330,7 +330,7 @@ struct StraightenWriterTests {
         let size = try #require(EditWriter.orientedSize(url))
         let item = try MetaFixtures.item(url)
         let p = await MainActor.run { () -> EditPlan in
-            let session = EditSession(item: item, imageSize: size, turns: 0, rawChoice: .jpeg)
+            let session = EditSession(item: item, imageSize: size, turns: 0)
             session.rotate(clockwise: true)
             session.setAngle(-3.2)
             session.setRatio(.r4x3)

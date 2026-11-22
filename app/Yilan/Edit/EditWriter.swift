@@ -44,17 +44,12 @@ enum EditNaming {
     }
 }
 
-/// RAW 存成什么（spec ED-33）
-enum RawExportFormat: String, Sendable {
-    case jpeg, heif
-}
-
 /// 存出的格式（spec ED-31、ED-33、ED-34）
 struct EditTarget: Equatable, Sendable {
     enum Reason: Equatable, Sendable {
         /// 沿用原格式
         case same
-        /// RAW 只能另存
+        /// RAW 导出为 JPEG（spec C6-04）：去掉相机厂商私有数据，不能替换原图
         case raw
         /// 系统写不出原格式（参数是原格式名，例如 WebP）
         case unwritable(String)
@@ -74,14 +69,14 @@ struct EditTarget: Equatable, Sendable {
 
     static let writableTypes: Set<String> = Set((CGImageDestinationCopyTypeIdentifiers() as? [String]) ?? [])
 
+    /// RAW 导出：固定存成 JPEG，不再提供 HEIF（spec C6-04）
+    static let rawExport = EditTarget(typeIdentifier: "public.jpeg", pathExtension: "jpg", reason: .raw)
+
     /// 决定输出格式。sourceType 是 ImageIO 认出的原图类型
-    static func decide(for item: MediaItem, sourceType: String?, hasAlpha: Bool, rawChoice: RawExportFormat,
+    static func decide(for item: MediaItem, sourceType: String?, hasAlpha: Bool,
                        writable: Set<String> = writableTypes) -> EditTarget {
-        if item.format == .raw {
-            return rawChoice == .heif
-                ? EditTarget(typeIdentifier: "public.heic", pathExtension: "heic", reason: .raw)
-                : EditTarget(typeIdentifier: "public.jpeg", pathExtension: "jpg", reason: .raw)
-        }
+        // RAW 不能进编辑（spec C6-01）；万一走到这里也绝不沿用原格式，不会改写 RAW
+        if item.format == .raw { return rawExport }
         let ext = item.url.pathExtension
         var type = sourceType ?? ""
         // 扩展名是 .heif 的照片：ImageIO 可能认作 public.heif（不能写），按 HEIC 编码写，扩展名不变
@@ -363,10 +358,19 @@ enum EditWriter {
     /// 编码写出：沿用原图的拍摄信息（Exif、GPS、TIFF、IPTC），方向改成 1，Exif 像素尺寸改成新值。
     /// 不复制 XMP（里面可能有其他软件的裁切、调色参数，放到新图上会错，技术方案 13.3）
     static func encode(_ image: CGImage, from source: URL, isRaw: Bool, hasAlpha: Bool, target: EditTarget, to dest: URL) throws {
-        guard let src = CGImageSourceCreateWithURL(source as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
-              let out = CGImageDestinationCreateWithURL(dest as CFURL, target.typeIdentifier as CFString, 1, nil)
+        guard let src = CGImageSourceCreateWithURL(source as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary)
         else { throw EditSaveError.other(String(localized: "无法写入这个格式。")) }
-        var p = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [String: Any] ?? [:]
+        let p = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [String: Any] ?? [:]
+        try encode(image, properties: p, isRaw: isRaw, hasAlpha: hasAlpha, target: target, to: dest)
+    }
+
+    /// 同上，拍摄信息由调用方给（相机预览图导出时，系统读不了 RAW 的信息就用内嵌 JPEG 自己带的，spec C6-05）。
+    /// 先编码到内存再写文件：磁盘满、没有写权限时得到系统的错误码，能说清原因（spec C6-11）
+    static func encode(_ image: CGImage, properties: [String: Any], isRaw: Bool, hasAlpha: Bool, target: EditTarget, to dest: URL) throws {
+        let data = NSMutableData()
+        guard let out = CGImageDestinationCreateWithData(data, target.typeIdentifier as CFString, 1, nil)
+        else { throw EditSaveError.other(String(localized: "无法写入这个格式。")) }
+        var p = properties
         for key in ["PixelWidth", "PixelHeight", "Depth", "HasAlpha", "ColorModel", "ProfileName", "IsFloat", "IsIndexed",
                     "{DNG}", "{CIFF}", "{Raw}", "{HEICS}", "{GIF}", "{PNG}", "{ExifAux}", "{8BIM}", "{MakerFujiFilm}"] {
             p[key] = nil
@@ -389,6 +393,7 @@ enum EditWriter {
         let final = hasAlpha && !target.isJPEG ? image : (opaque(image) ?? image)
         CGImageDestinationAddImage(out, final, p as CFDictionary)
         guard CGImageDestinationFinalize(out) else { throw EditSaveError.other(String(localized: "无法写入这个格式。")) }
+        try (data as Data).write(to: dest)
     }
 
     /// 去掉 alpha 通道的副本

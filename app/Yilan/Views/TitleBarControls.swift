@@ -103,6 +103,8 @@ struct ToolGroup: View {
     var editUnsupported = true
     /// 置灰的原因是相机预览图（spec C2-01）：提示换一句
     var editBlockedByPreview = false
+    /// 置灰的原因是 RAW（spec C6-01）：提示先导出为 JPEG
+    var editBlockedByRaw = false
     /// 编辑功能开着；关掉后没有编辑按钮（spec T2-12）
     var showsEdit = true
     /// 图标视图里没有旋转（spec V4a-01）
@@ -130,7 +132,7 @@ struct ToolGroup: View {
             }
             // 编辑（spec ED-01、ED-02）：不支持时不用 disabled，好让悬停提示照常出现
             if showsEdit {
-                EditEntryButton(unsupported: editUnsupported, previewOnly: editBlockedByPreview, action: onEdit)
+                EditEntryButton(unsupported: editUnsupported, previewOnly: editBlockedByPreview, rawOnly: editBlockedByRaw, action: onEdit)
             }
             ToolButton(symbol: "info.circle", help: "信息（I）", selected: infoSelected, action: onInfo)
                 .disabled(!enabled)
@@ -200,11 +202,15 @@ struct ToolButton: View {
 struct EditEntryButton: View {
     let unsupported: Bool
     var previewOnly = false
+    /// RAW（spec C6-01）：相机预览图状态的提示优先
+    var rawOnly = false
     let action: () -> Void
 
     var body: some View {
         ToolButton(symbol: "square.and.pencil",
-                   help: previewOnly ? "这张 RAW 系统暂时无法完整解码，不能编辑" : unsupported ? "此类文件不支持编辑" : "编辑（E）",
+                   help: previewOnly ? "这张 RAW 系统暂时无法完整解码，不能编辑"
+                       : rawOnly ? "RAW 不能直接编辑。先「导出为 JPEG」，再编辑导出的那一张"
+                       : unsupported ? "此类文件不支持编辑" : "编辑（E）",
                    opticalOffset: Self.opticalOffset) {
             if !unsupported { action() }
         }
