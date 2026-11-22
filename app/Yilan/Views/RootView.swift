@@ -731,7 +731,8 @@ struct RootView: View {
                     ratingLocation: model.current.map { model.ratingLocationDescription(for: $0) } ?? "",
                     canRate: model.canRateCurrent,
                     onRate: { model.rateCurrent($0, fromKeyboard: false) },
-                    cameraPreview: model.showingCameraPreview ? model.displayed.map(CameraPreviewNote.make) : nil
+                    cameraPreview: model.showingCameraPreview ? model.displayed.map(CameraPreviewNote.make)
+                        : model.gridCameraPreviewSize.map { CameraPreviewNote(size: $0, hasOriginalSize: false, isSmall: false) }
                 )
                 .onHover { model.setHovering("info", $0) }
                 .padding(.top, top)
@@ -924,7 +925,7 @@ struct RootView: View {
         }
         let trailing = model.gridItemTrailing
         let ratable = model.ratingEnabled && model.currentIsRatable
-        return GridInfoBar(left: .file(name: item.name, tag: model.cameraPreviewSeen.contains(item.url) ? Self.previewTagText : nil),
+        return GridInfoBar(left: .file(name: item.name, tag: model.cameraPreviewSeen.contains(item.url) || model.gridCameraPreviewSize != nil ? Self.previewTagText : nil),
                            rating: model.currentRating, canRate: model.canRateCurrent,
                            onRate: ratable ? { model.rateCurrent($0, fromKeyboard: false) } : nil,
                            dims: trailing?.dims, trailing: trailing?.rest ?? "",

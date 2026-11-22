@@ -14,6 +14,9 @@ struct MediaMetadata: Sendable, Equatable {
     /// 图片像素尺寸（已按方向转正）；视频为画面分辨率
     var pixelWidth: Int?
     var pixelHeight: Int?
+    /// 系统读不到这张 RAW 的像素尺寸时（实测等同于系统解不了它），文件里最大的内嵌 JPEG 的尺寸（已按方向转正）。
+    /// 图标视图靠它在不打开大图的情况下知道「这张会显示相机预览图」（spec C1-16）
+    var cameraPreviewSize: CGSize?
     /// 色彩描述文件，例如 Display P3、sRGB
     var colorProfile: String?
     /// 拍摄信息；没有任何相机数据时为 nil
@@ -83,6 +86,16 @@ enum MetadataReader {
             await readVideo(item.url, into: &meta)
         } else {
             readImage(item.url, into: &meta)
+            if item.format == .raw, meta.pixelWidth == nil, let preview = EmbeddedPreview.largestInfo(url: item.url) {
+                meta.cameraPreviewSize = preview.size
+                // 系统读不出拍摄信息时（旧系统上的富士压缩 RAW、适马 X3F），用内嵌 JPEG 自己带的；像素尺寸和色彩描述是预览图的，不算原片的
+                if meta.capture == nil {
+                    var fromPreview = meta
+                    apply(imageProperties: preview.properties, to: &fromPreview)
+                    meta.capture = fromPreview.capture
+                    if meta.location == nil { meta.location = fromPreview.location }
+                }
+            }
         }
         meta.isComplete = true
         return meta

@@ -376,11 +376,20 @@ extension BrowserModel {
     }
 
     /// 信息条右边：「5712 × 3808 · 3.9 MB · HEIF」，拆成尺寸和其余两段（窗口窄时尺寸先让位）
+    /// 图标视图里当前这张会显示相机预览图：在画廊视图里已经看到过，或者系统读不到它的尺寸（spec C1-16）。
+    /// 后一种不用打开大图就知道
+    var gridCameraPreviewSize: CGSize? {
+        guard viewMode == .grid, let item = current, gridMeta?.url == item.url else { return nil }
+        return gridMeta?.cameraPreviewSize
+    }
+
     var gridItemTrailing: (dims: String?, rest: String)? {
         guard let item = current else { return nil }
         let meta = gridMeta?.url == item.url ? gridMeta : nil
         var dims: String?
         if let w = meta?.pixelWidth, let h = meta?.pixelHeight, w > 0, h > 0 { dims = "\(w) × \(h)" }
+        // 系统读不到尺寸的 RAW：写相机预览图的尺寸（和画廊视图的信息行一致，spec C1-06）
+        else if let p = meta?.cameraPreviewSize { dims = "\(Int(p.width)) × \(Int(p.height))" }
         var parts: [String] = []
         if item.kind == .video, let d = ThumbnailStore.shared.cached(item)?.duration { parts.append(Formatting.duration(d)) }
         parts.append(Formatting.fileSize(item.fileSize))

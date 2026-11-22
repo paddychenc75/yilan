@@ -97,6 +97,50 @@ struct EmbeddedPreviewTests {
         #expect(EmbeddedPreview.largestJPEG(url: URL(fileURLWithPath: "/tmp/yilan-no-such-file.arw"), maxPixel: nil) == nil)
     }
 
+    @Test("只取尺寸：和解码出来的那张一致，竖拍的已经转正；系统读不到尺寸的 RAW 在文件信息里带上它（spec C1-16）")
+    func sizeOnly() async throws {
+        let url = try tempFile("fake.x3f", junk(4096) + jpegData(halves(320, 240)) + junk(100) + jpegData(halves(1200, 800), orientation: 6) + junk(5000))
+        #expect(EmbeddedPreview.largestSize(url: url) == CGSize(width: 800, height: 1200))
+        #expect(EmbeddedPreview.largestSize(url: url) == EmbeddedPreview.largestJPEG(url: url, maxPixel: 200)?.pixelSize)
+        #expect(EmbeddedPreview.largestSize(url: try tempFile("a.arw", junk(100_000))) == nil)
+        // 系统不认识的假 RAW：读不到像素尺寸，文件信息里记下预览图的尺寸
+        let meta = await MetadataReader.read(try MetaFixtures.item(url))
+        #expect(meta.pixelWidth == nil && meta.cameraPreviewSize == CGSize(width: 800, height: 1200))
+        // 系统能解的 RAW 不带
+        if let name = MetaFixtures.rawSamples.first {
+            let m = await MetadataReader.read(try MetaFixtures.item(MetaFixtures.raw.appendingPathComponent(name)))
+            #expect(m.pixelWidth != nil && m.cameraPreviewSize == nil)
+        }
+    }
+
+    @Test("系统不认识的 RAW：快速预览用内嵌 JPEG 缩小后的画面，尺寸报内嵌 JPEG 本身的；没有内嵌 JPEG 就没有快速预览")
+    func quickPreview() async throws {
+        let url = try tempFile("fake.x3f", junk(4096) + jpegData(halves(4000, 3000)) + junk(5000))
+        let quick = try await ImageDecoder.decode(try MetaFixtures.item(url), variant: .rawPreview)
+        #expect(quick.isPreview && !quick.isCameraPreview)
+        #expect(max(quick.image.width, quick.image.height) == ImageDecoder.quickCameraPreviewPixel)
+        #expect(quick.pixelSize == CGSize(width: 4000, height: 3000))
+        let none = try MetaFixtures.item(try tempFile("none.x3f", junk(50_000)))
+        await #expect(throws: DecodeFailure.self) { try await ImageDecoder.decode(none, variant: .rawPreview) }
+    }
+
+    @Test("系统读不出拍摄信息的 RAW：信息面板用内嵌 JPEG 自己带的拍摄信息")
+    func captureFromPreview() async throws {
+        let data = NSMutableData()
+        let dest = CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil)!
+        let props: [CFString: Any] = [
+            kCGImagePropertyExifDictionary: [kCGImagePropertyExifFNumber: 2.8, kCGImagePropertyExifISOSpeedRatings: [400]],
+            kCGImagePropertyTIFFDictionary: [kCGImagePropertyTIFFMake: "TESTCAM", kCGImagePropertyTIFFModel: "X-99"],
+        ]
+        CGImageDestinationAddImage(dest, halves(1200, 800), props as CFDictionary)
+        CGImageDestinationFinalize(dest)
+        let url = try tempFile("fake.x3f", junk(4096) + (data as Data) + junk(5000))
+        let meta = await MetadataReader.read(try MetaFixtures.item(url))
+        #expect(meta.capture?.fNumber == 2.8 && meta.capture?.iso == 400)
+        #expect(meta.capture?.camera?.contains("X-99") == true)
+        #expect(meta.pixelWidth == nil && meta.cameraPreviewSize == CGSize(width: 1200, height: 800))
+    }
+
     @Test("太小的内嵌缩略图（160 × 120）不算预览图")
     func ignoresTiny() throws {
         let url = try tempFile("fake.arw", junk(64) + jpegData(halves(160, 120)) + junk(64))

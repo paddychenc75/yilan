@@ -41,6 +41,30 @@ enum EmbeddedPreview {
         }
     }
 
+    /// 只要尺寸、不解码画面：文件里最大的内嵌 JPEG 转正后的像素尺寸。方向的取法和 largestJPEG 一样
+    static func largestSize(url: URL) -> CGSize? { largestInfo(url: url)?.size }
+
+    /// 最大的内嵌 JPEG 的尺寸和它自己带的属性（拍摄信息在这里面：系统读不了这张 RAW 时靠它填信息面板）
+    static func largestInfo(url: URL) -> (size: CGSize, properties: [CFString: Any])? {
+        guard let data = try? Data(contentsOf: url, options: .mappedIfSafe), data.count > 16 else { return nil }
+        let rawOrientation = CGImageSourceCreateWithURL(url as CFURL, nil).flatMap { source -> Int? in
+            guard CGImageSourceGetCount(source) > 0 else { return nil }
+            let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+            return (props?[kCGImagePropertyOrientation] as? NSNumber)?.intValue
+        }
+        return data.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) -> (size: CGSize, properties: [CFString: Any])? in
+            guard let base = buffer.baseAddress,
+                  let c = candidates(in: buffer).max(by: { $0.width * $0.height < $1.width * $1.height }) else { return nil }
+            let slice = Data(bytesNoCopy: UnsafeMutableRawPointer(mutating: base + c.offset),
+                             count: min(buffer.count - c.offset, maxJPEGBytes), deallocator: .none)
+            let props = CGImageSourceCreateWithData(slice as CFData, jpegHint)
+                .flatMap { CGImageSourceCopyPropertiesAtIndex($0, 0, nil) as? [CFString: Any] }
+            let orientation = (props?[kCGImagePropertyOrientation] as? NSNumber)?.intValue ?? rawOrientation ?? 1
+            let size = (5...8).contains(orientation) ? CGSize(width: c.height, height: c.width) : CGSize(width: c.width, height: c.height)
+            return (size, props ?? [:])
+        }
+    }
+
     struct Candidate: Equatable {
         let offset: Int
         let width: Int

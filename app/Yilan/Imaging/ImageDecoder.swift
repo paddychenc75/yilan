@@ -80,7 +80,11 @@ enum ImageDecoder {
 
     /// RAW 内嵌预览：只取文件里已有的 JPEG 预览，不做完整解码
     static func decodeEmbeddedPreview(_ item: MediaItem) throws -> DecodedImage {
-        let source = try makeSource(item)
+        // 系统连文件格式都不认识（适马 X3F）：没有系统预览可取，直接看文件里有没有内嵌 JPEG
+        guard let source = try? makeSource(item) else {
+            if let quick = quickCameraPreview(item, orientation: nil) { return quick }
+            return try decodeEmbeddedPreviewFailure(item)
+        }
         let size = orientedPixelSize(source)
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageIfAbsent: false,
@@ -89,11 +93,31 @@ enum ImageDecoder {
             kCGImageSourceShouldCacheImmediately: true,
         ]
         guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            // 系统读不到尺寸（= 解不了这张 RAW，随后会显示相机预览图）又不给预览时（旧系统上的富士压缩 RAW、尼康高效率压缩）：
+            // 先把文件里的内嵌 JPEG 缩小了顶上，不让用户对着缩略图等完整尺寸的那一张
+            if size == .zero {
+                let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+                let orientation = (props?[kCGImagePropertyOrientation] as? NSNumber)?.intValue
+                if let quick = quickCameraPreview(item, orientation: orientation) { return quick }
+            }
             throw DecodeFailure(reason: "没有内嵌预览", detail: "")   // 只在内部用（调用方会改为完整解码），不显示给用户，不用翻译
         }
         // 系统读不到这张 RAW 的尺寸（不认识的机型）时，按预览图自己的尺寸算，不能是 0
         let shown = size == .zero ? CGSize(width: image.width, height: image.height) : size
         return DecodedImage(image: image, pixelSize: shown, isPreview: true, isDownsampled: true)
+    }
+
+    /// 快速预览用的相机预览图长边（和系统给的内嵌预览差不多大）
+    static let quickCameraPreviewPixel = 1600
+
+    private static func quickCameraPreview(_ item: MediaItem, orientation: Int?) -> DecodedImage? {
+        guard item.format == .raw,
+              let found = EmbeddedPreview.largestJPEG(url: item.url, maxPixel: quickCameraPreviewPixel, orientation: orientation) else { return nil }
+        return DecodedImage(image: found.image, pixelSize: found.pixelSize, isPreview: true, isDownsampled: true)
+    }
+
+    private static func decodeEmbeddedPreviewFailure(_ item: MediaItem) throws -> DecodedImage {
+        throw accessFailure(item) ?? DecodeFailure(reason: "没有内嵌预览", detail: "")
     }
 
     /// 相机预览图（spec C1-03、C1-04）：先在文件里找最大的内嵌 JPEG，找不到再用系统给的内嵌预览；都没有就抛错
