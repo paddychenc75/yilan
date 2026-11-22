@@ -64,7 +64,7 @@ extension BrowserModel {
         case .failure(let error):
             Log.app.error("移到废纸篓失败 \(item.name, privacy: .public)：\(error.localizedDescription, privacy: .public)")
             showToast(symbol: "exclamationmark.triangle",
-                      text: String(localized: "无法移到废纸篓：\(error.localizedDescription)", comment: "%@ 是系统给出的原因"),
+                      text: String(localized: "无法移到废纸篓：\(BatchTrash.reason(for: error, url: item.url))", comment: "%@ 是原因：没有权限、这个位置没有废纸篓等（和批量删除用同一套说法），认不出时是系统给出的原因"),
                       duration: 4)
         }
     }

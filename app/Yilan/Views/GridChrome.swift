@@ -173,7 +173,11 @@ struct GridInfoBar: View {
                                             trailing: trailing.isEmpty ? nil : trailingWidth)
             ZStack {
                 HStack(spacing: 14) {
+                    // 有星时左边只能用到星的左沿：文件名很长（再加「相机预览图」标签）时自己截断，不伸到星下面
                     leftView
+                        .frame(maxWidth: plan.showStars && onRate != nil
+                               ? max(GridBarLayout.minLeft, plan.starsCenter(in: geo.size.width) - Self.starsWidth / 2 - GridBarLayout.gap - 16)
+                               : .infinity, alignment: .leading)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     if plan.showDims || plan.showTrailing {
                         HStack(spacing: 6) {
