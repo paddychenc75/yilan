@@ -86,12 +86,16 @@ enum ImageDecoder {
             return try decodeEmbeddedPreviewFailure(item)
         }
         let size = orientedPixelSize(source)
-        let options: [CFString: Any] = [
+        var options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageIfAbsent: false,
             kCGImageSourceCreateThumbnailFromImageAlways: false,
             kCGImageSourceCreateThumbnailWithTransform: true,
             kCGImageSourceShouldCacheImmediately: true,
         ]
+        // 内嵌预览特别大的（见 hugePreviewPixel）：让系统解 JPEG 时直接按一半解，不先解出 180 MB 的整张
+        if let long = RawFullDecode.largestPreviewLong(source), long > hugePreviewPixel {
+            options[kCGImageSourceThumbnailMaxPixelSize] = (long + 1) / 2
+        }
         guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
             // 系统读不到尺寸（= 解不了这张 RAW，随后会显示相机预览图）又不给预览时（旧系统上的富士压缩 RAW、尼康高效率压缩）：
             // 先把文件里的内嵌 JPEG 缩小了顶上，不让用户对着缩略图等完整尺寸的那一张
@@ -104,7 +108,24 @@ enum ImageDecoder {
         }
         // 系统读不到这张 RAW 的尺寸（不认识的机型）时，按预览图自己的尺寸算，不能是 0
         let shown = size == .zero ? CGSize(width: image.width, height: image.height) : size
-        return DecodedImage(image: image, pixelSize: shown, isPreview: true, isDownsampled: true)
+        return DecodedImage(image: halvedIfHuge(image), pixelSize: shown, isPreview: true, isDownsampled: true)
+    }
+
+    /// 内嵌预览超过这个长边（尼康 Z8、徕卡 Q2 的内嵌预览是 4500 万像素的全尺寸 JPEG，一张 180 MB）就缩成一半再显示。
+    /// 这么大的图贴到画面上那一下要占住主线程一百多毫秒，从图标视图双击打开时正好卡在过渡动画中间（v0.5.1 P1）；
+    /// 它只显示几百毫秒，高清解码好了就换掉，用不着这么大
+    static let hugePreviewPixel = 6500
+
+    /// 系统没说内嵌预览多大、解出来才发现特别大时的退路
+    static func halvedIfHuge(_ image: CGImage) -> CGImage {
+        guard max(image.width, image.height) > hugePreviewPixel else { return image }
+        let w = image.width / 2, h = image.height / 2
+        let space = image.colorSpace.flatMap { $0.model == .rgb ? $0 : nil } ?? CGColorSpace(name: CGColorSpace.sRGB)!
+        guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0, space: space,
+                                  bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return image }
+        ctx.interpolationQuality = .low
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+        return ctx.makeImage() ?? image
     }
 
     /// 快速预览用的相机预览图长边（和系统给的内嵌预览差不多大）

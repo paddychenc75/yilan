@@ -3,6 +3,48 @@ import AppKit
 /// 按截图参数（见 ShotHooks）在启动后摆出要截的状态。Release 版里什么都不做
 @MainActor
 enum ShotRunner {
+    #if DEBUG
+    /// 在图标视图里打开一张，量几个时间点（毫秒），再回到图标视图
+    private static func measureGridOpen(_ item: MediaItem, model: BrowserModel) async {
+        model.requestGridScroll(to: item.url)
+        try? await Task.sleep(for: .milliseconds(500))
+        // 主线程停顿：每 2 毫秒在主队列上打一个点，记最长的间隔
+        var last = CACurrentMediaTime(), worstGap = 0.0, worstAnimGap = 0.0, began = Double.infinity
+        let timer = DispatchSource.makeTimerSource(queue: .main)
+        timer.schedule(deadline: .now(), repeating: .milliseconds(2))
+        timer.setEventHandler {
+            let now = CACurrentMediaTime()
+            worstGap = max(worstGap, now - last)
+            // 过渡动画那一段（打开后 0.45 秒内）的停顿单独记
+            if now >= began, last - began < 0.45 { worstAnimGap = max(worstAnimGap, now - last) }
+            last = now
+        }
+        timer.resume()
+        let start = CACurrentMediaTime()
+        began = start
+        model.openFromGrid(item.url)
+        let sync = (CACurrentMediaTime() - start) * 1000
+        let animated = model.viewSwitch != nil
+        var first: Double?, full: Double?, switched: Double?
+        while CACurrentMediaTime() - start < 4 {
+            let ms = (CACurrentMediaTime() - start) * 1000
+            let mine = model.displayedItem == item
+            if first == nil, mine, model.displayed != nil || model.failure != nil { first = ms }
+            if full == nil, mine, model.failure != nil || (model.displayed.map { !$0.isPreview } ?? false) { full = ms }
+            if switched == nil, model.viewSwitch == nil { switched = ms }
+            if first != nil, full != nil, switched != nil { break }
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        try? await Task.sleep(for: .milliseconds(300))
+        timer.cancel()
+        func f(_ v: Double?) -> String { v.map { String(format: "%.0f", $0) } ?? "-" }
+        print("[perf] grid-open \(item.name): sync=\(f(sync)) first=\(f(first)) full=\(f(full)) overlayGone=\(f(switched)) animated=\(animated) worstMainGap=\(f(worstGap * 1000)) animGap=\(f(worstAnimGap * 1000))")
+        fflush(stdout)
+        model.returnToGrid()
+        try? await Task.sleep(for: .milliseconds(700))
+    }
+    #endif
+
     static func run(model: BrowserModel) {
         #if DEBUG
         guard ShotHooks.openInfo || ShotHooks.deleteState != nil || ShotHooks.fullScreenState != nil || ShotHooks.dumpMenus
@@ -49,6 +91,16 @@ enum ShotRunner {
                     while model.batchRunning { try? await Task.sleep(for: .milliseconds(20)) }
                     print("[perf] stop: left before=\(before) after=\(left()) took=\(Int(Date().timeIntervalSince(t0) * 1000))ms")
                     fflush(stdout)
+                }
+                // 量「图标视图里双击打开」（v0.5.1 P1）：逐张打开再回去，打印到第一帧、到高清、过渡图拿掉、主线程最长停顿
+                if CommandLine.arguments.contains("--perf-grid-open") {
+                    try? await Task.sleep(for: .seconds(3))   // 等缩略图
+                    for item in model.items {
+                        await measureGridOpen(item, model: model)
+                    }
+                    print("[perf] grid open done")
+                    fflush(stdout)
+                    NSApp.terminate(nil)
                 }
                 // 量内存用：从头滚到尾，每 0.12 秒滚一行
                 if CommandLine.arguments.contains("--perf-grid-scroll") {

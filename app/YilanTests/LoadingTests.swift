@@ -466,6 +466,14 @@ struct DecoderFixtureTests {
         #expect(long.step == 3)
     }
 
+    @Test("RAW 的内嵌预览特别大（长边超过 6500）时缩成一半再显示，其余原样")
+    func hugePreviewHalved() {
+        let huge = ImageDecoder.halvedIfHuge(pixel(8256, 5504))
+        #expect(huge.width == 4128 && huge.height == 2752)
+        let normal = pixel(6000, 4000)
+        #expect(ImageDecoder.halvedIfHuge(normal) === normal)
+    }
+
     @Test("SVG：按要求的尺寸栅格化")
     func svg() async throws {
         let dir = try fixtureCopy()
