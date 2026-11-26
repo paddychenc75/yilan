@@ -100,6 +100,17 @@ struct PipelineTests {
         #expect(await fake.callCount(a.url) == 1)
     }
 
+    @Test("缓存上限：普通屏幕 400 MB；5K、6K 屏放得下当前和前后各 2 张；最多 800 MB")
+    func costLimitFollowsDisplay() {
+        let mb = 1024 * 1024
+        #expect(ImagePipeline.costLimit(displayMaxPixel: 3456) == 400 * mb)   // 16 寸 MacBook Pro
+        for px in [5120, 6016] {                                             // 5K、6K
+            let one = px * (px * 2 / 3) * 4
+            #expect(ImagePipeline.costLimit(displayMaxPixel: px) >= one * 5)
+        }
+        #expect(ImagePipeline.costLimit(displayMaxPixel: 20_000) == 800 * mb)
+    }
+
     @Test("cancelAll 取消预加载，预加载不会自己重试")
     func cancelPreload() async {
         let fake = FakeDecoder()
@@ -520,6 +531,35 @@ struct FastSwitchTests {
         #expect(await waitUntil { isFullyShown(model, items[0]) })
         try? await Task.sleep(for: .milliseconds(100))
         #expect(isFullyShown(model, items[0]))
+    }
+
+    /// 用户反馈（v0.5.0）：左右切换时有时会闪出一帧别的图片。
+    /// 原因：切走以后，上一张的加载任务晚到的那一步仍然把「正在显示的文件」改成了它自己
+    @Test("快速切走以后，已经过期的加载不会把画面换成别的文件")
+    func staleLoadNeverShowsAnotherItem() async {
+        let fake = FakeDecoder()
+        let (model, items, _) = makeModel(fake)
+        #expect(await waitUntil { isFullyShown(model, items[0]) })
+        // 其他几张都解不出来：切过去只能走「还没解码好」那条路
+        for item in items.dropFirst() { await fake.block(item.url) }
+        var wrong: [String] = []
+        let watcher = Task { @MainActor in
+            while !Task.isCancelled {
+                if let shown = model.displayedItem, let current = model.current, shown != current {
+                    wrong.append("\(shown.name) 显示在 \(current.name) 上")
+                }
+                await Task.yield()
+            }
+        }
+        for round in 0..<40 {
+            model.select(4 + round % 3)   // 没解码好的一张
+            model.select(0)               // 马上切回已经在缓存里的第一张
+            for _ in 0..<20 { await Task.yield() }
+        }
+        #expect(await waitUntil { isFullyShown(model, items[0]) })
+        watcher.cancel()
+        #expect(wrong.isEmpty, "出现过别的文件的画面：\(wrong.prefix(3))")
+        for item in items.dropFirst() { await fake.release(item.url) }
     }
 
     @Test("按旧位置算的取消误伤当前图片的解码：仍然会显示出来")

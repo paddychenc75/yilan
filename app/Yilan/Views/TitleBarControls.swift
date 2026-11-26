@@ -208,7 +208,7 @@ struct EditEntryButton: View {
 
     var body: some View {
         ToolButton(symbol: "square.and.pencil",
-                   help: previewOnly ? "这张 RAW 系统暂时无法完整解码，不能编辑"
+                   help: previewOnly ? "这张 RAW 显示的是相机预览图，不能直接编辑。先「导出为 JPEG」，再编辑导出的那一张"
                        : rawOnly ? "RAW 不能直接编辑。先「导出为 JPEG」，再编辑导出的那一张"
                        : unsupported ? "此类文件不支持编辑" : "编辑（E）",
                    opticalOffset: Self.opticalOffset) {

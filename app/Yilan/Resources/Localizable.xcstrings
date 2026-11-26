@@ -896,12 +896,12 @@
         }
       }
     },
-    "你的 macOS 版本还不支持这台相机的 RAW，一览改为显示相机存在文件里的 JPEG 预览图。可以照常翻看、放大、打星和删除，只是不能编辑。升级 macOS 后会自动换成完整解码。" : {
+    "macOS 暂时还不支持这台相机的 RAW，一览改为显示相机存在文件里的 JPEG 预览图。可以照常翻看、放大、打星和删除；要编辑，先「导出为 JPEG」。macOS 支持这台相机后会自动换成完整解码。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Your version of macOS doesn’t support RAW files from this camera yet, so Yilan shows the JPEG preview the camera saved inside the file. You can browse, zoom, rate and delete as usual, but not edit. Full decoding takes over automatically once you update macOS."
+            "value" : "macOS doesn’t support RAW files from this camera yet, so Yilan shows the JPEG preview the camera saved inside the file. You can browse, zoom, rate and delete as usual; to edit, use Export as JPEG first. Full decoding takes over automatically once macOS supports this camera."
           }
         }
       }
@@ -4003,12 +4003,12 @@
         }
       }
     },
-    "文件可能已损坏，里面也没有可以显示的预览图。" : {
+    "这个版本的 macOS 无法解码这张 RAW，文件里也没有可以显示的预览图。更新的 macOS 也许能打开。" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The file may be damaged, and it has no preview that can be shown."
+            "value" : "This version of macOS can’t decode this RAW, and the file has no preview that can be shown. A newer version of macOS may be able to open it."
           }
         }
       }
@@ -6361,12 +6361,12 @@
         }
       }
     },
-    "这张 RAW 系统暂时无法完整解码，不能编辑" : {
+    "这张 RAW 显示的是相机预览图，不能直接编辑。先「导出为 JPEG」，再编辑导出的那一张" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "macOS can’t fully decode this RAW yet, so it can’t be edited"
+            "value" : "This RAW is showing the camera preview and can’t be edited directly. Export as JPEG first, then edit the copy"
           }
         }
       }

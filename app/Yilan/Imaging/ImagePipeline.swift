@@ -44,8 +44,24 @@ actor ImagePipeline {
         self.decode = decode
         gate = DecodeGate(limit: queuedLimit)
         // 屏幕尺寸的图约 30–70 MB：前后各 2 张 + 当前 + 少量历史。F2-06：原来是 900 MB / 16 张
-        cache.totalCostLimit = 400 * 1024 * 1024
+        cache.totalCostLimit = Self.baseCostLimit
         cache.countLimit = 8
+    }
+
+    static let baseCostLimit = 400 * 1024 * 1024
+
+    /// 缓存的成本上限。至少要放得下当前这张和前后各 2 张（另留一张的余量），不然往回翻时
+    /// 刚看过的那张已经被挤出去，又要重新解码、先闪一下模糊的缩略图。
+    /// 普通屏幕（长边 4000 像素以内）还是 400 MB；5K、6K 屏上一张图就有 70 到 100 MB，按屏幕放宽，最多 800 MB
+    static func costLimit(displayMaxPixel: Int) -> Int {
+        // 3:2 的照片按屏幕长边解码后的大小（每像素 4 字节）
+        let one = displayMaxPixel * (displayMaxPixel * 2 / 3) * 4
+        return min(max(baseCostLimit, one * 6), 2 * baseCostLimit)
+    }
+
+    /// 窗口所在屏幕的解码尺寸变了：缓存上限跟着调
+    func displayChanged(maxPixel: Int) {
+        cache.totalCostLimit = Self.costLimit(displayMaxPixel: maxPixel)
     }
 
     static func key(_ item: MediaItem, _ variant: ImageDecoder.Variant) -> Key {

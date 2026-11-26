@@ -146,7 +146,7 @@ enum ImageDecoder {
         }
         if let failure = accessFailure(item) { throw failure }
         // spec C1-12：两种预览都取不到
-        throw DecodeFailure(reason: String(localized: "文件可能已损坏，里面也没有可以显示的预览图。"),
+        throw DecodeFailure(reason: String(localized: "这个版本的 macOS 无法解码这张 RAW，文件里也没有可以显示的预览图。更新的 macOS 也许能打开。"),
                             detail: Formatting.fileSize(item.fileSize))
     }
 

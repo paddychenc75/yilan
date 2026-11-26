@@ -570,6 +570,8 @@ final class BrowserModel {
         guard maxPixel > 0, maxPixel != screenMaxPixel else { return }
         let previous = displayMaxPixel
         screenMaxPixel = maxPixel
+        let pipeline = self.pipeline
+        Task { await pipeline.displayChanged(maxPixel: maxPixel) }
         guard maxPixel > previous, fullResTask == nil, !isDecodingRaw, failure == nil, !showingStaleDisplay,
               let item = current, item == displayedItem, item.kind == .image,
               let shown = displayed, !shown.isPreview, !shown.isCameraPreview, shown.isDownsampled || item.format == .svg,
@@ -624,16 +626,25 @@ final class BrowserModel {
         loadGeneration += 1
         let generation = loadGeneration
         loadTask = Task {
-            if let hit = await pipeline.cached(item, variant) {
+            // 每次等待回来都要先看这一轮加载还作不作数：等的时候用户可能已经切到别的文件，
+            // 过期的这一轮再往下改「正在显示的文件」，画面上就会闪出一帧别的图片（v0.5.0 的用户反馈）
+            let isStale = { [weak self] in Task.isCancelled || self?.loadGeneration != generation }
+            let cachedHit = await pipeline.cached(item, variant)
+            guard !isStale() else { return }
+            if let hit = cachedHit {
                 show(hit, for: item)
                 preloadNeighbors()
                 return
             }
             // 这张 RAW 之前已经确定系统解不了：直接显示缓存里的相机预览图，不再闪一遍「正在解码」
-            if item.format == .raw, let hit = await pipeline.cached(item, .cameraPreview(maxPixel: displayMaxPixel)) {
-                show(hit, for: item)
-                preloadNeighbors()
-                return
+            if item.format == .raw {
+                let previewHit = await pipeline.cached(item, .cameraPreview(maxPixel: displayMaxPixel))
+                guard !isStale() else { return }
+                if let hit = previewHit {
+                    show(hit, for: item)
+                    preloadNeighbors()
+                    return
+                }
             }
             // 还没解码好：先用缩略图占位（模糊一点也比黑屏好）
             failure = nil
@@ -648,7 +659,9 @@ final class BrowserModel {
             // 和前后几张的预加载共用有限的名额，不会同时堆起很多个完整解码抢走 CPU
             var queuedOrder: Int?
             if item.format == .raw {
-                if let preview = try? await pipeline.image(item, .rawPreview), !Task.isCancelled {
+                let preview = try? await pipeline.image(item, .rawPreview)
+                guard !isStale() else { return }
+                if let preview {
                     show(preview, for: item)
                     isDecodingRaw = true
                     queuedOrder = PreloadOrder.currentFull(generation)
@@ -658,23 +671,23 @@ final class BrowserModel {
             }
             do {
                 let image = try await decodeCurrent(item, variant, order: queuedOrder)
-                guard !Task.isCancelled else { return }
+                guard !isStale() else { return }
                 show(image, for: item)
             } catch let decodeFailure as DecodeFailure {
-                guard !Task.isCancelled else { return }
+                guard !isStale() else { return }
                 // 系统解不了这张 RAW（spec C1-02）：改为显示相机存在文件里的预览图；连预览图都没有才显示出错卡片
                 var shownFailure = decodeFailure
                 if item.format == .raw, decodeFailure.kind == .corrupt {
                     do {
                         let preview = try await pipeline.image(item, .cameraPreview(maxPixel: displayMaxPixel))
-                        guard !Task.isCancelled else { return }
+                        guard !isStale() else { return }
                         show(preview, for: item)
                         isDecodingRaw = false
                         noteCameraPreviewShown(item)
                         preloadNeighbors()
                         return
                     } catch let previewFailure as DecodeFailure {
-                        guard !Task.isCancelled else { return }
+                        guard !isStale() else { return }
                         shownFailure = previewFailure
                     } catch {
                         return   // 切到了别的文件
